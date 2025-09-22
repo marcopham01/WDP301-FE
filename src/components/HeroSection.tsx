@@ -66,17 +66,14 @@ const HeroSection = () => {
               ))}
             </div>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            {/* CTA Button */}
+            <div className="flex justify-center sm:justify-start">
               <Button 
                 size="lg" 
-                className="gradient-primary text-primary-foreground shadow-glow"
-                onClick={() => window.location.href = '/customer'}
+                className="gradient-primary text-primary-foreground shadow-glow px-8"
+                onClick={() => window.location.href = '/login'}
               >
-                Dùng thử miễn phí
-              </Button>
-              <Button size="lg" variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-                Xem demo
+                Đặt lịch bảo dưỡng
               </Button>
             </div>
           </div>
