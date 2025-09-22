@@ -1,11 +1,12 @@
+import { motion } from "framer-motion";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "../components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form";
-import { Eye, EyeOff, Car, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { FcAutomotive } from "react-icons/fc";
 
 interface LoginFormData {
   email: string;
@@ -41,8 +42,15 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
-      <div className="absolute top-6 left-6 z-10">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-white to-blue-200 relative overflow-hidden">
+      {/* Hiệu ứng nền mây */}
+      <div className="absolute inset-0 pointer-events-none select-none">
+        <div className="absolute w-full h-full bg-gradient-to-br from-blue-100 via-white to-blue-200 opacity-80" />
+  <div className="absolute inset-0 bg-[url('/src/assets/bg-login.jpg')] bg-cover bg-center opacity-30" />
+        {/* Có thể thay bằng hình mây hoặc svg động nếu muốn */}
+      </div>
+      {/* Nút back home */}
+      <div className="absolute top-6 left-6 z-20">
         <Button
           variant="outline"
           className="flex items-center gap-2 shadow-lg px-4 py-2 rounded-full bg-white/90 hover:bg-white border-gray-200 hover:border-primary transition-all duration-300 hover:shadow-xl backdrop-blur-sm"
@@ -52,52 +60,47 @@ const Login = () => {
           <span className="font-medium">Trang chủ</span>
         </Button>
       </div>
-      <div className="w-full max-w-md space-y-6">
-        {/* Logo/Brand */}
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-primary mb-4">
-            <Car className="h-8 w-8 text-primary-foreground" />
+      <div className="w-full max-w-md mx-auto z-10">
+        <div className="flex flex-col items-center">
+          <div className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center mb-4 mt-2 transition-all duration-500 hover:scale-110 hover:rotate-12">
+            <FcAutomotive className="w-8 h-8 transition-all duration-500 hover:scale-125 hover:rotate-[360deg]" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">EV Care Connect</h1>
-          <p className="text-muted-foreground mt-2">Đăng nhập vào tài khoản của bạn</p>
         </div>
-
-        {/* Login Form */}
-        <Card className="shadow-card gradient-card border-0">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Đăng nhập</CardTitle>
-            <CardDescription className="text-center">
-              Nhập thông tin đăng nhập để tiếp tục
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  rules={{
-                    required: "Email là bắt buộc",
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: "Email không hợp lệ",
-                    },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="Nhập email của bạn"
-                          {...field}
-                          className="transition-smooth"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        <motion.div
+          initial={{ opacity: 0, y: -40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.23, 1, 0.32, 1] }}
+          className="rounded-2xl bg-white/80 shadow-2xl backdrop-blur-lg border border-gray-100 px-8 py-10 space-y-6"
+        >
+          <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">Sign in with email</h2>
+          <p className="text-center text-gray-500 text-sm mb-4">Delivering professional EV care with the trust and reliability you deserve.</p>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                rules={{
+                  required: "Email là bắt buộc",
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Email không hợp lệ",
+                  },
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700">Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="Email"
+                        {...field}
+                        className="rounded-lg bg-gray-100/80 border border-gray-200 px-4 py-3 text-base"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
                 <FormField
                   control={form.control}
@@ -170,13 +173,11 @@ const Login = () => {
                 </Link>
               </p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Footer */}
-        <div className="text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 EV Care Connect. Tất cả quyền được bảo lưu.</p>
-        </div>
+          {/* Footer */}
+          <div className="text-center text-sm text-muted-foreground mt-6">
+            <p>&copy; 2024 EV Care Connect. Tất cả quyền được bảo lưu.</p>
+          </div>
+  </motion.div>
       </div>
     </div>
   );

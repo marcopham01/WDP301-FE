@@ -1,3 +1,28 @@
+/* Animation cho logo/brand trên trang Login */
+.animate-logo-pop {
+  animation: logo-pop 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes logo-pop {
+  0% {
+    transform: scale(0.5) rotate(-20deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1) rotate(8deg);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(0.95) rotate(-4deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.animate-logo-spin {
+  animation: logo-spin 1.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
 #root {
   max-width: 1280px;
   margin: 0 auto;

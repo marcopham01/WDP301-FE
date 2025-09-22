@@ -1,4 +1,4 @@
-import { Button } from "../components/ui/button";
+import SlideArrowButton from "./ui/slide-arrow-button";
 import { Card } from "../components/ui/card";
 import { CheckCircle, Zap, Shield, Clock, Users } from "lucide-react";
 import heroImage from "../assets/hero-ev-service.jpg";
@@ -68,13 +68,12 @@ const HeroSection = () => {
 
             {/* CTA Button */}
             <div className="flex justify-center sm:justify-start">
-              <Button 
-                size="lg" 
-                className="gradient-primary text-primary-foreground shadow-glow px-8"
+              <SlideArrowButton
+                text="Đặt lịch bảo dưỡng"
+                primaryColor="linear-gradient(90deg, #43ea6d 0%, #1abc9c 100%)"
+                className="text-lg px-0 py-0"
                 onClick={() => window.location.href = '/login'}
-              >
-                Đặt lịch bảo dưỡng
-              </Button>
+              />
             </div>
           </div>
 

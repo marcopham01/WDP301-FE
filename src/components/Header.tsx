@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "../components/ui/button";
+import SwipeButton from "../components/ui/swipe-button";
 import { Car, Zap, Menu, X } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -48,10 +49,21 @@ const Header = () => {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" onClick={() => navigate('/login')}>Đăng nhập</Button>
-            <Button className="gradient-primary text-primary-foreground" onClick={() => navigate('/register')}>
-              Đăng ký
-            </Button>
+            <SwipeButton
+              firstText="Đăng nhập"
+              secondText="Đăng ký"
+              firstClass="bg-ev-green text-white"
+              secondClass="bg-black text-white"
+              onClick={e => {
+                // Nếu đang hover thì chuyển sang đăng ký, ngược lại đăng nhập
+                // Sử dụng event để xác định trạng thái hover
+                if (e.currentTarget.matches(':hover')) {
+                  navigate('/register');
+                } else {
+                  navigate('/login');
+                }
+              }}
+            />
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -82,10 +94,21 @@ const Header = () => {
               </a>
             ))}
             <div className="flex flex-col space-y-2 px-4 pt-2">
-              <Button variant="ghost" className="justify-start" onClick={() => { setIsMenuOpen(false); navigate('/login'); }}>Đăng nhập</Button>
-              <Button className="gradient-primary text-primary-foreground justify-start" onClick={() => { setIsMenuOpen(false); navigate('/register'); }}>
-                Đăng ký
-              </Button>
+              <SwipeButton
+                firstText="Đăng nhập"
+                secondText="Đăng ký"
+                firstClass="bg-ev-green text-white"
+                secondClass="bg-black text-white"
+                className="justify-start"
+                onClick={e => {
+                  setIsMenuOpen(false);
+                  if (e.currentTarget.matches(':hover')) {
+                    navigate('/register');
+                  } else {
+                    navigate('/login');
+                  }
+                }}
+              />
             </div>
           </nav>
         </div>
