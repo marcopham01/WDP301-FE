@@ -1,3 +1,19 @@
+/* Toast border animation */
+.animate-toast-border {
+  border-width: 2px;
+  border-style: solid;
+  border-image: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%) 1;
+  animation: toast-border-move 2s linear infinite;
+}
+
+@keyframes toast-border-move {
+  0% {
+    border-image-source: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%);
+  }
+  100% {
+    border-image-source: linear-gradient(90deg, #60a5fa 0%, #3b82f6 50%, #60a5fa 100%);
+  }
+}
 /* Animation cho logo/brand trên trang Login */
 .animate-logo-pop {
   animation: logo-pop 0.7s cubic-bezier(0.23, 1, 0.32, 1);

@@ -8,13 +8,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Checkbox } from "../components/ui/checkbox";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { FcAutomotive } from "react-icons/fc";
+import { toast } from "../hooks/use-toast";
 
 
 interface RegisterFormData {
-  firstName: string;
-  lastName: string;
+  username: string;
+  fullName: string;
   email: string;
-  phone: string;
+  phoneNumber: string;
   password: string;
   confirmPassword: string;
   agreeToTerms: boolean;
@@ -28,10 +29,10 @@ const Register = () => {
 
   const form = useForm<RegisterFormData>({
     defaultValues: {
-      firstName: "",
-      lastName: "",
+      username: "",
+      fullName: "",
       email: "",
-      phone: "",
+      phoneNumber: "",
       password: "",
       confirmPassword: "",
       agreeToTerms: false,
@@ -41,14 +42,36 @@ const Register = () => {
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual registration logic
-      console.log("Register data:", data);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Redirect to login after successful registration
-      navigate("/login");
+      const response = await fetch("/api/users/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password,
+          email: data.email,
+          phoneNumber: data.phoneNumber,
+          fullName: data.fullName,
+        }),
+      });
+      if (response.ok) {
+        toast({
+          title: "Đăng ký thành công!",
+          description: "Bạn có thể đăng nhập ngay để sử dụng dịch vụ.",
+        });
+        setTimeout(() => {
+          navigate("/login");
+        }, 1500);
+      } else {
+        toast({
+          title: "Đăng ký thất bại",
+          description: "Vui lòng kiểm tra lại thông tin hoặc thử lại sau.",
+        });
+      }
     } catch (error) {
       console.error("Registration error:", error);
+      alert("Có lỗi xảy ra khi đăng ký");
     } finally {
       setIsLoading(false);
     }
@@ -88,56 +111,54 @@ const Register = () => {
           <p className="text-center text-gray-500 text-sm mb-4">Join us for professional EV care services</p>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  rules={{
-                    required: "Tên là bắt buộc",
-                    minLength: {
-                      value: 2,
-                      message: "Tên phải có ít nhất 2 ký tự",
-                    },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tên</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Nhập tên"
-                          {...field}
-                          className="transition-smooth"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  rules={{
-                    required: "Họ là bắt buộc",
-                    minLength: {
-                      value: 2,
-                      message: "Họ phải có ít nhất 2 ký tự",
-                    },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Họ</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Nhập họ"
-                          {...field}
-                          className="transition-smooth"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="username"
+                rules={{
+                  required: "Username là bắt buộc",
+                  minLength: {
+                    value: 4,
+                    message: "Username phải có ít nhất 4 ký tự",
+                  },
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Nhập username"
+                        {...field}
+                        className="transition-smooth"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fullName"
+                rules={{
+                  required: "Họ và tên là bắt buộc",
+                  minLength: {
+                    value: 4,
+                    message: "Họ và tên phải có ít nhất 4 ký tự",
+                  },
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Họ và tên</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Nhập họ và tên"
+                        {...field}
+                        className="transition-smooth"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="email"
@@ -165,13 +186,13 @@ const Register = () => {
               />
               <FormField
                 control={form.control}
-                name="phone"
+                name="phoneNumber"
                 rules={{
                   required: "Số điện thoại là bắt buộc",
-                    pattern: {
-                      value: /^\d{10,11}$/,
-                      message: "Số điện thoại không hợp lệ",
-                    },
+                  pattern: {
+                    value: /^\d{10,11}$/,
+                    message: "Số điện thoại không hợp lệ",
+                  },
                 }}
                 render={({ field }) => (
                   <FormItem>

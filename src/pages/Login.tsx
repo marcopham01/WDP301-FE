@@ -7,9 +7,10 @@ import { Input } from "../components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { FcAutomotive } from "react-icons/fc";
+import { toast } from "../hooks/use-toast";
 
 interface LoginFormData {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -20,7 +21,7 @@ const Login = () => {
 
   const form = useForm<LoginFormData>({
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -28,14 +29,36 @@ const Login = () => {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual login logic
-      console.log("Login data:", data);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Redirect to dashboard after successful login
-      navigate("/customer");
+      const response = await fetch("/api/users/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password,
+        }),
+      });
+      if (response.ok) {
+        toast({
+          title: "Đăng nhập thành công!",
+          description: "Chào mừng bạn quay trở lại.",
+        });
+        setTimeout(() => {
+          navigate("/customer");
+        }, 500);
+      } else {
+        toast({
+          title: "Đăng nhập thất bại",
+          description: "Sai username hoặc password.",
+        });
+      }
     } catch (error) {
       console.error("Login error:", error);
+      toast({
+        title: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại sau.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -78,21 +101,21 @@ const Login = () => {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="username"
                 rules={{
-                  required: "Email là bắt buộc",
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Email không hợp lệ",
+                  required: "Username là bắt buộc",
+                  minLength: {
+                    value: 4,
+                    message: "Username phải có ít nhất 4 ký tự",
                   },
                 }}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700">Email</FormLabel>
+                    <FormLabel className="text-gray-700">Username</FormLabel>
                     <FormControl>
                       <Input
-                        type="email"
-                        placeholder="Email"
+                        type="text"
+                        placeholder="Username"
                         {...field}
                         className="rounded-lg bg-gray-100/80 border border-gray-200 px-4 py-3 text-base"
                       />

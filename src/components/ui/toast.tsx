@@ -14,7 +14,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
+      "fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-4 w-full max-w-md px-4",
       className,
     )}
     {...props}
@@ -41,7 +41,17 @@ const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> & VariantProps<typeof toastVariants>
 >(({ className, variant, ...props }, ref) => {
-  return <ToastPrimitives.Root ref={ref} className={cn(toastVariants({ variant }), className)} {...props} />;
+  return (
+    <ToastPrimitives.Root ref={ref} className={cn("relative", toastVariants({ variant }), className)} {...props}>
+      {/* Animated border */}
+      <span className="absolute inset-0 pointer-events-none z-10">
+        <span className="block w-full h-full rounded-xl border-2 border-transparent animate-toast-border bg-gradient-to-r from-blue-400 via-blue-200 to-blue-400 bg-[length:200%_100%] bg-clip-border" style={{borderImage: 'linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%) 1'}}></span>
+      </span>
+      <div className="relative z-20">
+        {props.children}
+      </div>
+    </ToastPrimitives.Root>
+  );
 });
 Toast.displayName = ToastPrimitives.Root.displayName;
 
