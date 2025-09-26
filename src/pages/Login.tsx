@@ -1,10 +1,19 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { auth } from "@/firebase/firebase";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "../components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../components/ui/form";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { FcAutomotive } from "react-icons/fc";
 import { toast } from "../hooks/use-toast";
@@ -25,6 +34,19 @@ const Login = () => {
       password: "",
     },
   });
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      navigate("/customer");
+    } catch (error) {
+      console.error("Google login error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -69,7 +91,7 @@ const Login = () => {
       {/* Hiệu ứng nền mây */}
       <div className="absolute inset-0 pointer-events-none select-none">
         <div className="absolute w-full h-full bg-gradient-to-br from-blue-100 via-white to-blue-200 opacity-80" />
-  <div className="absolute inset-0 bg-[url('/src/assets/bg-login.jpg')] bg-cover bg-center opacity-30" />
+        <div className="absolute inset-0 bg-[url('/src/assets/bg-login.jpg')] bg-cover bg-center opacity-30" />
         {/* Có thể thay bằng hình mây hoặc svg động nếu muốn */}
       </div>
       {/* Nút back home */}
@@ -77,8 +99,7 @@ const Login = () => {
         <Button
           variant="outline"
           className="flex items-center gap-2 shadow-lg px-4 py-2 rounded-full bg-white/90 hover:bg-white border-gray-200 hover:border-primary transition-all duration-300 hover:shadow-xl backdrop-blur-sm"
-          onClick={() => navigate("/")}
-        >
+          onClick={() => navigate("/")}>
           <ArrowLeft className="h-4 w-4" />
           <span className="font-medium">Trang chủ</span>
         </Button>
@@ -93,10 +114,14 @@ const Login = () => {
           initial={{ opacity: 0, y: -40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.23, 1, 0.32, 1] }}
-          className="rounded-2xl bg-white/80 shadow-2xl backdrop-blur-lg border border-gray-100 px-8 py-10 space-y-6"
-        >
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">Sign in with email</h2>
-          <p className="text-center text-gray-500 text-sm mb-4">Delivering professional EV care with the trust and reliability you deserve.</p>
+          className="rounded-2xl bg-white/80 shadow-2xl backdrop-blur-lg border border-gray-100 px-8 py-10 space-y-6">
+          <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
+            Sign in with email
+          </h2>
+          <p className="text-center text-gray-500 text-sm mb-4">
+            Delivering professional EV care with the trust and reliability you
+            deserve.
+          </p>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -125,82 +150,96 @@ const Login = () => {
                 )}
               />
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  rules={{
-                    required: "Mật khẩu là bắt buộc",
-                    minLength: {
-                      value: 6,
-                      message: "Mật khẩu phải có ít nhất 6 ký tự",
-                    },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Mật khẩu</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Nhập mật khẩu"
-                            {...field}
-                            className="transition-smooth pr-10"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <Eye className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </Button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="password"
+                rules={{
+                  required: "Mật khẩu là bắt buộc",
+                  minLength: {
+                    value: 6,
+                    message: "Mật khẩu phải có ít nhất 6 ký tự",
+                  },
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mật khẩu</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Nhập mật khẩu"
+                          {...field}
+                          className="transition-smooth pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}>
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <div className="flex items-center justify-between">
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Quên mật khẩu?
-                  </Link>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full gradient-primary shadow-glow transition-smooth"
-                  disabled={isLoading}
-                  onClick={() => {
-                    // This onClick is redundant because form submission handles navigation
-                  }}
-                >
-                  {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
-                </Button>
-              </form>
-            </Form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Chưa có tài khoản?{" "}
-                <Link to="/register" className="text-primary hover:underline font-medium">
-                  Đăng ký ngay
+              <div className="flex items-center justify-between">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-primary hover:underline">
+                  Quên mật khẩu?
                 </Link>
-              </p>
-            </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full gradient-primary shadow-glow transition-smooth"
+                disabled={isLoading}
+                onClick={() => {
+                  // This onClick is redundant because form submission handles navigation
+                }}>
+                {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+              </Button>
+            </form>
+          </Form>
+
+          <div className="mt-6 text-center">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full mb-4 flex items-center justify-center gap-2"
+              disabled={isLoading}
+              onClick={handleGoogleLogin}>
+              <img
+                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                alt="Google"
+                className="h-5 w-5"
+              />
+              <span>
+                {isLoading ? "Đang xử lý..." : "Đăng nhập với Google"}
+              </span>
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Chưa có tài khoản?{" "}
+              <Link
+                to="/register"
+                className="text-primary hover:underline font-medium">
+                Đăng ký ngay
+              </Link>
+            </p>
+          </div>
           {/* Footer */}
           <div className="text-center text-sm text-muted-foreground mt-6">
             <p>&copy; 2024 EV Care Connect. Tất cả quyền được bảo lưu.</p>
           </div>
-  </motion.div>
+        </motion.div>
       </div>
     </div>
   );
