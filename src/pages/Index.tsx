@@ -1,9 +1,9 @@
-import Header from "../components/Header";
-import HeroSection from "../components/HeroSection";
-import FeaturesSection from "../components/FeaturesSection";
+import Header from "../components/MainLayout/Header";
+import HeroSection from "../components/MainLayout/HeroSection";
+import FeaturesSection from "../components/HomePage/FeaturesSection";
 
-import FeedbackSection from "../components/FeedbackSection";
-import Footer from "../components/Footer";
+import FeedbackSection from "../components/HomePage/FeedbackSection";
+import Footer from "../components/MainLayout/Footer";
 import { useScrollReveal } from "../lib/useScrollReveal";
 
 const Index = () => {
