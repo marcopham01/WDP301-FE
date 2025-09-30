@@ -22,18 +22,17 @@ import {
   FileText,
 } from "lucide-react";
 
-// interface User {
-//   name: string;
-//   role: string;
-// }
+interface User {
+  name: string;
+  role: string;
+}
 
-// interface AdminDashboardProps {
-//   user: User;
-//   onLogout: () => void;
-// }
-// { user, onLogout }: AdminDashboardProps
+interface AdminDashboardProps {
+  user: User;
+  onLogout: () => void;
+}
 
-export const AdminDashboard = () => {
+export const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
   // Mock data for admin dashboard
   const overviewStats = [
     {
@@ -126,32 +125,34 @@ export const AdminDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-xl font-semibold">
-                   Chào mừng trở lại,{/* {user.name} */}
+                  Chào mừng trở lại, {user.name}
                 </h1>
                 <p className="text-sm text-muted-foreground">
                   Theo dõi hoạt động trung tâm dịch vụ EV
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive rounded-full text-xs text-white flex items-center justify-center">
-                    3
-                  </span>
-                </Button>
+                <div className="relative">
+                  <Button variant="ghost" size="icon">
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive rounded-full text-xs text-white flex items-center justify-center">
+                      3
+                    </span>
+                  </Button>
+                </div>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
                     A
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">{/* {user.name} */}</p>
+                    <p className="font-medium">{user.name}</p>
                     <p className="text-sm text-muted-foreground capitalize">
-                      {/* {user.role} */}
+                      {user.role}
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" >
-                  Đăng xuất 
+                <Button variant="outline" onClick={onLogout}>
+                  Đăng xuất
                 </Button>
               </div>
             </div>

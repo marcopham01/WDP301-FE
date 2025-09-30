@@ -24,7 +24,12 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route
             path="/dashboard/admin"
-            element={<AdminDashboard />}
+            element={
+              <AdminDashboard
+                user={{ name: "Admin", role: "admin" }}
+                onLogout={() => {}}
+              />
+            }
           />
         </Routes>
       </BrowserRouter>
