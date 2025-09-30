@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { AdminDashboard } from "./pages/dashboard/admin/AdminDashboard";
+import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,16 @@ const App = () => (
               />
             }
           />
+          <Route
+            path="/dashboard/technician"
+            element={
+              <TechnicianDashboard
+                user={{ name: "Technician", role: "technician" }}
+                onLogout={() => {}}
+              />
+            }
+          />
+          "
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
