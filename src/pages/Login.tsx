@@ -39,8 +39,26 @@ const Login = () => {
     setIsLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      navigate("/customer");
+      const result = await signInWithPopup(auth, provider);
+      // Gửi thông tin Google về BE để lấy accessToken
+      const googleToken = await result.user.getIdToken();
+      const response = await fetch("/api/users/loginfirebase", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ idToken: googleToken }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem("accessToken", data.accessToken);
+        navigate("/customer");
+      } else {
+        toast({
+          title: "Đăng nhập Google thất bại",
+          description: "Vui lòng thử lại.",
+        });
+      }
     } catch (error) {
       console.error("Google login error:", error);
     } finally {
@@ -62,6 +80,8 @@ const Login = () => {
         }),
       });
       if (response.ok) {
+        const resData = await response.json();
+        localStorage.setItem("accessToken", resData.accessToken); // Lưu token vào localStorage
         toast({
           title: "Đăng nhập thành công!",
           description: "Chào mừng bạn quay trở lại.",

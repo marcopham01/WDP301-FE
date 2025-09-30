@@ -7,6 +7,7 @@ import Index from "././pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import { AdminDashboard } from "./pages/dashboard/admin/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,15 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route
+            path="/dashboard/admin"
+            element={
+              <AdminDashboard
+                user={{ name: "Admin", role: "admin" }}
+                onLogout={() => {}}
+              />
+            }
+          />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
