@@ -11,6 +11,8 @@ import { AdminDashboard } from "./pages/dashboard/admin/AdminDashboard";
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import ProfilePage from "./pages/customer/ProfilePage";
 import AddVehiclePage from "./pages/customer/AddVehiclePage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,8 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/dashboard/admin"
             element={
