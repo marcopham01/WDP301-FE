@@ -34,7 +34,7 @@ const Header = () => {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     },
-    { label: "Dịch vụ", href: "/services" },
+    { label: "Đặt lịch", href: "/booking" },
     { label: "Về chúng tôi", href: "/about" },
     { label: "Liên hệ", href: "/contact" },
   ];
