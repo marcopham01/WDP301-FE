@@ -1,7 +1,7 @@
-import SlideArrowButton from "./ui/slide-arrow-button";
-import { Card } from "../components/ui/card";
+import SlideArrowButton from "@/components/ui/slide-arrow-button";
+import { Card } from "@/components/ui/card";
 import { CheckCircle, Zap, Shield, Clock, Users } from "lucide-react";
-import heroImage from "../assets/hero-ev-service.jpg";
+import heroImage from "@/assets/hero-ev-service.jpg";
 
 const HeroSection = () => {
   const features = [

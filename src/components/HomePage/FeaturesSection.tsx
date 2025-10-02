@@ -1,4 +1,4 @@
-import { Card } from "../components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Calendar, Bell, CreditCard, BarChart3, MessageSquare, Cog, Battery, Zap } from "lucide-react";
 
 const FeaturesSection = () => {

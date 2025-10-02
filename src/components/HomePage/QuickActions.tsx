@@ -1,5 +1,5 @@
-import { Card } from "../components/ui/card";
-import { Button } from "../components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Calendar, MessageSquare, CreditCard, Plus } from "lucide-react";
 
 const QuickActions = () => {

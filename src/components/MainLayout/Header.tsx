@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Button } from "../components/ui/button";
-import SwipeButton from "../components/ui/swipe-button";
+import { Button } from "@/components/ui/button";
+import SwipeButton from "@/components/ui/swipe-button";
 import { Car, Zap, Menu, X } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
 const Header = () => {
@@ -34,7 +34,7 @@ const Header = () => {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     },
-    { label: "Dịch vụ", href: "/services" },
+    { label: "Đặt lịch", href: "/booking" },
     { label: "Về chúng tôi", href: "/about" },
     { label: "Liên hệ", href: "/contact" },
   ];
