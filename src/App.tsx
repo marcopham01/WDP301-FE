@@ -13,6 +13,7 @@ import ProfilePage from "./pages/customer/ProfilePage";
 import AddVehiclePage from "./pages/customer/AddVehiclePage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import BookingPage from "./pages/BookingPage";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/customer" element={<CustomerDashboard />} />
           <Route path="/customer/profile" element={<ProfilePage />} />
           <Route path="/customer/vehicles/add" element={<AddVehiclePage />} />
+          <Route path="/customer/booking" element={<BookingPage />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

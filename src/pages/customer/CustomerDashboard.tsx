@@ -91,7 +91,7 @@ const CustomerDashboard = () => {
           <Button 
             variant="outline" 
             className="h-20 flex-col gap-2"
-            onClick={() => navigate('/booking')}
+            onClick={() => navigate('/customer/booking')}
           >
             <Calendar className="h-6 w-6" />
             Đặt lịch bảo dưỡng
