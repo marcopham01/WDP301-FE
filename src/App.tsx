@@ -13,7 +13,7 @@ import ProfilePage from "./pages/customer/ProfilePage";
 import AddVehiclePage from "./pages/customer/AddVehiclePage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import BookingPage from "./pages/BookingPage";
+import BookingPage from "./pages/customer/BookingPage";
 
 const queryClient = new QueryClient();
 
