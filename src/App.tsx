@@ -8,6 +8,9 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { AdminDashboard } from "./pages/dashboard/admin/AdminDashboard";
+import CustomerDashboard from "./pages/customer/CustomerDashboard";
+import ProfilePage from "./pages/customer/ProfilePage";
+import AddVehiclePage from "./pages/customer/AddVehiclePage";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +34,9 @@ const App = () => (
               />
             }
           />
+          <Route path="/customer" element={<CustomerDashboard />} />
+          <Route path="/customer/profile" element={<ProfilePage />} />
+          <Route path="/customer/vehicles/add" element={<AddVehiclePage />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

@@ -1,3 +1,26 @@
+// Lấy profile user hiện tại
+export async function getProfileApi() {
+  const token = localStorage.getItem("accessToken");
+  const response = await fetch("/api/users/getprofile", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token ? `Bearer ${token}` : undefined,
+    },
+  });
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  return {
+    ok: response.ok,
+    status: response.status,
+    data,
+    message: data?.message || data?.error || undefined,
+  };
+}
 export interface LoginPayload {
   username: string;
   password: string;
