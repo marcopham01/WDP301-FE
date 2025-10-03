@@ -12,7 +12,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       return;
     }
-    fetch("/api/users/getProfileUser", {
+    fetch("/api/users/getProfile", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (res) => {
