@@ -52,7 +52,7 @@ const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
       },
       active: location.pathname === "/",
     },
-    { label: "Đặt lịch", href: "/booking", active: location.pathname.startsWith("/booking") },
+    { label: "Đặt lịch", href: "/customer/booking", active: location.pathname.startsWith("/booking") },
     { label: "Về chúng tôi", href: "/about", active: location.pathname.startsWith("/about") },
     { label: "Liên hệ", href: "/contact", active: location.pathname.startsWith("/contact") },
   ];
@@ -99,7 +99,10 @@ const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
             {user && showLogout ? (
-              <Button className="bg-ev-green text-white px-6" onClick={onLogout}>Đăng xuất</Button>
+              <>
+                <span className="font-medium text-ev-green mr-2">{user.fullName || user.username || user.email}</span>
+                <Button className="bg-ev-green text-white px-6" onClick={onLogout}>Đăng xuất</Button>
+              </>
             ) : (
               <SwipeButton
                 firstText="Đăng nhập"
@@ -156,7 +159,10 @@ const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
             ))}
             <div className="flex flex-col space-y-2 px-4 pt-2">
               {user && showLogout ? (
-                <Button className="bg-ev-green text-white w-full" onClick={() => { setIsMenuOpen(false); onLogout && onLogout(); }}>Đăng xuất</Button>
+                <>
+                  <span className="font-medium text-ev-green mb-1">{user.fullName || user.username || user.email}</span>
+                  <Button className="bg-ev-green text-white w-full" onClick={() => { setIsMenuOpen(false); onLogout?.(); }}>Đăng xuất</Button>
+                </>
               ) : (
                 <SwipeButton
                   firstText="Đăng nhập"
