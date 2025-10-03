@@ -3,13 +3,29 @@ import { Button } from "@/components/ui/button";
 import SwipeButton from "@/components/ui/swipe-button";
 import { Car, Zap, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext/useAuth";
 
-const Header = () => {
+interface NavItem {
+  label: string;
+  href: string;
+  active?: boolean;
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+}
+
+interface HeaderProps {
+  navItems?: NavItem[];
+  showLogout?: boolean;
+  onLogout?: () => void;
+}
+
+const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
   const lastScrollY = useRef(window.scrollY);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,19 +41,22 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navItems = [
+  // Nếu không truyền navItems, dùng mặc định (chưa đăng nhập)
+  const defaultNavItems: NavItem[] = [
     {
       label: "Trang chủ",
       href: "/",
       onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
         window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      },
+      active: location.pathname === "/",
     },
-    { label: "Đặt lịch", href: "/booking" },
-    { label: "Về chúng tôi", href: "/about" },
-    { label: "Liên hệ", href: "/contact" },
+    { label: "Đặt lịch", href: "/booking", active: location.pathname.startsWith("/booking") },
+    { label: "Về chúng tôi", href: "/about", active: location.pathname.startsWith("/about") },
+    { label: "Liên hệ", href: "/contact", active: location.pathname.startsWith("/contact") },
   ];
+  const menuItems = navItems || defaultNavItems;
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b transition-transform duration-500 ${showHeader ? "translate-y-0" : "-translate-y-full"}`}>
@@ -59,12 +78,18 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            {navItems.map((item) => (
+            {menuItems.map((item) => (
               <a
                 key={item.label}
                 href={item.href}
-                className="text-foreground hover:text-primary transition-smooth"
-                onClick={item.onClick}
+                className={cn(
+                  "text-foreground hover:text-primary transition-smooth",
+                  item.active && "font-semibold text-primary"
+                )}
+                onClick={item.onClick || ((e) => {
+                  e.preventDefault();
+                  navigate(item.href);
+                })}
               >
                 {item.label}
               </a>
@@ -73,21 +98,23 @@ const Header = () => {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            <SwipeButton
-              firstText="Đăng nhập"
-              secondText="Đăng ký"
-              firstClass="bg-ev-green text-white"
-              secondClass="bg-black text-white"
-              onClick={e => {
-                // Nếu đang hover thì chuyển sang đăng ký, ngược lại đăng nhập
-                // Sử dụng event để xác định trạng thái hover
-                if (e.currentTarget.matches(':hover')) {
-                  navigate('/register');
-                } else {
-                  navigate('/login');
-                }
-              }}
-            />
+            {user && showLogout ? (
+              <Button className="bg-ev-green text-white px-6" onClick={onLogout}>Đăng xuất</Button>
+            ) : (
+              <SwipeButton
+                firstText="Đăng nhập"
+                secondText="Đăng ký"
+                firstClass="bg-ev-green text-white"
+                secondClass="bg-black text-white"
+                onClick={e => {
+                  if (e.currentTarget.matches(':hover')) {
+                    navigate('/register');
+                  } else {
+                    navigate('/login');
+                  }
+                }}
+              />
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -107,35 +134,46 @@ const Header = () => {
           isMenuOpen ? "max-h-96 pb-4" : "max-h-0"
         )}>
           <nav className="flex flex-col space-y-3 pt-4">
-            {navItems.map((item) => (
+            {menuItems.map((item) => (
               <a
                 key={item.label}
                 href={item.href}
-                className="text-foreground hover:text-primary transition-smooth px-4 py-2"
+                className={cn(
+                  "text-foreground hover:text-primary transition-smooth px-4 py-2",
+                  item.active && "font-semibold text-primary"
+                )}
                 onClick={e => {
                   setIsMenuOpen(false);
-                  item.onClick?.(e);
+                  if (item.onClick) item.onClick(e);
+                  else {
+                    e.preventDefault();
+                    navigate(item.href);
+                  }
                 }}
               >
                 {item.label}
               </a>
             ))}
             <div className="flex flex-col space-y-2 px-4 pt-2">
-              <SwipeButton
-                firstText="Đăng nhập"
-                secondText="Đăng ký"
-                firstClass="bg-ev-green text-white"
-                secondClass="bg-black text-white"
-                className="justify-start"
-                onClick={e => {
-                  setIsMenuOpen(false);
-                  if (e.currentTarget.matches(':hover')) {
-                    navigate('/register');
-                  } else {
-                    navigate('/login');
-                  }
-                }}
-              />
+              {user && showLogout ? (
+                <Button className="bg-ev-green text-white w-full" onClick={() => { setIsMenuOpen(false); onLogout && onLogout(); }}>Đăng xuất</Button>
+              ) : (
+                <SwipeButton
+                  firstText="Đăng nhập"
+                  secondText="Đăng ký"
+                  firstClass="bg-ev-green text-white"
+                  secondClass="bg-black text-white"
+                  className="justify-start"
+                  onClick={e => {
+                    setIsMenuOpen(false);
+                    if (e.currentTarget.matches(':hover')) {
+                      navigate('/register');
+                    } else {
+                      navigate('/login');
+                    }
+                  }}
+                />
+              )}
             </div>
           </nav>
         </div>

@@ -4,6 +4,7 @@ import { auth } from "@/firebase/firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -28,6 +29,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const form = useForm<LoginFormData>({
     defaultValues: {
@@ -77,6 +79,20 @@ const Login = () => {
       if (response.ok) {
         const resData = await response.json();
         localStorage.setItem("accessToken", resData.accessToken); // Lưu token vào localStorage
+        // Lấy profile user ngay sau khi login
+        const profileRes = await fetch("/api/users/getProfile", {
+          headers: { Authorization: `Bearer ${resData.accessToken}` },
+        });
+        if (profileRes.ok) {
+          const data = await profileRes.json();
+          setUser({
+            id: data.user._id || data.user.id,
+            username: data.user.username,
+            email: data.user.email,
+            fullName: data.user.fullName,
+            role: data.user.role,
+          });
+        }
         toast({
           title: "Đăng nhập thành công!",
           description: "Chào mừng bạn quay trở lại.",

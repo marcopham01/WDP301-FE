@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { CalendarIcon, Clock, MapPin, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
-// import Header from "@/components/MainLayout/Header";
+import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 
 export default function BookingPage() {
@@ -65,6 +65,13 @@ export default function BookingPage() {
     }, 1200);
   };
 
+  // Đăng xuất (giả lập)
+  const handleLogout = () => {
+    // Xoá token, clear user, ...
+    localStorage.removeItem('accessToken');
+    navigate('/login');
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
@@ -72,9 +79,19 @@ export default function BookingPage() {
       transition={{ duration: 0.5, ease: 'easeOut' }}
       className="min-h-screen flex flex-col"
     >
-  {/* <Header /> */}
-  <main className="flex-1 py-8">
-        <div className="container max-w-4xl">
+      <Header
+        navItems={[
+          { label: 'Dashboard', href: '/customer' },
+          { label: 'Xe của tôi', href: '/customer/vehicles' },
+          { label: 'Đặt lịch', href: '/customer/booking', active: true },
+          { label: 'Lịch sử', href: '/customer/history' },
+          { label: 'Thông báo', href: '/customer/notifications' },
+        ]}
+        onLogout={handleLogout}
+        showLogout
+      />
+      <main className="flex-1 py-8">
+        <div className="container max-w-4xl pt-20">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">Đặt lịch bảo dưỡng</h1>
             <p className="text-muted-foreground">Chọn xe, dịch vụ và thời gian phù hợp</p>
