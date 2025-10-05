@@ -21,6 +21,8 @@ import {
   Calendar,
   FileText,
 } from "lucide-react";
+import { DashboardLayout } from "@/components/dashboard/mainlayout/DashboardLayout";
+import { DashboardHeader } from "@/components/dashboard/mainlayout/DashboardHeader";
 
 interface User {
   name: string;
@@ -127,374 +129,325 @@ export const TechnicianDashboard = ({
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <TechnicianSidebar />
+      <DashboardLayout
+        sidebar={<TechnicianSidebar />}
+        header={
+          <DashboardHeader
+            user={user}
+            onLogout={onLogout}
+            notificationCount={0}
+          />
+        }>
+        {/* Main Content */}
+        <main className="flex-1 p-6 bg-background">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold mb-2">Dashboard Kỹ thuật viên</h2>
+            <p className="text-muted-foreground">
+              Quản lý công việc được giao và tiến độ thực hiện
+            </p>
+          </div>
 
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="bg-card border-b border-border/50 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl font-semibold">
-                  Chào mừng trở lại, {user.name}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Quản lý công việc bảo dưỡng và sửa chữa xe điện
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon">
-                  <Bell className="h-5 w-5" />
-                </Button>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-gradient-card border-0 shadow-soft">
+              <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
-                    K
+                  <div className="p-2 rounded-lg bg-warning/10">
+                    <Clock className="h-5 w-5 text-warning" />
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-sm text-muted-foreground capitalize">
-                      {user.role}
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Công việc được giao
+                    </p>
+                    <p className="text-2xl font-bold">{assignedTasks.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-card border-0 shadow-soft">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Wrench className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Đang thực hiện
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {inProgressTasks.length}
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" onClick={onLogout}>
-                  Đăng xuất
-                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-card border-0 shadow-soft">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-success/10">
+                    <CheckCircle className="h-5 w-5 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Hoàn thành tuần này
+                    </p>
+                    <p className="text-2xl font-bold">8</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-card border-0 shadow-soft">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-electric/10">
+                    <Battery className="h-5 w-5 text-electric" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Đánh giá trung bình
+                    </p>
+                    <p className="text-2xl font-bold">4.8</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Tabs */}
+          <Tabs defaultValue="assigned" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3">
+              <TabsTrigger value="assigned" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Công việc được giao
+              </TabsTrigger>
+              <TabsTrigger value="progress" className="flex items-center gap-2">
+                <Wrench className="h-4 w-4" />
+                Đang thực hiện
+              </TabsTrigger>
+              <TabsTrigger
+                value="completed"
+                className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Đã hoàn thành
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Assigned Tasks */}
+            <TabsContent value="assigned" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">
+                  Công việc được giao ({assignedTasks.length})
+                </h3>
               </div>
-            </div>
-          </header>
 
-          {/* Main Content */}
-          <main className="flex-1 p-6 bg-background">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold mb-2">
-                Dashboard Kỹ thuật viên
-              </h2>
-              <p className="text-muted-foreground">
-                Quản lý công việc được giao và tiến độ thực hiện
-              </p>
-            </div>
+              <div className="grid gap-4">
+                {assignedTasks.map((task) => (
+                  <Card
+                    key={task.id}
+                    className="bg-gradient-card border-0 shadow-soft">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-semibold">{task.vehicle}</h4>
+                            <Badge
+                              className={`${getPriorityColor(
+                                task.priority
+                              )} text-white`}>
+                              Ưu tiên {getPriorityText(task.priority)}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Khách hàng: {task.customer}
+                          </p>
+                          <p className="text-sm font-medium mb-3">
+                            {task.service}
+                          </p>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            {task.description}
+                          </p>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <Card className="bg-gradient-card border-0 shadow-soft">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-warning/10">
-                      <Clock className="h-5 w-5 text-warning" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Công việc được giao
-                      </p>
-                      <p className="text-2xl font-bold">
-                        {assignedTasks.length}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-card border-0 shadow-soft">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Wrench className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Đang thực hiện
-                      </p>
-                      <p className="text-2xl font-bold">
-                        {inProgressTasks.length}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-card border-0 shadow-soft">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-success/10">
-                      <CheckCircle className="h-5 w-5 text-success" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Hoàn thành tuần này
-                      </p>
-                      <p className="text-2xl font-bold">8</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-card border-0 shadow-soft">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-electric/10">
-                      <Battery className="h-5 w-5 text-electric" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Đánh giá trung bình
-                      </p>
-                      <p className="text-2xl font-bold">4.8</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Main Tabs */}
-            <Tabs defaultValue="assigned" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3">
-                <TabsTrigger
-                  value="assigned"
-                  className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Công việc được giao
-                </TabsTrigger>
-                <TabsTrigger
-                  value="progress"
-                  className="flex items-center gap-2">
-                  <Wrench className="h-4 w-4" />
-                  Đang thực hiện
-                </TabsTrigger>
-                <TabsTrigger
-                  value="completed"
-                  className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4" />
-                  Đã hoàn thành
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Assigned Tasks */}
-              <TabsContent value="assigned" className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">
-                    Công việc được giao ({assignedTasks.length})
-                  </h3>
-                </div>
-
-                <div className="grid gap-4">
-                  {assignedTasks.map((task) => (
-                    <Card
-                      key={task.id}
-                      className="bg-gradient-card border-0 shadow-soft">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h4 className="font-semibold">{task.vehicle}</h4>
-                              <Badge
-                                className={`${getPriorityColor(
-                                  task.priority
-                                )} text-white`}>
-                                Ưu tiên {getPriorityText(task.priority)}
-                              </Badge>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">Ngày giao</p>
+                              <p className="font-medium">{task.assignedDate}</p>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-1">
-                              Khách hàng: {task.customer}
-                            </p>
-                            <p className="text-sm font-medium mb-3">
-                              {task.service}
-                            </p>
-                            <p className="text-sm text-muted-foreground mb-4">
-                              {task.description}
-                            </p>
-
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <p className="text-muted-foreground">
-                                  Ngày giao
-                                </p>
-                                <p className="font-medium">
-                                  {task.assignedDate}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">
-                                  Thời gian dự kiến
-                                </p>
-                                <p className="font-medium">
-                                  {task.estimatedHours} giờ
-                                </p>
-                              </div>
+                            <div>
+                              <p className="text-muted-foreground">
+                                Thời gian dự kiến
+                              </p>
+                              <p className="font-medium">
+                                {task.estimatedHours} giờ
+                              </p>
                             </div>
                           </div>
                         </div>
+                      </div>
 
-                        <div className="flex gap-2">
-                          <Button className="bg-primary text-primary-foreground">
-                            Bắt đầu công việc
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Xem chi tiết
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
+                      <div className="flex gap-2">
+                        <Button className="bg-primary text-primary-foreground">
+                          Bắt đầu công việc
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          Xem chi tiết
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
 
-              {/* In Progress Tasks */}
-              <TabsContent value="progress" className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">
-                    Đang thực hiện ({inProgressTasks.length})
-                  </h3>
-                </div>
+            {/* In Progress Tasks */}
+            <TabsContent value="progress" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">
+                  Đang thực hiện ({inProgressTasks.length})
+                </h3>
+              </div>
 
-                <div className="grid gap-4">
-                  {inProgressTasks.map((task) => (
-                    <Card
-                      key={task.id}
-                      className="bg-gradient-card border-0 shadow-soft">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <h4 className="font-semibold mb-1">
-                              {task.vehicle}
-                            </h4>
-                            <p className="text-sm text-muted-foreground mb-1">
-                              Khách hàng: {task.customer}
-                            </p>
-                            <p className="text-sm font-medium mb-3">
-                              {task.service}
-                            </p>
-                            <p className="text-sm text-muted-foreground mb-4">
-                              {task.description}
-                            </p>
+              <div className="grid gap-4">
+                {inProgressTasks.map((task) => (
+                  <Card
+                    key={task.id}
+                    className="bg-gradient-card border-0 shadow-soft">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h4 className="font-semibold mb-1">{task.vehicle}</h4>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Khách hàng: {task.customer}
+                          </p>
+                          <p className="text-sm font-medium mb-3">
+                            {task.service}
+                          </p>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            {task.description}
+                          </p>
 
-                            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                              <div>
-                                <p className="text-muted-foreground">Bắt đầu</p>
-                                <p className="font-medium">{task.startTime}</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">
-                                  Dự kiến hoàn thành
-                                </p>
-                                <p className="font-medium">
-                                  {task.estimatedCompletion}
-                                </p>
-                              </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                            <div>
+                              <p className="text-muted-foreground">Bắt đầu</p>
+                              <p className="font-medium">{task.startTime}</p>
                             </div>
-
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Tiến độ</span>
-                                <span>{task.progress}%</span>
-                              </div>
-                              <Progress value={task.progress} className="h-2" />
+                            <div>
+                              <p className="text-muted-foreground">
+                                Dự kiến hoàn thành
+                              </p>
+                              <p className="font-medium">
+                                {task.estimatedCompletion}
+                              </p>
                             </div>
                           </div>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span>Tiến độ</span>
+                              <span>{task.progress}%</span>
+                            </div>
+                            <Progress value={task.progress} className="h-2" />
+                          </div>
                         </div>
+                      </div>
 
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            Cập nhật tiến độ
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Gửi báo cáo
-                          </Button>
-                          <Button
-                            className="bg-success text-success-foreground"
-                            size="sm">
-                            Hoàn thành
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          Cập nhật tiến độ
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          Gửi báo cáo
+                        </Button>
+                        <Button
+                          className="bg-success text-success-foreground"
+                          size="sm">
+                          Hoàn thành
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
 
-              {/* Completed Tasks */}
-              <TabsContent value="completed" className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">
-                    Đã hoàn thành gần đây
-                  </h3>
-                </div>
+            {/* Completed Tasks */}
+            <TabsContent value="completed" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Đã hoàn thành gần đây</h3>
+              </div>
 
-                <div className="grid gap-4">
-                  {completedTasks.map((task) => (
-                    <Card
-                      key={task.id}
-                      className="bg-gradient-card border-0 shadow-soft">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h4 className="font-semibold">{task.vehicle}</h4>
-                              <Badge className="bg-success text-white">
+              <div className="grid gap-4">
+                {completedTasks.map((task) => (
+                  <Card
+                    key={task.id}
+                    className="bg-gradient-card border-0 shadow-soft">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-semibold">{task.vehicle}</h4>
+                            <Badge className="bg-success text-white">
+                              Hoàn thành
+                            </Badge>
+                            <div className="flex items-center gap-1">
+                              {[...Array(task.rating)].map((_, i) => (
+                                <CheckCircle
+                                  key={i}
+                                  className="h-4 w-4 text-warning fill-current"
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Khách hàng: {task.customer}
+                          </p>
+                          <p className="text-sm font-medium mb-3">
+                            {task.service}
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                            <div>
+                              <p className="text-muted-foreground">
                                 Hoàn thành
-                              </Badge>
-                              <div className="flex items-center gap-1">
-                                {[...Array(task.rating)].map((_, i) => (
-                                  <CheckCircle
-                                    key={i}
-                                    className="h-4 w-4 text-warning fill-current"
-                                  />
-                                ))}
-                              </div>
+                              </p>
+                              <p className="font-medium">
+                                {task.completedDate} - {task.completedTime}
+                              </p>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-1">
-                              Khách hàng: {task.customer}
-                            </p>
-                            <p className="text-sm font-medium mb-3">
-                              {task.service}
-                            </p>
-
-                            <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                              <div>
-                                <p className="text-muted-foreground">
-                                  Hoàn thành
-                                </p>
-                                <p className="font-medium">
-                                  {task.completedDate} - {task.completedTime}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">
-                                  Đánh giá
-                                </p>
-                                <p className="font-medium">
-                                  {task.rating}/5 sao
-                                </p>
-                              </div>
+                            <div>
+                              <p className="text-muted-foreground">Đánh giá</p>
+                              <p className="font-medium">{task.rating}/5 sao</p>
                             </div>
-
-                            {task.feedback && (
-                              <div className="p-3 bg-muted/50 rounded-lg">
-                                <p className="text-sm text-muted-foreground mb-1">
-                                  Phản hồi từ khách hàng:
-                                </p>
-                                <p className="text-sm italic">
-                                  "{task.feedback}"
-                                </p>
-                              </div>
-                            )}
                           </div>
-                        </div>
 
-                        <div className="flex gap-2 mt-4">
-                          <Button variant="outline" size="sm">
-                            Xem chi tiết
-                          </Button>
+                          {task.feedback && (
+                            <div className="p-3 bg-muted/50 rounded-lg">
+                              <p className="text-sm text-muted-foreground mb-1">
+                                Phản hồi từ khách hàng:
+                              </p>
+                              <p className="text-sm italic">
+                                "{task.feedback}"
+                              </p>
+                            </div>
+                          )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </main>
-        </div>
-      </div>
+                      </div>
+
+                      <div className="flex gap-2 mt-4">
+                        <Button variant="outline" size="sm">
+                          Xem chi tiết
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </main>
+      </DashboardLayout>
     </SidebarProvider>
   );
 };
