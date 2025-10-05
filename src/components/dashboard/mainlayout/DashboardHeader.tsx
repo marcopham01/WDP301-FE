@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Bell } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardHeaderProps {
   user: { name: string; role: string };
@@ -14,6 +15,13 @@ export function DashboardHeader({
   notificationCount = 0,
   subtitle,
 }: DashboardHeaderProps) {
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    onLogout();
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("role");
+    navigate("/");
+  };
   return (
     <header className="bg-card border-b border-border/50 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -45,7 +53,7 @@ export function DashboardHeader({
               </p>
             </div>
           </div>
-          <Button variant="outline" onClick={onLogout}>
+          <Button variant="outline" onClick={handleLogout}>
             Đăng xuất
           </Button>
         </div>

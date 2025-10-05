@@ -17,6 +17,7 @@ import {
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { FcAutomotive } from "react-icons/fc";
 import { toast } from "../hooks/use-toast";
+import { apiRequest } from "../api/api";
 
 interface LoginFormData {
   username: string;
@@ -40,26 +41,22 @@ const Login = () => {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      // Gửi thông tin Google về BE để lấy accessToken
       const googleToken = await result.user.getIdToken();
-      const response = await fetch("/api/users/loginfirebase", {
+      // Gọi API và nhận luôn data
+      const data = await apiRequest("/api/users/loginfirebase", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ idToken: googleToken }),
       });
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("accessToken", data.accessToken);
-        navigate("/customer");
-      } else {
-        toast({
-          title: "Đăng nhập Google thất bại",
-          description: "Vui lòng thử lại.",
-        });
-      }
+      localStorage.setItem("accessToken", data.accessToken);
+      navigate("/customer");
     } catch (error) {
+      toast({
+        title: "Đăng nhập Google thất bại",
+        description: "Vui lòng thử lại.",
+      });
       console.error("Google login error:", error);
     } finally {
       setIsLoading(false);
@@ -69,7 +66,7 @@ const Login = () => {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/users/login", {
+      const resData = await apiRequest("/api/users/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,28 +76,45 @@ const Login = () => {
           password: data.password,
         }),
       });
-      if (response.ok) {
-        const resData = await response.json();
-        localStorage.setItem("accessToken", resData.accessToken); // Lưu token vào localStorage
-        toast({
-          title: "Đăng nhập thành công!",
-          description: "Chào mừng bạn quay trở lại.",
-        });
-        setTimeout(() => {
-          navigate("/customer");
-        }, 500);
-      } else {
-        toast({
-          title: "Đăng nhập thất bại",
-          description: "Sai username hoặc password.",
-        });
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast({
-        title: "Lỗi hệ thống",
-        description: "Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại sau.",
+      localStorage.setItem("accessToken", resData.accessToken);
+
+      // Gọi API lấy profile để lấy role
+      const profile = await apiRequest("/api/users/getprofile", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${resData.accessToken}`,
+        },
       });
+
+      const role = profile.user.role;
+      localStorage.setItem("role", role);
+
+      // Điều hướng theo role
+      switch (role) {
+        case "admin":
+          navigate("/dashboard/admin");
+          break;
+        case "technician":
+          navigate("/dashboard/technician");
+          break;
+        case "staff":
+          navigate("/staff");
+          break;
+        case "customer":
+        default:
+          navigate("/customer");
+          break;
+      }
+      toast({
+        title: "Đăng nhập thành công!",
+        description: "Chào mừng bạn quay trở lại.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Đăng nhập thất bại",
+        description: error?.message || "Sai username hoặc password.",
+      });
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }
