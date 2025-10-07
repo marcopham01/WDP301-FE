@@ -1,4 +1,3 @@
-
 import { createContext } from "react";
 
 export interface AppUser {
@@ -13,6 +12,7 @@ export const AuthContext = createContext<{
   user: AppUser | null;
   loading: boolean;
   setUser: (user: AppUser | null) => void;
+  accessToken?: string | null;
 } | null>(null);
 
 

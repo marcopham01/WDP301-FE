@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const value = useMemo(() => ({ user, loading, setUser }), [user, loading]);
+  const accessToken = localStorage.getItem("accessToken");
+  const value = useMemo(() => ({ user, loading, setUser, accessToken }), [user, loading, accessToken]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
