@@ -80,7 +80,7 @@ const Login = () => {
         const resData = await response.json();
         localStorage.setItem("accessToken", resData.accessToken); // Lưu token vào localStorage
         // Lấy profile user ngay sau khi login
-        const profileRes = await fetch("/api/users/getProfile", {
+        const profileRes = await fetch("/api/users/getprofile", {
           headers: { Authorization: `Bearer ${resData.accessToken}` },
         });
         if (profileRes.ok) {
