@@ -6,6 +6,7 @@ import { Car, Plus, Calendar, Bell, Settings, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getProfileApi } from "@/lib/authApi";
 import { getUserVehiclesApi, Vehicle } from "@/lib/vehicleApi";
+import { getUserAppointmentsApi } from "@/lib/appointmentApi";
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ const CustomerDashboard = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -47,14 +49,25 @@ const CustomerDashboard = () => {
   }, []);
 
   useEffect(() => {
-    // Read recent bookings (temporary until backend provides bookings endpoint)
-    try {
-      const raw = localStorage.getItem("recentBookings");
-      const list = raw ? JSON.parse(raw) : [];
-      setRecentBookings(Array.isArray(list) ? list : []);
-    } catch (_) {
-      setRecentBookings([]);
-    }
+    const loadAppointments = async () => {
+      setAppointmentsLoading(true);
+      // Need username from profile
+      const profile = await getProfileApi();
+      const username = profile.ok ? (profile.data?.user?.username as string) : undefined;
+      if (!username) {
+        setRecentBookings([]);
+        setAppointmentsLoading(false);
+        return;
+      }
+      const res = await getUserAppointmentsApi(username, { page: 1, limit: 5 });
+      if (res.ok && res.data?.data?.appointments) {
+        setRecentBookings(res.data.data.appointments);
+      } else {
+        setRecentBookings([]);
+      }
+      setAppointmentsLoading(false);
+    };
+    loadAppointments();
   }, []);
 
   const getModelLabel = (v: Vehicle) => {
@@ -184,7 +197,12 @@ const CustomerDashboard = () => {
               <CardDescription>Theo dõi trạng thái các lịch hẹn</CardDescription>
             </CardHeader>
             <CardContent>
-              {recentBookings.length === 0 ? (
+              {appointmentsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Đang tải lịch bảo dưỡng...</p>
+                </div>
+              ) : recentBookings.length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground mb-4">Chưa có lịch bảo dưỡng nào</p>
@@ -195,12 +213,12 @@ const CustomerDashboard = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentBookings.map((b) => (
-                    <div key={b.id} className="border rounded-lg p-4 flex items-start justify-between gap-4">
+                  {recentBookings.map((b: any) => (
+                    <div key={b._id} className="border rounded-lg p-4 flex items-start justify-between gap-4">
                       <div>
-                        <div className="font-medium">{b.service?.name ?? "Dịch vụ"} {b.service?.base_price ? `- ${b.service.base_price.toLocaleString("vi-VN")} VNĐ` : ""}</div>
-                        <div className="text-sm text-muted-foreground">{b.vehicle?.model ?? "Xe"} ({b.vehicle?.license_plate ?? "--"})</div>
-                        <div className="text-xs text-muted-foreground mt-1">{new Date(b.schedule_at).toLocaleString("vi-VN")}</div>
+                        <div className="font-medium">{b.center_id?.name ?? "Trung tâm"}</div>
+                        <div className="text-sm text-muted-foreground">{b.vehicle_id?.brand ?? ""} {b.vehicle_id?.model ?? ""} ({b.vehicle_id?.license_plate ?? "--"})</div>
+                        <div className="text-xs text-muted-foreground mt-1">{new Date(b.appoinment_date).toLocaleDateString("vi-VN")} {b.appoinment_time}</div>
                       </div>
                       <div className="text-xs px-2 py-1 rounded bg-muted capitalize">{b.status ?? "pending"}</div>
                     </div>

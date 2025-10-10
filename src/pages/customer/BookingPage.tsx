@@ -15,16 +15,16 @@ import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { getUserVehiclesApi, Vehicle } from "@/lib/vehicleApi";
 import { getActiveServicesApi, ServiceType } from "@/lib/serviceApi";
+import { getServiceCentersApi, ServiceCenter } from "@/lib/serviceCenterApi";
+import { getProfileApi } from "@/lib/authApi";
+import { createAppointmentApi } from "@/lib/appointmentApi";
 
 export default function BookingPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
-  const [serviceCenters] = useState([
-    { id: "1", name: "Trung tâm EVCare Hà Nội", address: "123 Đường A, Hà Nội" },
-    { id: "2", name: "Trung tâm EVCare HCM", address: "456 Đường B, TP.HCM" },
-  ]); // TODO: replace when backend provides centers API
+  const [serviceCenters, setServiceCenters] = useState<ServiceCenter[]>([]);
 
   const [selectedVehicle, setSelectedVehicle] = useState("");
   const [selectedServiceType, setSelectedServiceType] = useState("");
@@ -32,6 +32,7 @@ export default function BookingPage() {
   const [bookingDate, setBookingDate] = useState<Date | undefined>(undefined);
   const [bookingTime, setBookingTime] = useState("");
   const [notes, setNotes] = useState("");
+  const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
 
   const timeSlots = [
     "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
@@ -41,16 +42,29 @@ export default function BookingPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [veh, svc] = await Promise.all([getUserVehiclesApi(), getActiveServicesApi()]);
+      const [profile, veh, svc, centers] = await Promise.all([
+        getProfileApi(),
+        getUserVehiclesApi(),
+        getActiveServicesApi(),
+        getServiceCentersApi(),
+      ]);
+      if (profile.ok && profile.data?.user) {
+        const u = profile.data.user;
+        setCurrentUser({ id: u._id || u.id, username: u.username });
+      } else {
+        setCurrentUser(null);
+      }
       if (veh.ok && veh.data?.data) setVehicles(veh.data.data);
       else setVehicles([]);
       if (svc.ok && svc.data?.data) setServiceTypes(svc.data.data);
       else setServiceTypes([]);
+      if (centers.ok && centers.data?.data) setServiceCenters(centers.data.data);
+      else setServiceCenters([]);
     };
     load();
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedVehicle || !selectedServiceType || !selectedCenter || !bookingDate || !bookingTime) {
       toast({
@@ -60,64 +74,32 @@ export default function BookingPage() {
       });
       return;
     }
+    if (!currentUser?.id) {
+      toast({ title: "Chưa xác thực người dùng", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
 
-    // Build booking object (temporary local persistence until backend API is available)
-    const vehicle = vehicles.find((v) => v._id === selectedVehicle);
     const service = serviceTypes.find((s) => s._id === selectedServiceType);
-    const center = serviceCenters.find((c) => c.id === selectedCenter);
-
-    const [hh, mm] = bookingTime.split(":");
-    const schedule = new Date(bookingDate);
-    schedule.setHours(parseInt(hh || "0", 10), parseInt(mm || "0", 10), 0, 0);
-
-    const booking = {
-      id: `${Date.now()}`,
-      vehicle: vehicle
-        ? {
-            id: vehicle._id,
-            license_plate: vehicle.license_plate,
-            model: (vehicle.model_id && typeof vehicle.model_id === "object")
-              ? `${(vehicle.model_id as any).brand ?? ""} ${(vehicle.model_id as any).model_name ?? ""}`.trim()
-              : "Xe",
-          }
-        : undefined,
-      service: service
-        ? {
-            id: service._id,
-            name: service.service_name,
-            base_price: service.base_price,
-          }
-        : undefined,
-      center: center
-        ? {
-            id: center.id,
-            name: center.name,
-            address: center.address,
-          }
-        : undefined,
-      schedule_at: schedule.toISOString(),
-      notes,
-      createdAt: new Date().toISOString(),
-      status: "pending",
+    const payload = {
+      appoinment_date: format(bookingDate!, "yyyy-MM-dd"),
+      appoinment_time: bookingTime,
+      notes: notes || undefined,
+      estimated_cost: service?.base_price,
+      user_id: currentUser.id,
+      vehicle_id: selectedVehicle,
+      center_id: selectedCenter,
     };
 
-    try {
-      const raw = localStorage.getItem("recentBookings");
-      const list: any[] = raw ? JSON.parse(raw) : [];
-      list.unshift(booking);
-      // keep only latest 5
-      const trimmed = list.slice(0, 5);
-      localStorage.setItem("recentBookings", JSON.stringify(trimmed));
-    } catch (_) {}
-
-    toast({
-      title: "Đặt lịch thành công!",
-      description: "Chúng tôi sẽ liên hệ với bạn để xác nhận lịch hẹn",
-    });
-
+    const res = await createAppointmentApi(payload);
+    if (res.ok) {
+      toast({ title: "Đặt lịch thành công!" });
+      navigate("/customer");
+    } else {
+      toast({ title: "Không thể tạo lịch", description: res.message, variant: "destructive" });
+    }
     setLoading(false);
-    navigate("/customer");
   };
 
   // Đăng xuất (giả lập)
@@ -212,11 +194,11 @@ export default function BookingPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {serviceCenters.map((center) => (
-                            <SelectItem key={center.id} value={center.id}>
+                            <SelectItem key={center._id} value={center._id}>
                               <div className="flex items-start gap-2">
                                 <MapPin className="h-4 w-4 mt-1" />
                                 <div>
-                                  <div>{center.name}</div>
+                                  <div>{center.center_name}</div>
                                   <div className="text-xs text-muted-foreground">{center.address}</div>
                                 </div>
                               </div>
