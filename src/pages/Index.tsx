@@ -12,12 +12,13 @@ const Index = () => {
   const heroRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
   const featuresRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
   const feedbackRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
-  const { user, setUser } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
+  const { logout } = useAuth();
+
   const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    setUser(null);
+    logout();
     navigate("/login");
   };
 

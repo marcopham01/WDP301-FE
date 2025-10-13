@@ -29,6 +29,7 @@ type AppointmentItem = {
   vehicle_id?: { _id?: string; brand?: string; model?: string; license_plate?: string };
   center_id?: { _id?: string; name?: string; center_name?: string; address?: string };
 };
+
 export default function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<AppointmentItem[]>([]);

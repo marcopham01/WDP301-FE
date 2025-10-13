@@ -12,6 +12,7 @@ export const AuthContext = createContext<{
   user: AppUser | null;
   loading: boolean;
   setUser: (user: AppUser | null) => void;
+  logout: () => void;
   accessToken?: string | null;
 } | null>(null);
 

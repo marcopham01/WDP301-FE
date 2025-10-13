@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext/useAuth";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -24,12 +25,11 @@ import WorkingHoursManagement from "./pages/dashboard/staff/WorkingHoursManageme
 const queryClient = new QueryClient();
 
 const AppRoutes = () => {
-  const { setUser } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    setUser(null);
+    logout();
     navigate("/login");
   };
 
@@ -44,38 +44,82 @@ const AppRoutes = () => {
       <Route
         path="/dashboard/admin"
         element={
-          <AdminDashboard
-            user={{ name: "Admin", role: "admin" }}
-            onLogout={handleLogout}
-          />
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminDashboard
+              user={{ name: "Admin", role: "admin" }}
+              onLogout={handleLogout}
+            />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/dashboard/staff"
         element={
-          <StaffDashboard
-            user={{ name: "Staff", role: "staff" }}
-            onLogout={handleLogout}
-          />
+          <ProtectedRoute allowedRoles={["staff"]}>
+            <StaffDashboard
+              user={{ name: "Staff", role: "staff" }}
+              onLogout={handleLogout}
+            />
+          </ProtectedRoute>
         }
       />
       {/* Thêm routes mới cho quản lý dịch vụ và trung tâm dịch vụ */}
-      <Route 
-        path="/dashboard/staff/services" 
-        element={<ServiceManagement />} 
+      <Route
+        path="/dashboard/staff/services"
+        element={
+          <ProtectedRoute allowedRoles={["staff"]}>
+            <ServiceManagement />
+          </ProtectedRoute>
+        }
       />
-      <Route 
-        path="/dashboard/staff/service-centers" 
-        element={<ServiceCenterManagement />} 
+      <Route
+        path="/dashboard/staff/service-centers"
+        element={
+          <ProtectedRoute allowedRoles={["staff"]}>
+            <ServiceCenterManagement />
+          </ProtectedRoute>
+        }
       />
-      <Route 
-        path="/dashboard/staff/service-center/:centerId/working-hours" 
-        element={<WorkingHoursManagement />} 
+      <Route
+        path="/dashboard/staff/service-center/:centerId/working-hours"
+        element={
+          <ProtectedRoute allowedRoles={["staff"]}>
+            <WorkingHoursManagement />
+          </ProtectedRoute>
+        }
       />
-      <Route path="/customer" element={<CustomerDashboard />} />
-      <Route path="/customer/profile" element={<ProfilePage />} />
-      <Route path="/customer/vehicles/add" element={<AddVehiclePage />} />
-      <Route path="/customer/booking" element={<BookingPage />} />
+      <Route
+        path="/customer"
+        element={
+          <ProtectedRoute allowedRoles={["customer"]}>
+            <CustomerDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/profile"
+        element={
+          <ProtectedRoute allowedRoles={["customer"]}>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/vehicles/add"
+        element={
+          <ProtectedRoute allowedRoles={["customer"]}>
+            <AddVehiclePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/booking"
+        element={
+          <ProtectedRoute allowedRoles={["customer"]}>
+            <BookingPage />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 };
