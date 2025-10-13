@@ -17,12 +17,18 @@ async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
   } catch {
     data = null;
   }
-  return {
+  const result = {
     ok: response.ok,
     status: response.status,
     data,
     message: data?.message || data?.error || undefined,
   } as ApiResult<T>;
+  if (!result.ok) {
+    // Surface details for debugging in dev
+    // eslint-disable-next-line no-console
+    console.error("[serviceCenterApi] Error", result.status, result.message, result.data);
+  }
+  return result;
 }
 
 export interface WorkingHour {
@@ -41,14 +47,90 @@ export interface ServiceCenter {
   working_hours?: WorkingHour[];
 }
 
-// GET /api/service-center/get
+export interface CreateServiceCenterPayload {
+  center_name: string;
+  address?: string;
+  phone?: string;
+  is_active?: boolean;
+  working_hours?: WorkingHour[];
+}
+
+export interface UpdateServiceCenterPayload {
+  center_name?: string;
+  address?: string;
+  phone?: string;
+  is_active?: boolean;
+}
+
+export interface CreateSchedulePayload {
+  day_of_week: string;
+  open_time: string;
+  close_time: string;
+  is_close?: boolean;
+}
+
+// GET /api/service-center/get - Lấy danh sách tất cả trung tâm và giờ làm việc
 export async function getServiceCentersApi(): Promise<ApiResult<{ success: boolean; data: ServiceCenter[] }>> {
-  const response = await fetch("/api/service-center/get", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...getAuthHeader(),
-    },
-  });
-  return parseResponse(response);
+  try {
+    const response = await fetch("/api/service-center/get", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeader(),
+      },
+    });
+    return parseResponse(response);
+  } catch (err: any) {
+    // eslint-disable-next-line no-console
+    console.error("[serviceCenterApi] Network error", err);
+    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+  }
+}
+
+// POST /api/service-center/create - Tạo trung tâm dịch vụ mới
+export async function createServiceCenterApi(payload: CreateServiceCenterPayload): Promise<ApiResult<{ success: boolean; data: ServiceCenter }>> {
+  try {
+    const response = await fetch("/api/service-center/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return parseResponse(response);
+  } catch (err: any) {
+    console.error("[serviceCenterApi] Network error", err);
+    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+  }
+}
+
+// POST /api/service-center/schedule/create/:id - Tạo lịch làm việc cho trung tâm
+export async function createServiceCenterScheduleApi(centerId: string, payload: CreateSchedulePayload): Promise<ApiResult<{ success: boolean; data: any }>> {
+  try {
+    const response = await fetch(`/api/service-center/schedule/create/${centerId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return parseResponse(response);
+  } catch (err: any) {
+    console.error("[serviceCenterApi] Network error", err);
+    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+  }
+}
+
+// DEPRECATED FUNCTIONS - Backend không hỗ trợ các endpoint này
+// Giữ lại để tránh lỗi compile, nhưng sẽ return error
+export async function updateServiceCenterApi(id: string, payload: UpdateServiceCenterPayload): Promise<ApiResult<{ success: boolean; data: ServiceCenter }>> {
+  console.warn("[serviceCenterApi] updateServiceCenterApi - API này không tồn tại trên backend");
+  return { ok: false, status: 404, data: null, message: "API endpoint không tồn tại trên backend" };
+}
+
+export async function deleteServiceCenterApi(id: string): Promise<ApiResult<{ success: boolean }>> {
+  console.warn("[serviceCenterApi] deleteServiceCenterApi - API này không tồn tại trên backend");
+  return { ok: false, status: 404, data: null, message: "API endpoint không tồn tại trên backend" };
 }

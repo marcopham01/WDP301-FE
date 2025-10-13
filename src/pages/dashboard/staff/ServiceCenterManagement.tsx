@@ -1,0 +1,383 @@
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Pencil, Plus, Trash2, Clock } from "lucide-react";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  ServiceCenter, 
+  getServiceCentersApi, 
+  createServiceCenterApi,
+  CreateServiceCenterPayload
+} from "@/lib/serviceCenterApi";
+import { useNavigate } from "react-router-dom";
+
+const ServiceCenterManagement = () => {
+  const [serviceCenters, setServiceCenters] = useState<ServiceCenter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [currentServiceCenter, setCurrentServiceCenter] = useState<ServiceCenter | null>(null);
+  
+  // Form states
+  const [centerName, setCenterName] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    loadServiceCenters();
+  }, []);
+
+  const loadServiceCenters = async () => {
+    setLoading(true);
+    try {
+      const response = await getServiceCentersApi();
+      if (response.ok && response.data?.data) {
+        setServiceCenters(response.data.data);
+      } else {
+        toast({
+          title: "Lỗi",
+          description: "Không thể tải danh sách trung tâm dịch vụ. " + (response.message || ""),
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error loading service centers:", error);
+      toast({
+        title: "Lỗi",
+        description: "Đã xảy ra lỗi khi tải danh sách trung tâm dịch vụ.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setCenterName("");
+    setAddress("");
+    setPhone("");
+    setIsActive(true);
+  };
+
+  const handleOpenCreateDialog = () => {
+    resetForm();
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleOpenEditDialog = (serviceCenter: ServiceCenter) => {
+    setCurrentServiceCenter(serviceCenter);
+    setCenterName(serviceCenter.center_name);
+    setAddress(serviceCenter.address || "");
+    setPhone(serviceCenter.phone || "");
+    setIsActive(serviceCenter.is_active !== false);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleOpenDeleteDialog = (serviceCenter: ServiceCenter) => {
+    setCurrentServiceCenter(serviceCenter);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleCreateServiceCenter = async () => {
+    if (!centerName.trim()) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng nhập tên trung tâm dịch vụ",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const payload: CreateServiceCenterPayload = {
+      center_name: centerName.trim(),
+      address: address.trim() || undefined,
+      phone: phone.trim() || undefined,
+      is_active: isActive,
+    };
+
+    try {
+      const response = await createServiceCenterApi(payload);
+      if (response.ok) {
+        toast({
+          title: "Thành công",
+          description: "Đã tạo trung tâm dịch vụ mới thành công",
+        });
+        setIsCreateDialogOpen(false);
+        resetForm();
+        loadServiceCenters();
+      } else {
+        toast({
+          title: "Lỗi",
+          description: "Không thể tạo trung tâm dịch vụ. " + (response.message || ""),
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error creating service center:", error);
+      toast({
+        title: "Lỗi",
+        description: "Đã xảy ra lỗi khi tạo trung tâm dịch vụ mới.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateServiceCenter = async () => {
+    toast({
+      title: "Chức năng chưa hỗ trợ",
+      description: "Backend hiện chưa cung cấp API để cập nhật trung tâm dịch vụ. Vui lòng liên hệ admin để thêm endpoint PUT /api/service-center/update/:id",
+      variant: "destructive",
+    });
+    setIsEditDialogOpen(false);
+  };
+
+  const handleDeleteServiceCenter = async () => {
+    toast({
+      title: "Chức năng chưa hỗ trợ",
+      description: "Backend hiện chưa cung cấp API để xóa trung tâm dịch vụ. Vui lòng liên hệ admin để thêm endpoint DELETE /api/service-center/delete/:id",
+      variant: "destructive",
+    });
+    setIsDeleteDialogOpen(false);
+  };
+
+  const handleManageWorkingHours = (serviceCenter: ServiceCenter) => {
+    navigate(`/dashboard/staff/service-center/${serviceCenter._id}/working-hours`);
+  };
+
+  return (
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Quản lý Trung tâm Dịch vụ</h1>
+        <Button onClick={handleOpenCreateDialog}>
+          <Plus className="mr-2 h-4 w-4" /> Thêm trung tâm mới
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Danh sách trung tâm dịch vụ</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-4">Đang tải...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tên trung tâm</TableHead>
+                  <TableHead>Địa chỉ</TableHead>
+                  <TableHead>Số điện thoại</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead className="text-right">Thao tác</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {serviceCenters.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      Không có trung tâm dịch vụ nào
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  serviceCenters.map((center) => (
+                    <TableRow key={center._id}>
+                      <TableCell className="font-medium">{center.center_name}</TableCell>
+                      <TableCell>{center.address || "-"}</TableCell>
+                      <TableCell>{center.phone || "-"}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${
+                            center.is_active !== false
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {center.is_active !== false ? "Hoạt động" : "Không hoạt động"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleManageWorkingHours(center)}
+                          title="Quản lý giờ làm việc"
+                        >
+                          <Clock className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenEditDialog(center)}
+                          title="Chỉnh sửa"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDeleteDialog(center)}
+                          title="Xóa"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create Service Center Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Thêm trung tâm dịch vụ mới</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="centerName">Tên trung tâm *</Label>
+              <Input
+                id="centerName"
+                value={centerName}
+                onChange={(e) => setCenterName(e.target.value)}
+                placeholder="Nhập tên trung tâm dịch vụ"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="address">Địa chỉ</Label>
+              <Input
+                id="address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Nhập địa chỉ"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Số điện thoại</Label>
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Nhập số điện thoại"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="isActive">Hoạt động</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Hủy</Button>
+            </DialogClose>
+            <Button onClick={handleCreateServiceCenter}>Tạo trung tâm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Service Center Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa trung tâm dịch vụ</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="editCenterName">Tên trung tâm *</Label>
+              <Input
+                id="editCenterName"
+                value={centerName}
+                onChange={(e) => setCenterName(e.target.value)}
+                placeholder="Nhập tên trung tâm dịch vụ"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editAddress">Địa chỉ</Label>
+              <Input
+                id="editAddress"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Nhập địa chỉ"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editPhone">Số điện thoại</Label>
+              <Input
+                id="editPhone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Nhập số điện thoại"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="editIsActive"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="editIsActive">Hoạt động</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Hủy</Button>
+            </DialogClose>
+            <Button onClick={handleUpdateServiceCenter}>Cập nhật</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Service Center Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa trung tâm dịch vụ</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>
+              Bạn có chắc chắn muốn xóa trung tâm dịch vụ "{currentServiceCenter?.center_name}"?
+              Hành động này không thể hoàn tác.
+            </p>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Hủy</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={handleDeleteServiceCenter}>
+              Xóa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default ServiceCenterManagement;

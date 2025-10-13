@@ -54,8 +54,39 @@ const Login = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem("accessToken", data.accessToken);
-        navigate("/customer");
+        const accessToken = data.accessToken;
+        localStorage.setItem("accessToken", accessToken);
+        // Lấy profile user ngay sau khi login
+        const profileRes = await fetch("/api/users/getprofile", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          const userRole = profileData.user.role;
+          setUser({
+            id: profileData.user._id || profileData.user.id,
+            username: profileData.user.username,
+            email: profileData.user.email,
+            fullName: profileData.user.fullName,
+            role: userRole,
+          });
+          toast({
+            title: "Đăng nhập thành công!",
+            description: "Chào mừng bạn quay trở lại.",
+          });
+          if (userRole === "staff") {
+            navigate("/dashboard/staff");
+          } else if (userRole === "admin") {
+            navigate("/dashboard/admin");
+          } else {
+            navigate("/customer");
+          }
+        } else {
+          toast({
+            title: "Lỗi",
+            description: "Không thể lấy thông tin người dùng.",
+          });
+        }
       } else {
         toast({
           title: "Đăng nhập Google thất bại",
@@ -85,21 +116,33 @@ const Login = () => {
         });
         if (profileRes.ok) {
           const data = await profileRes.json();
+          const userRole = data.user.role;
           setUser({
             id: data.user._id || data.user.id,
             username: data.user.username,
             email: data.user.email,
             fullName: data.user.fullName,
-            role: data.user.role,
+            role: userRole,
+          });
+          toast({
+            title: "Đăng nhập thành công!",
+            description: "Chào mừng bạn quay trở lại.",
+          });
+          setTimeout(() => {
+            if (userRole === "staff") {
+              navigate("/dashboard/staff");
+            } else if (userRole === "admin") {
+              navigate("/dashboard/admin");
+            } else {
+              navigate("/customer");
+            }
+          }, 500);
+        } else {
+          toast({
+            title: "Lỗi",
+            description: "Không thể lấy thông tin người dùng.",
           });
         }
-        toast({
-          title: "Đăng nhập thành công!",
-          description: "Chào mừng bạn quay trở lại.",
-        });
-        setTimeout(() => {
-          navigate("/customer");
-        }, 500);
       } else {
         toast({
           title: "Đăng nhập thất bại",
