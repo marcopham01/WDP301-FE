@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Plus, Trash2, Clock } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2, Clock } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -163,7 +163,12 @@ const ServiceCenterManagement = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Quản lý Trung tâm Dịch vụ</h1>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate("/dashboard/staff")}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
+          </Button>
+          <h1 className="text-2xl font-bold">Quản lý Trung tâm Dịch vụ</h1>
+        </div>
         <Button onClick={handleOpenCreateDialog}>
           <Plus className="mr-2 h-4 w-4" /> Thêm trung tâm mới
         </Button>

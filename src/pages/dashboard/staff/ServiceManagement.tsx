@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -15,6 +15,7 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { 
   ServiceType, 
   getAllServicesApi, 
@@ -41,6 +42,7 @@ const ServiceManagement = () => {
   const [isActive, setIsActive] = useState(true);
   
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Dữ liệu mẫu để hiển thị khi không có kết nối API
   const sampleServices: ServiceType[] = [
@@ -269,7 +271,12 @@ const ServiceManagement = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Quản lý Dịch vụ</h1>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate("/dashboard/staff")}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
+          </Button>
+          <h1 className="text-2xl font-bold">Quản lý Dịch vụ</h1>
+        </div>
         <Button onClick={handleOpenCreateDialog}>
           <Plus className="mr-2 h-4 w-4" /> Thêm dịch vụ mới
         </Button>
