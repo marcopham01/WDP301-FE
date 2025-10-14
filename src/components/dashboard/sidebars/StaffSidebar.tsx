@@ -7,8 +7,6 @@ const items = [
   { title: "Quản lý khách hàng", icon: Users, href: "/dashboard/staff/customers" },
   { title: "Quản lý lịch hẹn", icon: Calendar, href: "/dashboard/staff/appointments" },
   { title: "Quản lý bảo dưỡng", icon: Wrench, href: "/dashboard/staff/maintenance" },
-  { title: "Quản lý dịch vụ", icon: Settings, href: "/dashboard/staff/services" },
-  { title: "Quản lý trung tâm", icon: MapPin, href: "/dashboard/staff/service-centers" },
 ];
 
 export default function StaffSidebar() {
