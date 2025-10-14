@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Index from "./pages/index";
+import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -18,8 +18,9 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import BookingPage from "./pages/customer/BookingPage";
 import StaffDashboard from "./pages/dashboard/staff/StaffDashboard";
-import ServiceManagement from "./pages/dashboard/staff/ServiceManagement";
-import ServiceCenterManagement from "./pages/dashboard/staff/ServiceCenterManagement";
+import ServiceManagement from "./pages/dashboard/admin/ServiceManagement";
+import ServiceCenterManagement from "./pages/dashboard/admin/ServiceCenterManagement";
+import AdminOverview from "./pages/dashboard/admin/AdminOverview";
 import WorkingHoursManagement from "./pages/dashboard/staff/WorkingHoursManagement";
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 
@@ -51,8 +52,11 @@ const AppRoutes = () => {
               onLogout={handleLogout}
             />
           </ProtectedRoute>
-        }
-      />
+        }>
+        <Route index element={<AdminOverview />} />
+        <Route path="services" element={<ServiceManagement />} />
+        <Route path="service-centers" element={<ServiceCenterManagement />} />
+      </Route>
       <Route
         path="/dashboard/staff"
         element={
@@ -64,23 +68,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      {/* Thêm routes mới cho quản lý dịch vụ và trung tâm dịch vụ */}
-      <Route
-        path="/dashboard/staff/services"
-        element={
-          <ProtectedRoute allowedRoles={["staff"]}>
-            <ServiceManagement />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard/staff/service-centers"
-        element={
-          <ProtectedRoute allowedRoles={["staff"]}>
-            <ServiceCenterManagement />
-          </ProtectedRoute>
-        }
-      />
+      {/* Các route con của admin đã được lồng bên trong /dashboard/admin */}
       <Route
         path="/dashboard/staff/service-center/:centerId/working-hours"
         element={
@@ -121,16 +109,15 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-          <Route
-            path="/dashboard/technician"
-            element={
-              <TechnicianDashboard
-                user={{ name: "Technician", role: "technician" }}
-                onLogout={() => {}}
-              />
-            }
+      <Route
+        path="/dashboard/technician"
+        element={
+          <TechnicianDashboard
+            user={{ name: "Technician", role: "technician" }}
+            onLogout={() => {}}
           />
-          "
+        }
+      />
     </Routes>
   );
 };

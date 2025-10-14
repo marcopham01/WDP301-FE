@@ -3,22 +3,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ArrowLeft, Pencil, Plus, Trash2, Clock } from "lucide-react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogFooter,
-  DialogClose
+  DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  ServiceCenter, 
-  getServiceCentersApi, 
+import {
+  ServiceCenter,
+  getServiceCentersApi,
   createServiceCenterApi,
-  CreateServiceCenterPayload
+  CreateServiceCenterPayload,
 } from "@/lib/serviceCenterApi";
 import { useNavigate } from "react-router-dom";
 
@@ -28,14 +35,15 @@ const ServiceCenterManagement = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [currentServiceCenter, setCurrentServiceCenter] = useState<ServiceCenter | null>(null);
-  
+  const [currentServiceCenter, setCurrentServiceCenter] =
+    useState<ServiceCenter | null>(null);
+
   // Form states
   const [centerName, setCenterName] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [isActive, setIsActive] = useState(true);
-  
+
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -52,7 +60,9 @@ const ServiceCenterManagement = () => {
       } else {
         toast({
           title: "Lỗi",
-          description: "Không thể tải danh sách trung tâm dịch vụ. " + (response.message || ""),
+          description:
+            "Không thể tải danh sách trung tâm dịch vụ. " +
+            (response.message || ""),
           variant: "destructive",
         });
       }
@@ -124,7 +134,8 @@ const ServiceCenterManagement = () => {
       } else {
         toast({
           title: "Lỗi",
-          description: "Không thể tạo trung tâm dịch vụ. " + (response.message || ""),
+          description:
+            "Không thể tạo trung tâm dịch vụ. " + (response.message || ""),
           variant: "destructive",
         });
       }
@@ -141,7 +152,8 @@ const ServiceCenterManagement = () => {
   const handleUpdateServiceCenter = async () => {
     toast({
       title: "Chức năng chưa hỗ trợ",
-      description: "Backend hiện chưa cung cấp API để cập nhật trung tâm dịch vụ. Vui lòng liên hệ admin để thêm endpoint PUT /api/service-center/update/:id",
+      description:
+        "Backend hiện chưa cung cấp API để cập nhật trung tâm dịch vụ. Vui lòng liên hệ admin để thêm endpoint PUT /api/service-center/update/:id",
       variant: "destructive",
     });
     setIsEditDialogOpen(false);
@@ -150,21 +162,26 @@ const ServiceCenterManagement = () => {
   const handleDeleteServiceCenter = async () => {
     toast({
       title: "Chức năng chưa hỗ trợ",
-      description: "Backend hiện chưa cung cấp API để xóa trung tâm dịch vụ. Vui lòng liên hệ admin để thêm endpoint DELETE /api/service-center/delete/:id",
+      description:
+        "Backend hiện chưa cung cấp API để xóa trung tâm dịch vụ. Vui lòng liên hệ admin để thêm endpoint DELETE /api/service-center/delete/:id",
       variant: "destructive",
     });
     setIsDeleteDialogOpen(false);
   };
 
   const handleManageWorkingHours = (serviceCenter: ServiceCenter) => {
-    navigate(`/dashboard/staff/service-center/${serviceCenter._id}/working-hours`);
+    navigate(
+      `/dashboard/staff/service-center/${serviceCenter._id}/working-hours`
+    );
   };
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate("/dashboard/staff")}>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/dashboard/admin")}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
           </Button>
           <h1 className="text-2xl font-bold">Quản lý Trung tâm Dịch vụ</h1>
@@ -202,7 +219,9 @@ const ServiceCenterManagement = () => {
                 ) : (
                   serviceCenters.map((center) => (
                     <TableRow key={center._id}>
-                      <TableCell className="font-medium">{center.center_name}</TableCell>
+                      <TableCell className="font-medium">
+                        {center.center_name}
+                      </TableCell>
                       <TableCell>{center.address || "-"}</TableCell>
                       <TableCell>{center.phone || "-"}</TableCell>
                       <TableCell>
@@ -211,9 +230,10 @@ const ServiceCenterManagement = () => {
                             center.is_active !== false
                               ? "bg-green-100 text-green-800"
                               : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {center.is_active !== false ? "Hoạt động" : "Không hoạt động"}
+                          }`}>
+                          {center.is_active !== false
+                            ? "Hoạt động"
+                            : "Không hoạt động"}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -221,24 +241,21 @@ const ServiceCenterManagement = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleManageWorkingHours(center)}
-                          title="Quản lý giờ làm việc"
-                        >
+                          title="Quản lý giờ làm việc">
                           <Clock className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleOpenEditDialog(center)}
-                          title="Chỉnh sửa"
-                        >
+                          title="Chỉnh sửa">
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleOpenDeleteDialog(center)}
-                          title="Xóa"
-                        >
+                          title="Xóa">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -367,8 +384,9 @@ const ServiceCenterManagement = () => {
           </DialogHeader>
           <div className="py-4">
             <p>
-              Bạn có chắc chắn muốn xóa trung tâm dịch vụ "{currentServiceCenter?.center_name}"?
-              Hành động này không thể hoàn tác.
+              Bạn có chắc chắn muốn xóa trung tâm dịch vụ "
+              {currentServiceCenter?.center_name}"? Hành động này không thể hoàn
+              tác.
             </p>
           </div>
           <DialogFooter>

@@ -4,26 +4,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogFooter,
-  DialogClose
+  DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { 
-  ServiceType, 
-  getAllServicesApi, 
-  createServiceApi, 
-  updateServiceApi, 
+import {
+  ServiceType,
+  getAllServicesApi,
+  createServiceApi,
+  updateServiceApi,
   deleteServiceApi,
   CreateServicePayload,
-  UpdateServicePayload
+  UpdateServicePayload,
 } from "@/lib/serviceApi";
 
 const ServiceManagement = () => {
@@ -32,15 +39,17 @@ const ServiceManagement = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [currentService, setCurrentService] = useState<ServiceType | null>(null);
-  
+  const [currentService, setCurrentService] = useState<ServiceType | null>(
+    null
+  );
+
   // Form states
   const [serviceName, setServiceName] = useState("");
   const [description, setDescription] = useState("");
   const [basePrice, setBasePrice] = useState("");
   const [estimatedDuration, setEstimatedDuration] = useState("");
   const [isActive, setIsActive] = useState(true);
-  
+
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -52,7 +61,7 @@ const ServiceManagement = () => {
       description: "Kiểm tra và bảo dưỡng xe điện định kỳ",
       base_price: 500000,
       estimated_duration: "2 giờ",
-      is_active: true
+      is_active: true,
     },
     {
       _id: "2",
@@ -60,8 +69,8 @@ const ServiceManagement = () => {
       description: "Kiểm tra và sửa chữa hệ thống pin xe điện",
       base_price: 1500000,
       estimated_duration: "4 giờ",
-      is_active: true
-    }
+      is_active: true,
+    },
   ];
 
   useEffect(() => {
@@ -80,7 +89,8 @@ const ServiceManagement = () => {
         setServices(sampleServices);
         toast({
           title: "Chế độ offline",
-          description: "Đang hiển thị dữ liệu mẫu do không thể kết nối đến server",
+          description:
+            "Đang hiển thị dữ liệu mẫu do không thể kết nối đến server",
         });
       }
     } catch (error) {
@@ -89,7 +99,8 @@ const ServiceManagement = () => {
       setServices(sampleServices);
       toast({
         title: "Chế độ offline",
-        description: "Đang hiển thị dữ liệu mẫu do không thể kết nối đến server",
+        description:
+          "Đang hiển thị dữ liệu mẫu do không thể kết nối đến server",
       });
     } finally {
       setLoading(false);
@@ -161,10 +172,10 @@ const ServiceManagement = () => {
           description: payload.description,
           base_price: payload.base_price,
           estimated_duration: payload.estimated_duration,
-          is_active: payload.is_active
+          is_active: payload.is_active,
         };
-        
-        setServices(prev => [...prev, newService]);
+
+        setServices((prev) => [...prev, newService]);
         toast({
           title: "Thành công (Chế độ offline)",
           description: "Đã thêm dịch vụ mới vào danh sách tạm thời",
@@ -181,10 +192,10 @@ const ServiceManagement = () => {
         description: payload.description,
         base_price: payload.base_price,
         estimated_duration: payload.estimated_duration,
-        is_active: payload.is_active
+        is_active: payload.is_active,
       };
-      
-      setServices(prev => [...prev, newService]);
+
+      setServices((prev) => [...prev, newService]);
       toast({
         title: "Thành công (Chế độ offline)",
         description: "Đã thêm dịch vụ mới vào danh sách tạm thời",
@@ -225,7 +236,8 @@ const ServiceManagement = () => {
       } else {
         toast({
           title: "Lỗi",
-          description: "Không thể cập nhật dịch vụ. " + (response.message || ""),
+          description:
+            "Không thể cập nhật dịch vụ. " + (response.message || ""),
           variant: "destructive",
         });
       }
@@ -272,7 +284,9 @@ const ServiceManagement = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate("/dashboard/staff")}>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/dashboard/admin")}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
           </Button>
           <h1 className="text-2xl font-bold">Quản lý Dịch vụ</h1>
@@ -311,7 +325,9 @@ const ServiceManagement = () => {
                 ) : (
                   services.map((service) => (
                     <TableRow key={service._id}>
-                      <TableCell className="font-medium">{service.service_name}</TableCell>
+                      <TableCell className="font-medium">
+                        {service.service_name}
+                      </TableCell>
                       <TableCell>{service.description || "-"}</TableCell>
                       <TableCell>
                         {service.base_price
@@ -325,24 +341,23 @@ const ServiceManagement = () => {
                             service.is_active !== false
                               ? "bg-green-100 text-green-800"
                               : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {service.is_active !== false ? "Hoạt động" : "Không hoạt động"}
+                          }`}>
+                          {service.is_active !== false
+                            ? "Hoạt động"
+                            : "Không hoạt động"}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleOpenEditDialog(service)}
-                        >
+                          onClick={() => handleOpenEditDialog(service)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleOpenDeleteDialog(service)}
-                        >
+                          onClick={() => handleOpenDeleteDialog(service)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -491,8 +506,8 @@ const ServiceManagement = () => {
           </DialogHeader>
           <div className="py-4">
             <p>
-              Bạn có chắc chắn muốn xóa dịch vụ "{currentService?.service_name}"?
-              Hành động này không thể hoàn tác.
+              Bạn có chắc chắn muốn xóa dịch vụ "{currentService?.service_name}
+              "? Hành động này không thể hoàn tác.
             </p>
           </div>
           <DialogFooter>
