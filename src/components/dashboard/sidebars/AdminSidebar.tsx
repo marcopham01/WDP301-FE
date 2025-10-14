@@ -6,6 +6,7 @@ import {
   FileText,
   DollarSign,
   Home,
+  MapPin,
 } from "lucide-react";
 
 import {
@@ -18,9 +19,20 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { NavLink } from "react-router-dom";
 
 const adminMenuItems = [
-  { title: "Tổng quan", icon: Home, isActive: true },
+  { title: "Tổng quan", icon: Home, href: "/dashboard/admin" },
+  {
+    title: "Quản lý trung tâm",
+    icon: MapPin,
+    href: "/dashboard/admin/service-centers",
+  },
+  {
+    title: "Quản lý dịch vụ",
+    icon: Settings,
+    href: "/dashboard/admin/services",
+  },
   { title: "Quản lý khách hàng", icon: Users },
   { title: "Quản lý phương tiện", icon: Car },
   { title: "Quản lý lịch hẹn", icon: FileText },
@@ -52,15 +64,26 @@ export function AdminSidebar() {
             <SidebarMenu>
               {adminMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    className={
-                      item.isActive ? "bg-primary text-primary-foreground" : ""
-                    }>
-                    <button className="w-full flex items-center gap-3 p-2 text-left hover:bg-accent rounded-md">
-                      <item.icon className="h-4 w-4" />
-                      <span className="text-sm">{item.title}</span>
-                    </button>
+                  <SidebarMenuButton asChild>
+                    {item.href ? (
+                      <NavLink
+                        to={item.href}
+                        className={({ isActive }) =>
+                          `w-full flex items-center gap-3 p-2 text-left rounded-md ${
+                            isActive
+                              ? "bg-primary text-primary-foreground"
+                              : "hover:bg-accent"
+                          }`
+                        }>
+                        <item.icon className="h-4 w-4" />
+                        <span className="text-sm">{item.title}</span>
+                      </NavLink>
+                    ) : (
+                      <button className="w-full flex items-center gap-3 p-2 text-left hover:bg-accent rounded-md">
+                        <item.icon className="h-4 w-4" />
+                        <span className="text-sm">{item.title}</span>
+                      </button>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

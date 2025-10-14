@@ -43,9 +43,9 @@ const Login = () => {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      // Gửi thông tin Google về BE để lấy accessToken
       const googleToken = await result.user.getIdToken();
-      const response = await fetch("/api/users/loginfirebase", {
+      // Gọi API và nhận luôn data
+      const data = await apiRequest("/api/users/loginfirebase", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -151,10 +151,6 @@ const Login = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
-      toast({
-        title: "Lỗi hệ thống",
-        description: "Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại sau.",
-      });
     } finally {
       setIsLoading(false);
     }
