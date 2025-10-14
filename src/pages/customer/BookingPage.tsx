@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -14,10 +15,10 @@ import { cn } from "@/lib/utils";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { getUserVehiclesApi, Vehicle } from "@/lib/vehicleApi";
-import { getActiveServicesApi, ServiceType } from "@/lib/serviceApi";
+import { getAllServicesApi, ServiceType } from "@/lib/serviceApi";
 import { getServiceCentersApi, ServiceCenter } from "@/lib/serviceCenterApi";
 import { getProfileApi } from "@/lib/authApi";
-import { createAppointmentApi } from "@/lib/appointmentApi";
+// import { createAppointmentApi } from "@/lib/appointmentApi"; // Temporarily disabled
 
 export default function BookingPage() {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ export default function BookingPage() {
       const [profile, veh, svc, centers] = await Promise.all([
         getProfileApi(),
         getUserVehiclesApi(),
-        getActiveServicesApi(),
+        getAllServicesApi(),
         getServiceCentersApi(),
       ]);
       if (profile.ok && profile.data?.user) {
@@ -58,8 +59,16 @@ export default function BookingPage() {
       else setVehicles([]);
       if (svc.ok && svc.data?.data) setServiceTypes(svc.data.data);
       else setServiceTypes([]);
-      if (centers.ok && centers.data?.data) setServiceCenters(centers.data.data);
-      else setServiceCenters([]);
+      if (centers.ok && centers.data?.data) {
+        setServiceCenters(centers.data.data);
+      } else {
+        console.error("[BookingPage] Failed to load service centers:", centers);
+        setServiceCenters([]);
+        // Show user-friendly error message
+        if (centers.status === 500) {
+          alert("Không thể tải danh sách trung tâm bảo dưỡng. Vui lòng thử lại sau hoặc liên hệ hỗ trợ.");
+        }
+      }
     };
     load();
   }, []);
@@ -81,24 +90,31 @@ export default function BookingPage() {
 
     setLoading(true);
 
-    const service = serviceTypes.find((s) => s._id === selectedServiceType);
-    const payload = {
-      appoinment_date: format(bookingDate!, "yyyy-MM-dd"),
-      appoinment_time: bookingTime,
-      notes: notes || undefined,
-      estimated_cost: service?.base_price,
-      user_id: currentUser.id,
-      vehicle_id: selectedVehicle,
-      center_id: selectedCenter,
-    };
+    // const service = serviceTypes.find((s) => s._id === selectedServiceType);
+    // const payload = {
+    //   appoinment_date: format(bookingDate!, "yyyy-MM-dd"),
+    //   appoinment_time: bookingTime,
+    //   notes: notes || undefined,
+    //   estimated_cost: service?.base_price,
+    //   user_id: currentUser.id,
+    //   vehicle_id: selectedVehicle,
+    //   center_id: selectedCenter,
+    // };
 
-    const res = await createAppointmentApi(payload);
-    if (res.ok) {
-      toast({ title: "Đặt lịch thành công!" });
-      navigate("/customer");
-    } else {
-      toast({ title: "Không thể tạo lịch", description: res.message, variant: "destructive" });
-    }
+    // API appointment chưa sẵn sàng
+    toast({ 
+      title: "Chức năng tạm thời không khả dụng", 
+      description: "API appointment đang được phát triển",
+      variant: "destructive" 
+    });
+    
+    // const res = await createAppointmentApi(payload);
+    // if (res.ok) {
+    //   toast({ title: "Đặt lịch thành công!" });
+    //   navigate("/customer");
+    // } else {
+    //   toast({ title: "Không thể tạo lịch", description: res.message, variant: "destructive" });
+    // }
     setLoading(false);
   };
 
@@ -109,8 +125,8 @@ export default function BookingPage() {
   };
 
   const getVehicleLabel = (v: Vehicle) => {
-    const m: any = v.model_id as any;
-    const model = m && typeof m === "object" ? `${m.brand ?? ""} ${m.model_name ?? ""}`.trim() : "Xe";
+    const m = v.model_id;
+    const model = typeof m === "object" ? `${m.brand ?? ""} ${m.model_name ?? ""}`.trim() : "Xe";
     return `${model} (${v.license_plate})`;
   };
 
@@ -219,25 +235,29 @@ export default function BookingPage() {
                   <CardContent className="space-y-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">Ngày hẹn</label>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !bookingDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {bookingDate ? format(bookingDate, "PPP", { locale: vi }) : "Chọn ngày"}
-                      </Button>
-                      <div className="mt-2">
-                        <Calendar
-                          mode="single"
-                          selected={bookingDate}
-                          onSelect={setBookingDate}
-                          disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
-                          initialFocus
-                        />
-                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !bookingDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {bookingDate ? format(bookingDate, "PPP", { locale: vi }) : "Chọn ngày"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={bookingDate}
+                            onSelect={setBookingDate}
+                            disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div>
                       <label className="text-sm font-medium mb-2 block">Giờ hẹn</label>

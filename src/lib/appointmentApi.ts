@@ -54,10 +54,27 @@ export interface GetUserAppointmentsParams {
   status?: string; // pending | accept | deposited | completed | canceled
 }
 
+export type Appointment = {
+  _id: string;
+  status: string;
+  appoinment_date?: string;
+  appoinment_time?: string;
+  user_id?: { _id?: string; username?: string; fullName?: string; email?: string };
+  vehicle_id?: { _id?: string; brand?: string; model?: string; license_plate?: string };
+  center_id?: { _id?: string; name?: string; center_name?: string; address?: string };
+};
+
+export type Pagination = {
+  page: number;
+  limit: number;
+  totalPages: number;
+  totalDocs: number;
+};
+
 export async function getUserAppointmentsApi(
   username: string,
   params: GetUserAppointmentsParams = {}
-): Promise<ApiResult<{ success: boolean; data: { appointments: any[]; pagination: any } }>> {
+): Promise<ApiResult<{ success: boolean; data: { appointments: Appointment[]; pagination: Pagination } }>> {
   const query = new URLSearchParams();
   if (params.page) query.set("page", String(params.page));
   if (params.limit) query.set("limit", String(params.limit));
@@ -70,6 +87,48 @@ export async function getUserAppointmentsApi(
       "Content-Type": "application/json",
       ...getAuthHeader(),
     },
+  });
+  return parseResponse(response);
+}
+
+export interface GetAppointmentsParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+}
+
+export async function getAppointmentsApi(
+  params: GetAppointmentsParams = {}
+): Promise<ApiResult<{ success: boolean; data: { appointments: Appointment[]; pagination: Pagination } }>> {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.limit) query.set("limit", String(params.limit));
+  if (params.status) query.set("status", params.status);
+  const qs = query.toString();
+  const url = qs ? `/api/appointment?${qs}` : `/api/appointment`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+  });
+  return parseResponse(response);
+}
+
+export interface UpdateAppointmentStatusPayload {
+  appointment_id: string;
+  status: string;
+}
+
+export async function updateAppointmentStatusApi(payload: UpdateAppointmentStatusPayload): Promise<ApiResult<{ success: boolean }>> {
+  const response = await fetch(`/api/appointment/status/${payload.appointment_id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify({ status: payload.status }),
   });
   return parseResponse(response);
 }

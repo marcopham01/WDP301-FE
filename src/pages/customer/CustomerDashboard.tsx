@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, Plus, Calendar, Bell, Settings, LogOut } from "lucide-react";
+import { Car, Plus, Calendar, Settings, LogOut, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getProfileApi } from "@/lib/authApi";
 import { getUserVehiclesApi, Vehicle } from "@/lib/vehicleApi";
-import { getUserAppointmentsApi } from "@/lib/appointmentApi";
+// import { getUserAppointmentsApi } from "@/lib/appointmentApi"; // Temporarily disabled
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
@@ -51,20 +51,21 @@ const CustomerDashboard = () => {
   useEffect(() => {
     const loadAppointments = async () => {
       setAppointmentsLoading(true);
-      // Need username from profile
-      const profile = await getProfileApi();
-      const username = profile.ok ? (profile.data?.user?.username as string) : undefined;
-      if (!username) {
-        setRecentBookings([]);
-        setAppointmentsLoading(false);
-        return;
-      }
-      const res = await getUserAppointmentsApi(username, { page: 1, limit: 5 });
-      if (res.ok && res.data?.data?.appointments) {
-        setRecentBookings(res.data.data.appointments);
-      } else {
-        setRecentBookings([]);
-      }
+      // API appointment chưa sẵn sàng
+      // const profile = await getProfileApi();
+      // const username = profile.ok ? (profile.data?.user?.username as string) : undefined;
+      // if (!username) {
+      //   setRecentBookings([]);
+      //   setAppointmentsLoading(false);
+      //   return;
+      // }
+      // const res = await getUserAppointmentsApi(username, { page: 1, limit: 5 });
+      // if (res.ok && res.data?.data?.appointments) {
+      //   setRecentBookings(res.data.data.appointments);
+      // } else {
+      //   setRecentBookings([]);
+      // }
+      setRecentBookings([]); // Empty for now
       setAppointmentsLoading(false);
     };
     loadAppointments();
@@ -104,6 +105,7 @@ const CustomerDashboard = () => {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <Bell className="h-5 w-5 text-muted-foreground cursor-pointer" />
             <span className="text-sm text-muted-foreground">
               {user ? `Chào ${user.fullName || user.email}` : "Không tìm thấy thông tin người dùng"}
             </span>
@@ -123,7 +125,7 @@ const CustomerDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Button
             variant="hero"
             className="h-20 flex-col gap-2"
@@ -135,10 +137,6 @@ const CustomerDashboard = () => {
           <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => navigate("/customer/booking")}>
             <Calendar className="h-6 w-6" />
             Đặt lịch bảo dưỡng
-          </Button>
-          <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => navigate("/reminders")}>
-            <Bell className="h-6 w-6" />
-            Nhắc nhở
           </Button>
           <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => navigate("/customer/profile")}>
             <Settings className="h-6 w-6" />
