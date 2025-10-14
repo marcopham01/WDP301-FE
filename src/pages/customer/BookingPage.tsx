@@ -142,9 +142,7 @@ export default function BookingPage() {
           { label: "Dashboard", href: "/customer" },
           { label: "Xe của tôi", href: "/customer/vehicles" },
           { label: "Đặt lịch", href: "/customer/booking", active: true },
-          { label: "Lịch sử", href: "/customer/history" },
-          { label: "Thông báo", href: "/customer/notifications" },
-        ]}
+          { label: "Lịch sử", href: "/customer/history" },        ]}
         onLogout={handleLogout}
         showLogout
       />

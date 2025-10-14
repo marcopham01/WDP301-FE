@@ -78,7 +78,7 @@ const WorkingHoursManagement = () => {
             description: "Không tìm thấy trung tâm dịch vụ",
             variant: "destructive",
           });
-          navigate("/dashboard/staff/service-centers");
+          navigate("/dashboard/admin/service-centers");
         }
       } else {
         toast({
@@ -86,7 +86,7 @@ const WorkingHoursManagement = () => {
           description: "Không thể tải thông tin trung tâm dịch vụ. " + (response.message || ""),
           variant: "destructive",
         });
-        navigate("/dashboard/staff/service-centers");
+        navigate("/dashboard/admin/service-centers");
       }
     } catch (error) {
       console.error("Error loading service center:", error);
@@ -95,7 +95,7 @@ const WorkingHoursManagement = () => {
         description: "Đã xảy ra lỗi khi tải thông tin trung tâm dịch vụ.",
         variant: "destructive",
       });
-      navigate("/dashboard/staff/service-centers");
+      navigate("/dashboard/admin/service-centers");
     } finally {
       setLoading(false);
     }
@@ -191,7 +191,7 @@ const WorkingHoursManagement = () => {
           </p>
         </div>
         <div className="space-x-2">
-          <Button variant="outline" onClick={() => navigate("/dashboard/staff/service-centers")}>
+          <Button variant="outline" onClick={() => navigate("/dashboard/admin/service-centers")}>
             Quay lại
           </Button>
           <Button onClick={handleSaveWorkingHours} disabled={saving}>

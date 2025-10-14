@@ -14,6 +14,7 @@ import { AdminDashboard } from "./pages/dashboard/admin/AdminDashboard";
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import ProfilePage from "./pages/customer/ProfilePage";
 import AddVehiclePage from "./pages/customer/AddVehiclePage";
+import VehiclesPage from "./pages/customer/VehiclesPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import BookingPage from "./pages/customer/BookingPage";
@@ -21,7 +22,7 @@ import StaffDashboard from "./pages/dashboard/staff/StaffDashboard";
 import ServiceManagement from "./pages/dashboard/admin/ServiceManagement";
 import ServiceCenterManagement from "./pages/dashboard/admin/ServiceCenterManagement";
 import AdminOverview from "./pages/dashboard/admin/AdminOverview";
-import WorkingHoursManagement from "./pages/dashboard/staff/WorkingHoursManagement";
+import WorkingHoursManagement from "./pages/dashboard/admin/WorkingHoursManagement";
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const AppRoutes = () => {
         <Route index element={<AdminOverview />} />
         <Route path="services" element={<ServiceManagement />} />
         <Route path="service-centers" element={<ServiceCenterManagement />} />
+        <Route path="/dashboard/admin/service-center/:centerId/working-hours"   element={<WorkingHoursManagement /> }  />
       </Route>
       <Route
         path="/dashboard/staff"
@@ -69,14 +71,7 @@ const AppRoutes = () => {
         }
       />
       {/* Các route con của admin đã được lồng bên trong /dashboard/admin */}
-      <Route
-        path="/dashboard/staff/service-center/:centerId/working-hours"
-        element={
-          <ProtectedRoute allowedRoles={["staff"]}>
-            <WorkingHoursManagement />
-          </ProtectedRoute>
-        }
-      />
+    
       <Route
         path="/customer"
         element={
@@ -98,6 +93,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={["customer"]}>
             <AddVehiclePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/vehicles"
+        element={
+          <ProtectedRoute allowedRoles={["customer"]}>
+            <VehiclesPage />
           </ProtectedRoute>
         }
       />

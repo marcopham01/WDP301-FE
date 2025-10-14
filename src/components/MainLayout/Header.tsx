@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import SwipeButton from "@/components/ui/swipe-button";
-import { Car, Zap, Menu, X } from "lucide-react";
+import { Car, Zap, Menu, X, User, LogOut, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext/useAuth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { NotificationDropdown } from "@/components/ui/notification-dropdown";
 
 interface NavItem {
   label: string;
@@ -100,8 +103,50 @@ const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
           <div className="hidden md:flex items-center space-x-4">
             {user && showLogout ? (
               <>
-                <span className="font-medium text-ev-green mr-2">{user.fullName || user.username || user.email}</span>
-                <Button className="bg-ev-green text-white px-6" onClick={onLogout}>Đăng xuất</Button>
+                {location.pathname.startsWith('/customer') && (
+                  <NotificationDropdown>
+                    <Button variant="ghost" size="icon" className="relative cursor-pointer">
+                      <Bell className="h-5 w-5" />
+                    </Button>
+                  </NotificationDropdown>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {(user.fullName || user.username || user.email || "").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user.fullName || user.username}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/customer/vehicles")}>
+                    <Car className="mr-2 h-4 w-4" />
+                    <span>Xe của tôi</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/customer/profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               </>
             ) : (
               <SwipeButton
@@ -159,10 +204,43 @@ const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
             ))}
             <div className="flex flex-col space-y-2 px-4 pt-2">
               {user && showLogout ? (
-                <>
-                  <span className="font-medium text-ev-green mb-1">{user.fullName || user.username || user.email}</span>
-                  <Button className="bg-ev-green text-white w-full" onClick={() => { setIsMenuOpen(false); onLogout?.(); }}>Đăng xuất</Button>
-                </>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {(user.fullName || user.username || user.email || "").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {user.fullName || user.username}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user.email}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/vehicles"); }}>
+                      <Car className="mr-2 h-4 w-4" />
+                      <span>Xe của tôi</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/profile"); }}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); onLogout?.(); }}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
                 <SwipeButton
                   firstText="Đăng nhập"

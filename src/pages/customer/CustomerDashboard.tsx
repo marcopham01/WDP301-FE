@@ -2,32 +2,41 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, Plus, Calendar, Settings, LogOut, Bell } from "lucide-react";
+import { Car, Plus, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getProfileApi } from "@/lib/authApi";
 import { getUserVehiclesApi, Vehicle } from "@/lib/vehicleApi";
+import Header from "@/components/MainLayout/Header";
+import Footer from "@/components/MainLayout/Footer";
+import { useAuth } from "@/context/AuthContext/useAuth";
 // import { getUserAppointmentsApi } from "@/lib/appointmentApi"; // Temporarily disabled
+
+interface Booking {
+  _id: string;
+  center_id?: { name?: string };
+  vehicle_id?: { brand?: string; model?: string; license_plate?: string };
+  appoinment_date: string;
+  appoinment_time: string;
+  status?: string;
+}
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<{ fullName?: string; email?: string } | null>(null);
+
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
-  const [recentBookings, setRecentBookings] = useState<any[]>([]);
+  const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
       const res = await getProfileApi();
-      if (res.ok && res.data?.user) {
-        setUser({
-          fullName: res.data.user.fullName || res.data.user.full_name || res.data.user.name,
-          email: res.data.user.email,
-        });
-      } else {
-        setUser(null);
+      if (!res.ok) {
+        setLoading(false);
+        return;
       }
       setLoading(false);
     };
@@ -72,9 +81,10 @@ const CustomerDashboard = () => {
   }, []);
 
   const getModelLabel = (v: Vehicle) => {
-    const m: any = v.model_id as any; // populated object or string id
-    if (m && typeof m === "object") {
-      const label = `${m.brand ?? ""} ${m.model_name ?? ""}`.trim();
+    const m = v.model_id as unknown; // populated object or string id
+    if (m && typeof m === "object" && m !== null) {
+      const model = m as { brand?: string; model_name?: string };
+      const label = `${model.brand ?? ""} ${model.model_name ?? ""}`.trim();
       return label || "Model";
     }
     return "Model";
@@ -88,61 +98,37 @@ const CustomerDashboard = () => {
     );
   }
 
+  // Đăng xuất (giả lập)
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    navigate("/login");
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-      className="min-h-screen bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9]"
+      className="min-h-screen flex flex-col"
     >
-      {/* Header */}
-      <header className="bg-white border-b border-border">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Car className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold bg-gradient-to-r from-ev-green to-ev-blue bg-clip-text text-transparent">
-              EV Service
-            </span>
+      <Header
+        navItems={[
+          { label: "Dashboard", href: "/customer", active: true },
+          { label: "Xe của tôi", href: "/customer/vehicles" },
+          { label: "Đặt lịch", href: "/customer/booking" },
+          { label: "Lịch sử", href: "/customer/history" },        ]}
+        onLogout={handleLogout}
+        showLogout
+      />
+      <main className="flex-1 py-8">
+        <div className="container max-w-4xl pt-20">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Chào {user?.fullName || user?.username || "Khách hàng"}!</h1>
+            <p className="text-muted-foreground">Quản lý xe và lịch bảo dưỡng của bạn</p>
           </div>
-          <div className="flex items-center gap-4">
-            <Bell className="h-5 w-5 text-muted-foreground cursor-pointer" />
-            <span className="text-sm text-muted-foreground">
-              {user ? `Chào ${user.fullName || user.email}` : "Không tìm thấy thông tin người dùng"}
-            </span>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/login") /* giả lập sign out */}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Đăng xuất
-            </Button>
-          </div>
-        </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard khách hàng</h1>
-          <p className="text-muted-foreground">Quản lý xe và lịch bảo dưỡng của bạn</p>
-        </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Button
-            variant="hero"
-            className="h-20 flex-col gap-2"
-            onClick={() => navigate("/customer/vehicles/add")}
-          >
-            <Plus className="h-6 w-6" />
-            Thêm xe mới
-          </Button>
-          <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => navigate("/customer/booking")}>
-            <Calendar className="h-6 w-6" />
-            Đặt lịch bảo dưỡng
-          </Button>
-          <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => navigate("/customer/profile")}>
-            <Settings className="h-6 w-6" />
-            Cài đặt
-          </Button>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Vehicles Section */}
@@ -211,7 +197,7 @@ const CustomerDashboard = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentBookings.map((b: any) => (
+                  {recentBookings.map((b) => (
                     <div key={b._id} className="border rounded-lg p-4 flex items-start justify-between gap-4">
                       <div>
                         <div className="font-medium">{b.center_id?.name ?? "Trung tâm"}</div>
@@ -226,7 +212,9 @@ const CustomerDashboard = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
+        </div>
+      </main>
+      <Footer />
     </motion.div>
   );
 };

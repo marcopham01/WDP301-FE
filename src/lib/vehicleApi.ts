@@ -111,3 +111,15 @@ export async function getAllVehiclesApi(): Promise<ApiResult<{ success: boolean;
   });
   return parseResponse(response);
 }
+
+// DELETE: /api/vehicle/deleteVehicle/:id
+export async function deleteVehicleApi(vehicleId: string): Promise<ApiResult<{ success: boolean }>> {
+  const response = await fetch(`/api/vehicle/deleteVehicle/${vehicleId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+  });
+  return parseResponse(response);
+}

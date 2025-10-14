@@ -171,7 +171,7 @@ const ServiceCenterManagement = () => {
 
   const handleManageWorkingHours = (serviceCenter: ServiceCenter) => {
     navigate(
-      `/dashboard/staff/service-center/${serviceCenter._id}/working-hours`
+      `/dashboard/admin/service-center/${serviceCenter._id}/working-hours`
     );
   };
 
