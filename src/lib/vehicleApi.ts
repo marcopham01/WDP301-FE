@@ -1,4 +1,4 @@
-export interface ApiResult<T = any> {
+export interface ApiResult<T = unknown> {
   ok: boolean;
   status: number;
   data?: T | null;
@@ -16,6 +16,15 @@ export interface VehicleModel {
   maintenanceIntervaMonths?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface CreateVehicleModelPayload {
+  brand: string;
+  model_name: string;
+  year: number;
+  battery_type: string;
+  maintenanceIntervalKm?: number;
+  maintenanceIntervaMonths?: number;
 }
 
 export interface Vehicle {
@@ -39,7 +48,7 @@ function getAuthHeader() {
 }
 
 async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
-  let data: any = null;
+  let data: unknown = null;
   try {
     data = await response.json();
   } catch {
@@ -49,7 +58,7 @@ async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
     ok: response.ok,
     status: response.status,
     data,
-    message: data?.message || data?.error || undefined,
+    message: (data as { message?: string; error?: string })?.message || (data as { message?: string; error?: string })?.error || undefined,
   } as ApiResult<T>;
 }
 
@@ -65,6 +74,19 @@ export async function getVehicleModelsApi(): Promise<ApiResult<{ success: boolea
   return parseResponse(response);
 }
 
+// POST: /api/vehicle/createModel
+export async function createVehicleModelApi(payload: CreateVehicleModelPayload): Promise<ApiResult<{ success: boolean }>> {
+  const response = await fetch("/api/vehicle/createModel", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify(payload),
+  });
+  return parseResponse(response);
+}
+
 // POST: /api/vehicle/createVehicle
 export interface CreateVehiclePayload {
   license_plate: string;
@@ -76,9 +98,31 @@ export interface CreateVehiclePayload {
   model_id: string; // VehicleModel _id
 }
 
+// PUT: /api/vehicle/update/{id}
+export interface UpdateVehiclePayload {
+  color?: string;
+  current_miliage?: number;
+  battery_health?: number;
+  last_service_mileage?: number;
+  purchase_date?: string; // YYYY-MM-DD format
+}
+
 export async function createVehicleApi(payload: CreateVehiclePayload): Promise<ApiResult<{ success: boolean }>> {
   const response = await fetch("/api/vehicle/createVehicle", {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify(payload),
+  });
+  return parseResponse(response);
+}
+
+// PUT: /api/vehicle/update/{id}
+export async function updateVehicleApi(vehicleId: string, payload: UpdateVehiclePayload): Promise<ApiResult<{ success: boolean }>> {
+  const response = await fetch(`/api/vehicle/update/${vehicleId}`, {
+    method: "PUT",
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeader(),
@@ -112,9 +156,9 @@ export async function getAllVehiclesApi(): Promise<ApiResult<{ success: boolean;
   return parseResponse(response);
 }
 
-// DELETE: /api/vehicle/deleteVehicle/:id
+// DELETE: /api/vehicle/delete/:id
 export async function deleteVehicleApi(vehicleId: string): Promise<ApiResult<{ success: boolean }>> {
-  const response = await fetch(`/api/vehicle/deleteVehicle/${vehicleId}`, {
+  const response = await fetch(`/api/vehicle/delete/${vehicleId}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",

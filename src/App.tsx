@@ -15,6 +15,7 @@ import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import ProfilePage from "./pages/customer/ProfilePage";
 import AddVehiclePage from "./pages/customer/AddVehiclePage";
 import VehiclesPage from "./pages/customer/VehiclesPage";
+import EditVehiclePage from "./pages/customer/EditVehiclePage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import BookingPage from "./pages/customer/BookingPage";
@@ -23,6 +24,7 @@ import ServiceManagement from "./pages/dashboard/admin/ServiceManagement";
 import ServiceCenterManagement from "./pages/dashboard/admin/ServiceCenterManagement";
 import AdminOverview from "./pages/dashboard/admin/AdminOverview";
 import WorkingHoursManagement from "./pages/dashboard/admin/WorkingHoursManagement";
+import VehicleModelManagement from "./pages/dashboard/admin/VehicleModelManagement";
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 
 const queryClient = new QueryClient();
@@ -57,6 +59,7 @@ const AppRoutes = () => {
         <Route index element={<AdminOverview />} />
         <Route path="services" element={<ServiceManagement />} />
         <Route path="service-centers" element={<ServiceCenterManagement />} />
+        <Route path="vehicle-models" element={<VehicleModelManagement />} />
         <Route path="/dashboard/admin/service-center/:centerId/working-hours"   element={<WorkingHoursManagement /> }  />
       </Route>
       <Route
@@ -101,6 +104,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={["customer"]}>
             <VehiclesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/vehicles/:id/edit"
+        element={
+          <ProtectedRoute allowedRoles={["customer"]}>
+            <EditVehiclePage />
           </ProtectedRoute>
         }
       />
