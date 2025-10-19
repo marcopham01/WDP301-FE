@@ -90,7 +90,7 @@ const AddVehiclePage = () => {
 
     if (res.ok) {
       toast({ title: "Thêm xe thành công" });
-      navigate("/customer");
+      navigate("/");
     } else {
       toast({ title: "Không thể thêm xe", description: res.message, variant: "destructive" });
     }
@@ -110,7 +110,7 @@ const AddVehiclePage = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/customer")}
+            onClick={() => navigate("/")}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Quay lại
@@ -254,7 +254,7 @@ const AddVehiclePage = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => navigate("/customer")}
+                    onClick={() => navigate("/")}
                     className="flex-1"
                   >
                     Hủy

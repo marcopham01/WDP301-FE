@@ -28,7 +28,7 @@ const EditVehiclePage = () => {
   useEffect(() => {
     const loadVehicle = async () => {
       if (!id) {
-        navigate("/customer/vehicles");
+        navigate("/");
         return;
       }
 
@@ -53,7 +53,7 @@ const EditVehiclePage = () => {
             description: "Xe không tồn tại hoặc không thuộc về bạn",
             variant: "destructive"
           });
-          navigate("/customer/vehicles");
+          navigate("/");
         }
       } else {
         toast({
@@ -61,7 +61,7 @@ const EditVehiclePage = () => {
           description: "Không thể tải thông tin xe",
           variant: "destructive"
         });
-        navigate("/customer/vehicles");
+        navigate("/");
       }
       setLoading(false);
     };
@@ -92,7 +92,7 @@ const EditVehiclePage = () => {
         title: "Cập nhật thành công",
         description: "Thông tin xe đã được cập nhật"
       });
-      navigate("/customer/vehicles");
+      navigate("/");
     } else {
       toast({
         title: "Cập nhật thất bại",
@@ -129,8 +129,7 @@ const EditVehiclePage = () => {
             { label: "Xe của tôi", href: "/customer/vehicles" },
             { label: "Đặt lịch", href: "/customer/booking" },
           ]}
-          onLogout={handleLogout}
-          showLogout
+        onLogout={handleLogout}
         />
         <main className="flex-1 py-8">
           <div className="container max-w-2xl pt-20">
@@ -163,7 +162,6 @@ const EditVehiclePage = () => {
           { label: "Đặt lịch", href: "/customer/booking" },
         ]}
         onLogout={handleLogout}
-        showLogout
       />
       <main className="flex-1 py-8">
         <div className="container max-w-2xl pt-20">

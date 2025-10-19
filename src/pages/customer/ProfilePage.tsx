@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getProfileApi } from "@/lib/authApi";
 import { useNavigate } from "react-router-dom";
-import { User, Mail, Phone, Calendar, ArrowLeft, Pencil } from "lucide-react";
-import { motion } from "framer-motion";
+import { User, Mail, Phone, Calendar, Pencil, Lock } from "lucide-react";
+import Header from "@/components/MainLayout/Header";
 
 interface UserProfile {
   id?: string;
@@ -57,89 +61,163 @@ const ProfilePage = () => {
     );
   }
 
+  const handleLogout = () => {
+    // Handle logout logic here - clear user from context and token
+    localStorage.removeItem('accessToken');
+    // You might want to call a logout function from AuthContext if available
+    navigate('/login');
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] px-4">
-      <div className="w-full max-w-2xl mx-auto flex flex-col items-center">
-        <Button variant="ghost" className="mb-8 self-start flex items-center gap-2 text-base" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-5 w-5" />
-          <span>Quay lại</span>
-        </Button>
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-          className="w-full"
-        >
-          <Card className="w-full max-w-xl shadow-2xl border-0 bg-white/90 rounded-2xl p-0">
-            <CardHeader className="flex flex-col items-center gap-2 bg-gradient-to-r from-ev-green/80 to-ev-blue/80 rounded-t-2xl pb-8 pt-8 relative">
-              <div className="w-24 h-24 rounded-full bg-white shadow-lg flex items-center justify-center mb-2 border-4 border-ev-green/60">
-                <User className="w-14 h-14 text-ev-green" />
-              </div>
-              {!editMode && (
-                <Button size="icon" variant="outline" className="absolute top-4 right-4 rounded-full border-ev-green/40 shadow hover:bg-ev-green/10 transition" title="Chỉnh sửa thông tin" onClick={() => { setEditMode(true); setEditData({ ...user }); }}>
-                  <Pencil className="w-5 h-5 text-ev-green" />
-                </Button>
-              )}
-              <CardTitle className="text-2xl font-bold text-gray-900 text-center">
-                {editMode ? (
-                  <input
-                    className="bg-white/80 border border-gray-200 rounded px-3 py-1 text-center font-bold text-lg focus:outline-ev-green"
-                    value={editData?.fullName || editData?.full_name || editData?.name || ''}
-                    onChange={e => setEditData((prev: UserProfile | null) => ({ ...prev, fullName: e.target.value }))}
-                  />
-                ) : (
-                  user.fullName || user.full_name || user.name || "-"
-                )}
-              </CardTitle>
-              <CardDescription className="text-base text-gray-700 text-center">
-                Khách hàng EV Service
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6 px-8 py-8">
-              <div className="flex items-center gap-3 text-lg">
-                <Mail className="h-5 w-5 text-ev-blue" />
-                <span className="font-medium min-w-[120px]">Email:</span>
-                {editMode ? (
-                  <input
-                    className="bg-white/80 border border-gray-200 rounded px-3 py-1 text-gray-800 w-full max-w-xs focus:outline-ev-green"
-                    value={editData?.email || ''}
-                    onChange={e => setEditData((prev: UserProfile | null) => ({ ...prev, email: e.target.value }))}
-                  />
-                ) : (
-                  <span className="text-gray-800">{user.email || "-"}</span>
-                )}
-              </div>
-              {(user.phoneNumber || user.phone_number || editMode) && (
-                <div className="flex items-center gap-3 text-lg">
-                  <Phone className="h-5 w-5 text-ev-blue" />
-                  <span className="font-medium min-w-[120px]">Số điện thoại:</span>
-                  {editMode ? (
-                    <input
-                      className="bg-white/80 border border-gray-200 rounded px-3 py-1 text-gray-800 w-full max-w-xs focus:outline-ev-green"
-                      value={editData?.phoneNumber || editData?.phone_number || ''}
-                      onChange={e => setEditData((prev: UserProfile | null) => ({ ...prev, phoneNumber: e.target.value }))}
+    <div className="min-h-screen bg-gray-50">
+      {/* Main Header */}
+      <Header onLogout={handleLogout} />
+
+      {/* Profile Header */}
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white mt-16">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-xl font-bold">Thông tin cá nhân</h1>
+              <p className="text-blue-100 text-sm mt-1">Quản lý và cập nhật thông tin tài khoản của bạn</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
+          {/* Left Sidebar - Profile Info */}
+          <div className="lg:col-span-1">
+            <Card className="shadow-lg">
+              <CardContent className="p-3">
+                <div className="text-center">
+                  {/* Avatar */}
+                  <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <span className="text-white text-lg font-bold">
+                      {(user.fullName || user.full_name || user.name || user.email || "U").charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+
+                  {/* User Info */}
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">
+                    {user.fullName || user.full_name || user.name || "Người dùng"}
+                  </h3>
+                  <p className="text-gray-600 text-xs mb-2">@{user.email?.split('@')[0] || 'username'}</p>
+                  <Button className="bg-blue-500 hover:bg-blue-600 text-white w-full text-xs py-1.5">
+                    Khách hàng
+                  </Button>
+
+                  {/* Contact Info */}
+                  <div className="mt-3 space-y-1.5 text-left">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="text-gray-700 text-xs">{user.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="text-gray-700 text-xs">{user.phoneNumber || user.phone_number || "Chưa cập nhật"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="text-gray-700 text-xs">
+                        Tham gia: {new Date(user.createdAt || user.created_at || Date.now()).toLocaleDateString('vi-VN')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Side - Forms */}
+          <div className="lg:col-span-2">
+            <Card className="shadow-lg">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <User className="w-4 h-4" />
+                    Thông tin chi tiết
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-3 py-1.5">
+                      <Lock className="w-3 h-3 mr-1" />
+                      Đổi mật khẩu
+                    </Button>
+                    <Button
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5"
+                      onClick={() => setEditMode(!editMode)}
+                    >
+                      <Pencil className="w-3 h-3 mr-1" />
+                      {editMode ? 'Hủy chỉnh sửa' : 'Chỉnh sửa'}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+
+                {/* Username and Full Name in one row */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="username" className="text-sm">Tên đăng nhập</Label>
+                    <Input
+                      id="username"
+                      value={user.email?.split('@')[0] || ''}
+                      disabled
+                      className="bg-gray-50 h-9 text-sm"
                     />
-                  ) : (
-                    <span className="text-gray-800">{user.phoneNumber || user.phone_number}</span>
-                  )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="fullName" className="text-sm">Họ và tên</Label>
+                    <Input
+                      id="fullName"
+                      value={editMode ? (editData?.fullName || editData?.full_name || editData?.name || '') : (user.fullName || user.full_name || user.name || '')}
+                      onChange={(e) => setEditData((prev: UserProfile | null) => ({ ...prev, fullName: e.target.value }))}
+                      disabled={!editMode}
+                      className={`h-9 text-sm ${!editMode ? "bg-gray-50" : ""}`}
+                    />
+                  </div>
                 </div>
-              )}
-              {(user.createdAt || user.created_at) && (
-                <div className="flex items-center gap-3 text-lg">
-                  <Calendar className="h-5 w-5 text-ev-blue" />
-                  <span className="font-medium min-w-[120px]">Ngày tạo tài khoản:</span>
-                  <span className="text-gray-800">{new Date(user.createdAt || user.created_at).toLocaleDateString('vi-VN')}</span>
+
+                {/* Address */}
+                <div className="space-y-1">
+                  <Label htmlFor="address" className="text-sm">Địa chỉ</Label>
+                  <Textarea
+                    id="address"
+                    placeholder="Nhập địa chỉ của bạn..."
+                    className="min-h-[80px] text-sm"
+                    disabled={!editMode}
+                  />
                 </div>
-              )}
-              {editMode && (
-                <div className="flex gap-4 pt-4 justify-end">
-                  <Button variant="outline" onClick={() => setEditMode(false)}>Hủy</Button>
-                  <Button variant="ev-primary" onClick={() => { setUser(editData); setEditMode(false); }}>Lưu</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+
+                
+
+                {/* Action Buttons */}
+                {editMode && (
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditMode(false)}
+                      className="flex-1"
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      className="flex-1 bg-blue-500 hover:bg-blue-600"
+                      onClick={() => {
+                        setUser(editData);
+                        setEditMode(false);
+                      }}
+                    >
+                      Lưu thay đổi
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
