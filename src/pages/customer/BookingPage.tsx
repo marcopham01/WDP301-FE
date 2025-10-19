@@ -18,7 +18,8 @@ import { getUserVehiclesApi, Vehicle } from "@/lib/vehicleApi";
 import { getAllServicesApi, ServiceType } from "@/lib/serviceApi";
 import { getServiceCentersApi, ServiceCenter } from "@/lib/serviceCenterApi";
 import { getProfileApi } from "@/lib/authApi";
-// import { createAppointmentApi } from "@/lib/appointmentApi"; // Temporarily disabled
+import { createAppointmentApi, getAppointmentByIdApi } from "@/lib/appointmentApi";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export default function BookingPage() {
   const navigate = useNavigate();
@@ -34,6 +35,8 @@ export default function BookingPage() {
   const [bookingTime, setBookingTime] = useState("");
   const [notes, setNotes] = useState("");
   const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState<{ amount?: number; checkout_url?: string; qr_code?: string; order_code?: number } | null>(null);
 
   const timeSlots = [
     "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
@@ -90,32 +93,60 @@ export default function BookingPage() {
 
     setLoading(true);
 
-    // const service = serviceTypes.find((s) => s._id === selectedServiceType);
-    // const payload = {
-    //   appoinment_date: format(bookingDate!, "yyyy-MM-dd"),
-    //   appoinment_time: bookingTime,
-    //   notes: notes || undefined,
-    //   estimated_cost: service?.base_price,
-    //   user_id: currentUser.id,
-    //   vehicle_id: selectedVehicle,
-    //   center_id: selectedCenter,
-    // };
+    try {
+      const payload = {
+        appoinment_date: format(bookingDate, "yyyy-MM-dd"),
+        appoinment_time: bookingTime,
+        notes: notes || undefined,
+        user_id: currentUser.id,
+        vehicle_id: selectedVehicle,
+        center_id: selectedCenter,
+        service_type_id: selectedServiceType,
+        // technician_id: LOẠI BỎ - sẽ được staff gán sau
+      };
 
-    // API appointment chưa sẵn sàng
-    toast({ 
-      title: "Chức năng tạm thời không khả dụng", 
-      description: "API appointment đang được phát triển",
-      variant: "destructive" 
-    });
-    
-    // const res = await createAppointmentApi(payload);
-    // if (res.ok) {
-    //   toast({ title: "Đặt lịch thành công!" });
-    //   navigate("/customer");
-    // } else {
-    //   toast({ title: "Không thể tạo lịch", description: res.message, variant: "destructive" });
-    // }
-    setLoading(false);
+      const res = await createAppointmentApi(payload);
+      
+      if (res.ok && res.data?.success) {
+        toast({
+          title: "Đặt lịch thành công!",
+          description: res.data.message || "Lịch hẹn của bạn đã được tạo. Vui lòng thanh toán đặt cọc để xác nhận.",
+        });
+
+        const appointmentId = res.data.data?._id;
+        if (appointmentId) {
+          const detail = await getAppointmentByIdApi(appointmentId);
+          const appt: any = detail.data?.data;
+          const pay = appt?.payment_id;
+          if (detail.ok && pay) {
+            setPaymentInfo({
+              amount: pay.amount,
+              checkout_url: pay.checkout_url,
+              qr_code: pay.qr_code,
+              order_code: pay.order_code,
+            });
+            setPaymentDialogOpen(true);
+          } else if (pay?.checkout_url) {
+            window.open(pay.checkout_url, "_blank");
+          }
+        }
+      } else {
+        toast({
+          title: "Không thể tạo lịch",
+          description: res.message || "Đã có lỗi xảy ra. Vui lòng thử lại.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Booking error:", error);
+      toast({ 
+        title: "Lỗi hệ thống", 
+        description: "Không thể kết nối đến server. Vui lòng thử lại sau.",
+        variant: "destructive" 
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Đăng xuất (giả lập)
@@ -137,15 +168,7 @@ export default function BookingPage() {
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="min-h-screen flex flex-col"
     >
-      <Header
-        navItems={[
-          { label: "Dashboard", href: "/customer" },
-          { label: "Xe của tôi", href: "/customer/vehicles" },
-          { label: "Đặt lịch", href: "/customer/booking", active: true },
-          { label: "Lịch sử", href: "/customer/history" },        ]}
-        onLogout={handleLogout}
-        showLogout
-      />
+      <Header onLogout={handleLogout} />
       <main className="flex-1 py-8">
         <div className="container max-w-4xl pt-20">
           <div className="mb-8">
@@ -290,7 +313,7 @@ export default function BookingPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => navigate("/customer")}
+                    onClick={() => navigate("/")}
                     className="flex-1"
                   >
                     Hủy
@@ -304,6 +327,68 @@ export default function BookingPage() {
           )}
         </div>
       </main>
+      {/* Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>Thanh toán đặt lịch</DialogTitle>
+            <DialogDescription>
+              Vui lòng thanh toán tiền đặt cọc để xác nhận lịch hẹn
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-md bg-muted p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">Số tiền</div>
+                <div className="text-xl font-bold text-primary">
+                  {paymentInfo?.amount ? paymentInfo.amount.toLocaleString("vi-VN") + " VND" : "—"}
+                </div>
+              </div>
+            </div>
+
+            {paymentInfo?.qr_code && (
+              <div className="flex flex-col items-center gap-2">
+                <img
+                  src={paymentInfo.qr_code}
+                  alt="QR thanh toán"
+                  className="w-56 h-56 object-contain rounded-md border"
+                />
+                <div className="text-xs text-muted-foreground">Quét mã để thanh toán</div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Thanh toán online</div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => paymentInfo?.checkout_url && window.open(paymentInfo.checkout_url, "_blank")}
+                >
+                  Mở trang thanh toán
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    if (paymentInfo?.checkout_url) {
+                      await navigator.clipboard.writeText(paymentInfo.checkout_url);
+                      toast({ title: "Đã sao chép link thanh toán" });
+                    }
+                  }}
+                >
+                  Sao chép link
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="destructive" onClick={() => setPaymentDialogOpen(false)}>
+              Hủy thanh toán
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Footer />
     </motion.div>
   );

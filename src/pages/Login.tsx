@@ -79,7 +79,7 @@ const Login = () => {
           } else if (userRole === "admin") {
             navigate("/dashboard/admin");
           } else {
-            navigate("/customer");
+            navigate("/");
           }
         } else {
           toast({
@@ -134,7 +134,7 @@ const Login = () => {
             } else if (userRole === "admin") {
               navigate("/dashboard/admin");
             } else {
-              navigate("/customer");
+              navigate("/");
             }
           }, 500);
         } else {

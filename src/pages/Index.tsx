@@ -12,7 +12,6 @@ const Index = () => {
   const heroRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
   const featuresRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
   const feedbackRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const { logout } = useAuth();
@@ -24,7 +23,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
-      <Header showLogout={!!user} onLogout={handleLogout} />
+      <Header onLogout={handleLogout} />
       <main>
         <div ref={heroRef}>
           <HeroSection />

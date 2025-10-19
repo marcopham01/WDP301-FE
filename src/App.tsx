@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Toaster as ToasterUI } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "./context/AuthContext/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -11,11 +11,14 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { AdminDashboard } from "./pages/dashboard/admin/AdminDashboard";
-import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import ProfilePage from "./pages/customer/ProfilePage";
 import AddVehiclePage from "./pages/customer/AddVehiclePage";
 import VehiclesPage from "./pages/customer/VehiclesPage";
+import VehicleDetailPage from "./pages/customer/VehicleDetailPage";
 import EditVehiclePage from "./pages/customer/EditVehiclePage";
+import ChatPage from "./pages/customer/ChatPage";
+import BookingHistoryPage from "./pages/customer/BookingHistoryPage";
+import PaymentHistoryPage from "./pages/customer/PaymentHistoryPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import BookingPage from "./pages/customer/BookingPage";
@@ -26,6 +29,8 @@ import AdminOverview from "./pages/dashboard/admin/AdminOverview";
 import WorkingHoursManagement from "./pages/dashboard/admin/WorkingHoursManagement";
 import VehicleModelManagement from "./pages/dashboard/admin/VehicleModelManagement";
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
+import PaymentSuccessPage from "@/pages/customer/PaymentSuccessPage";
+import PaymentCancelPage from "@/pages/customer/PaymentCancelPage";
 
 const queryClient = new QueryClient();
 
@@ -75,14 +80,7 @@ const AppRoutes = () => {
       />
       {/* Các route con của admin đã được lồng bên trong /dashboard/admin */}
     
-      <Route
-        path="/customer"
-        element={
-          <ProtectedRoute allowedRoles={["customer"]}>
-            <CustomerDashboard />
-          </ProtectedRoute>
-        }
-      />
+
       <Route
         path="/customer/profile"
         element={
@@ -108,6 +106,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/customer/vehicles/:id"
+        element={
+          <ProtectedRoute allowedRoles={["customer"]}>
+            <VehicleDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/customer/vehicles/:id/edit"
         element={
           <ProtectedRoute allowedRoles={["customer"]}>
@@ -116,13 +122,40 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/customer/booking"
+        path="/booking"
         element={
           <ProtectedRoute allowedRoles={["customer"]}>
             <BookingPage />
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/customer/chat"
+        element={
+          <ProtectedRoute allowedRoles={["customer"]}>
+            <ChatPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/booking-history"
+        element={
+          <ProtectedRoute allowedRoles={["customer"]}>
+            <BookingHistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/payment-history"
+        element={
+          <ProtectedRoute allowedRoles={["customer"]}>
+            <PaymentHistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      {/* Payment result routes (public) */}
+      <Route path="/payment/success" element={<PaymentSuccessPage />} />
+      <Route path="/payment/cancel" element={<PaymentCancelPage />} />
       <Route
         path="/dashboard/technician"
         element={

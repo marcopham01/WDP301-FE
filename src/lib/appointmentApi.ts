@@ -26,17 +26,61 @@ async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
 }
 
 export interface CreateAppointmentPayload {
-  appoinment_date: string; // YYYY-MM-DD
-  appoinment_time: string; // HH:mm
+  appoinment_date: string; // YYYY-MM-DD format: "2025-10-12"
+  appoinment_time: string; // HH:mm format: "09:00"
   notes?: string;
-  estimated_cost?: number;
-  user_id: string; // current user id
-  vehicle_id: string;
-  center_id: string;
-  assigned?: string; // optional technician id
+  user_id: string; // ID người dùng
+  vehicle_id: string; // ID xe cần bảo dưỡng
+  center_id: string; // ID trung tâm bảo dưỡng
+  service_type_id: string; // ID loại dịch vụ bảo dưỡng (REQUIRED)
 }
 
-export async function createAppointmentApi(payload: CreateAppointmentPayload): Promise<ApiResult<{ success: boolean }>> {
+export interface CreateAppointmentResponse {
+  message: string;
+  success: boolean;
+  data: {
+    _id: string;
+    appoinment_date: string;
+    appoinment_time: string;
+    status: string;
+    estimated_cost: number;
+    user_id: {
+      _id: string;
+      username?: string;
+      fullName?: string;
+      email?: string;
+    };
+    vehicle_id: {
+      _id: string;
+      license_plate?: string;
+      brand?: string;
+      model?: string;
+    };
+    center_id: {
+      _id: string;
+      center_name?: string;
+      address?: string;
+    };
+    service_type_id: {
+      _id: string;
+      service_name?: string;
+      base_price?: number;
+      estimated_duration?: string;
+    };
+    payment_id?: {
+      _id: string;
+      order_code?: number;
+      amount?: number;
+      status?: string;
+      checkout_url?: string;
+      qr_code?: string;
+    };
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+export async function createAppointmentApi(payload: CreateAppointmentPayload): Promise<ApiResult<CreateAppointmentResponse>> {
   const response = await fetch("/api/appointment/create", {
     method: "POST",
     headers: {
@@ -105,7 +149,7 @@ export async function getAppointmentsApi(
   if (params.limit) query.set("limit", String(params.limit));
   if (params.status) query.set("status", params.status);
   const qs = query.toString();
-  const url = qs ? `/api/appointment?${qs}` : `/api/appointment`;
+  const url = qs ? `/api/appointment/list?${qs}` : `/api/appointment/list`;
   const response = await fetch(url, {
     method: "GET",
     headers: {
@@ -116,19 +160,70 @@ export async function getAppointmentsApi(
   return parseResponse(response);
 }
 
+// API lấy danh sách appointment của user hiện tại
+export async function getMyAppointmentsApi(
+  params: GetAppointmentsParams = {}
+): Promise<ApiResult<{ success: boolean; data: { appointments: Appointment[]; pagination: Pagination } }>> {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.limit) query.set("limit", String(params.limit));
+  if (params.status) query.set("status", params.status);
+  // Add cache-busting parameter
+  query.set("_t", String(Date.now()));
+  const qs = query.toString();
+  const url = `/api/appointment/myAppointment?${qs}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
+      ...getAuthHeader(),
+    },
+  });
+
+  return parseResponse(response);
+}
+
 export interface UpdateAppointmentStatusPayload {
   appointment_id: string;
   status: string;
 }
 
 export async function updateAppointmentStatusApi(payload: UpdateAppointmentStatusPayload): Promise<ApiResult<{ success: boolean }>> {
-  const response = await fetch(`/api/appointment/status/${payload.appointment_id}`, {
+  const response = await fetch("/api/appointment/update-status", {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeader(),
     },
-    body: JSON.stringify({ status: payload.status }),
+    body: JSON.stringify(payload),
+  });
+  return parseResponse(response);
+}
+
+// API lấy thông tin appointment theo ID
+export async function getAppointmentByIdApi(appointmentId: string): Promise<ApiResult<{ success: boolean; data: Appointment }>> {
+  const response = await fetch(`/api/appointment/${appointmentId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+  });
+  return parseResponse(response);
+}
+
+// API xóa appointment (chỉ cho phép xóa appointment có trạng thái pending)
+export async function deleteAppointmentApi(appointmentId: string): Promise<ApiResult<{ success: boolean; message: string }>> {
+  const response = await fetch(`/api/appointment/${appointmentId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
   });
   return parseResponse(response);
 }

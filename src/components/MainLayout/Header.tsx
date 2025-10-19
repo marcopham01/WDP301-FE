@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import SwipeButton from "@/components/ui/swipe-button";
-import { Car, Zap, Menu, X, User, LogOut, Bell } from "lucide-react";
+import { Car, Zap, Menu, X, User, LogOut, Bell, Calendar, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext/useAuth";
@@ -18,11 +18,10 @@ interface NavItem {
 
 interface HeaderProps {
   navItems?: NavItem[];
-  showLogout?: boolean;
   onLogout?: () => void;
 }
 
-const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
+const Header = ({ navItems, onLogout }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
   const lastScrollY = useRef(window.scrollY);
@@ -51,11 +50,15 @@ const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
       href: "/",
       onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (location.pathname !== "/") {
+          navigate("/");
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
       },
       active: location.pathname === "/",
     },
-    { label: "Đặt lịch", href: "/customer/booking", active: location.pathname.startsWith("/booking") },
+    { label: "Đặt lịch", href: "/booking", active: location.pathname.startsWith("/booking") },
     { label: "Về chúng tôi", href: "/about", active: location.pathname.startsWith("/about") },
     { label: "Liên hệ", href: "/contact", active: location.pathname.startsWith("/contact") },
   ];
@@ -101,7 +104,7 @@ const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            {user && showLogout ? (
+            {user ? (
               <>
                 {location.pathname.startsWith('/customer') && (
                   <NotificationDropdown>
@@ -132,13 +135,25 @@ const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/customer/vehicles")}>
-                    <Car className="mr-2 h-4 w-4" />
-                    <span>Xe của tôi</span>
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/customer/profile")}>
                     <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                    <span>Hồ sơ</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/customer/chat")}>
+                    <Bell className="mr-2 h-4 w-4" />
+                    <span>Trung tâm chat</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/customer/vehicles")}>
+                    <Car className="mr-2 h-4 w-4" />
+                    <span>Quản lý xe</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/customer/booking-history")}>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    <span>Lịch sử đặt lịch</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/customer/payment-history")}>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span>Lịch sử thanh toán</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onLogout}>
@@ -203,7 +218,7 @@ const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
               </a>
             ))}
             <div className="flex flex-col space-y-2 px-4 pt-2">
-              {user && showLogout ? (
+              {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -226,13 +241,25 @@ const Header = ({ navItems, showLogout, onLogout }: HeaderProps) => {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/vehicles"); }}>
-                      <Car className="mr-2 h-4 w-4" />
-                      <span>Xe của tôi</span>
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/profile"); }}>
                       <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
+                      <span>Hồ sơ</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/chat"); }}>
+                      <Bell className="mr-2 h-4 w-4" />
+                      <span>Trung tâm chat</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/vehicles"); }}>
+                      <Car className="mr-2 h-4 w-4" />
+                      <span>Quản lý xe</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/booking-history"); }}>
+                      <Calendar className="mr-2 h-4 w-4" />
+                      <span>Lịch sử đặt lịch</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/payment-history"); }}>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      <span>Lịch sử thanh toán</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => { setIsMenuOpen(false); onLogout?.(); }}>
