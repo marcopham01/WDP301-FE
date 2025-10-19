@@ -1,0 +1,131 @@
+import React, { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import Header from "@/components/MainLayout/Header";
+import Footer from "@/components/MainLayout/Footer";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2 } from "lucide-react";
+import { updateAppointmentStatusApi, getMyAppointmentsApi } from "@/lib/appointmentApi";
+
+const PaymentSuccessPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const orderCode = searchParams.get("order_code");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tx, setTx] = useState<any>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!orderCode) {
+      setError("Thiếu mã đơn hàng (order_code)");
+      setLoading(false);
+      return;
+    }
+
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const run = async () => {
+      try {
+        // Update status to 'paid'
+        await fetch("/api/payment/update-status", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ order_code: Number(orderCode), status: "paid" }),
+        });
+
+        // Fetch transaction details
+        const res = await fetch(`/api/payment/transaction/${encodeURIComponent(orderCode)}`, {
+          method: "GET",
+          headers,
+        });
+        let data: any = null;
+        try { data = await res.json(); } catch { data = null; }
+        if (!res.ok) {
+          setError(data?.message || "Không thể lấy thông tin giao dịch");
+        } else {
+          setTx(data?.data || null);
+
+          // Find appointment by payment_id and update its status to 'deposited'
+          try {
+            const paymentId = data?.data?._id;
+            if (paymentId) {
+              // Add a small delay to ensure backend has processed the payment status update
+              await new Promise(resolve => setTimeout(resolve, 500));
+
+              // Get all appointments to find the one with matching payment_id
+              const appointmentsRes = await getMyAppointmentsApi({ limit: 100 });
+              if (appointmentsRes.ok && appointmentsRes.data?.data) {
+                const appointmentsList = (appointmentsRes.data.data as any).items ||
+                                        (appointmentsRes.data.data as any).appointments || [];
+                const appointment = appointmentsList.find((apt: any) => {
+                  // Check if payment_id is an object with _id property or a string
+                  const aptPaymentId = apt.payment_id?._id || apt.payment_id;
+                  return String(aptPaymentId) === String(paymentId);
+                });
+                if (appointment) {
+                  await updateAppointmentStatusApi({
+                    appointment_id: appointment._id,
+                    status: "deposited"
+                  });
+                }
+              }
+            }
+          } catch (err) {
+            console.error("Failed to update appointment status:", err);
+            // Don't show error to user, payment success is still recorded
+          }
+        }
+      } catch (err) {
+        setError("Lỗi kết nối máy chủ");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    run();
+  }, [orderCode]);
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header onLogout={() => { localStorage.removeItem("accessToken"); navigate("/login"); }} />
+      <main className="flex-1 py-8">
+        <div className="container max-w-2xl pt-20">
+          <Card>
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-2">
+                <CheckCircle2 className="h-12 w-12 text-green-600" />
+              </div>
+              <CardTitle>Thanh toán thành công</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="text-center text-muted-foreground">Đang xử lý...</div>
+              ) : error ? (
+                <div className="text-center text-destructive">{error}</div>
+              ) : (
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span>Mã đơn hàng:</span><span className="font-medium">{tx?.order_code || orderCode}</span></div>
+                  <div className="flex justify-between"><span>Số tiền:</span><span className="font-semibold text-primary">{tx?.amount ? tx.amount.toLocaleString("vi-VN") + " VND" : "—"}</span></div>
+                  <div className="flex justify-between"><span>Trạng thái:</span><span className="font-medium capitalize">{tx?.status || "paid"}</span></div>
+                  {tx?.description && (<div className="flex justify-between"><span>Mô tả:</span><span className="font-medium">{tx.description}</span></div>)}
+                </div>
+              )}
+
+              <div className="mt-6 flex gap-2 justify-center">
+                <Button onClick={() => navigate("/")}>Về trang chủ</Button>
+                <Button variant="outline" onClick={() => navigate("/customer/payment-history")}>
+                  Xem lịch sử thanh toán
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+export default PaymentSuccessPage;
