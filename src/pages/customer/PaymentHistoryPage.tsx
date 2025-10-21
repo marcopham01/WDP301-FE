@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, CreditCard, Download, Eye, Clock, RefreshCw, Trash2 } from "lucide-react";
+import { Calendar, CreditCard, Eye, Clock, RefreshCw, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
@@ -15,6 +15,8 @@ const PaymentHistoryPage = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -27,25 +29,25 @@ const PaymentHistoryPage = () => {
     try {
       const res = await getAllMyTransactionsApi();
       if (res.ok && res.data?.data) {
-        const data = res.data.data as any;
-        const txns: Transaction[] = (data.items || data.transactions || []) as Transaction[];
+        const data = res.data.data as { items?: Transaction[]; transactions?: Transaction[] };
+        const txns: Transaction[] = (data.items || data.transactions || []) ?? [];
         setAllTransactions(txns);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Error fetching all transactions:", e);
     }
   }
 
   // Fetch paginated data
-  async function fetchData(opts?: { resetPage?: boolean }) {
+  async function fetchData(opts?: { resetPage?: boolean; soft?: boolean }) {
     try {
-      setLoading(true);
+      if (opts?.soft) setRefreshing(true); else setLoading(true);
       setError(null);
       const reqPage = opts?.resetPage ? 1 : page;
       const res = await getMyTransactionsApi({
         page: reqPage,
         limit,
-        status: statusFilter !== "all" ? (statusFilter as any) : undefined,
+        status: statusFilter !== "all" ? (statusFilter as "pending" | "paid" | "cancelled") : undefined,
       });
 
       if (!res.ok || !res.data?.data) {
@@ -55,33 +57,35 @@ const PaymentHistoryPage = () => {
         throw new Error(res.message || "Không thể tải dữ liệu thanh toán");
       }
 
-      const data = res.data.data as any;
-      const txns: Transaction[] = (data.items || data.transactions || []) as Transaction[];
-      const p = data.pagination || {};
-
-      const currentPage = p.current_page ?? p.page ?? reqPage;
-      const totalPagesN = p.total_pages ?? p.totalPages ?? 1;
-      const totalDocs = p.total_items ?? p.totalDocs ?? txns.length;
+  const data = res.data.data as { items?: Transaction[]; transactions?: Transaction[]; pagination?: Partial<Pagination> };
+  const txns: Transaction[] = (data.items || data.transactions || []) ?? [];
+  const p = data.pagination || {};
+  const pSnake = p as Record<string, number | undefined>;
+  const currentPage = pSnake.current_page ?? (p as { page?: number }).page ?? reqPage;
+  const totalPagesN = pSnake.total_pages ?? (p as { totalPages?: number }).totalPages ?? 1;
+  const totalDocs = pSnake.total_items ?? (p as { totalDocs?: number }).totalDocs ?? txns.length;
 
       setTransactions(txns);
       setPage(currentPage);
       setTotalPages(totalPagesN);
       setTotalItems(totalDocs);
-    } catch (e: any) {
-      setError(e?.message || "Lỗi không xác định");
-      toast({ title: "Lỗi", description: e?.message || "Không thể tải thanh toán", variant: "destructive" });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Lỗi không xác định";
+      setError(message);
+      toast({ title: "Lỗi", description: message || "Không thể tải thanh toán", variant: "destructive" });
     } finally {
-      setLoading(false);
+      if (opts?.soft) setRefreshing(false); else setLoading(false);
+      if (initialLoad) setInitialLoad(false);
     }
   }
 
   useEffect(() => {
     fetchAllTransactions();
-    fetchData();
+    fetchData({ soft: !initialLoad });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, statusFilter]);
 
-  const handleRefresh = () => fetchData();
+  const handleRefresh = () => fetchData({ soft: true });
   const handleClearFilters = () => {
     setStatusFilter("all");
     setPage(1);
@@ -130,7 +134,7 @@ const PaymentHistoryPage = () => {
     window.location.href = "/login";
   };
 
-  if (loading) {
+  if (initialLoad && loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -156,8 +160,8 @@ const PaymentHistoryPage = () => {
               </h1>
               <p className="opacity-90 mt-1">Xem và quản lý lịch sử thanh toán của bạn</p>
             </div>
-            <Button variant="secondary" onClick={handleRefresh} className="gap-2">
-              <RefreshCw className="w-4 h-4" /> Làm mới
+            <Button variant="secondary" onClick={handleRefresh} className="gap-2" disabled={refreshing} aria-busy={refreshing}>
+              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} /> Làm mới
             </Button>
           </div>
 
@@ -203,7 +207,7 @@ const PaymentHistoryPage = () => {
 
           {/* Filters */}
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-0 relative" aria-busy={refreshing}>
               <div className="flex flex-col md:flex-row gap-3 items-center">
                 {/* Status */}
                 <div className="w-full md:w-48">
@@ -222,9 +226,6 @@ const PaymentHistoryPage = () => {
                   <Button variant="outline" className="gap-2" onClick={handleClearFilters}>
                     <Trash2 className="w-4 h-4" /> Xóa bộ lọc
                   </Button>
-                  <Button variant="default" className="gap-2" onClick={handleRefresh}>
-                    <RefreshCw className="w-4 h-4" /> Tải lại
-                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -232,10 +233,8 @@ const PaymentHistoryPage = () => {
 
           {/* Transactions List */}
           <Card>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="px-4 py-6 text-center text-muted-foreground">Đang tải...</div>
-              ) : error ? (
+            <CardContent className="p-0 relative" aria-busy={refreshing}>
+              {error ? (
                 <div className="px-4 py-6 text-center text-destructive">{error}</div>
               ) : transactions.length === 0 ? (
                 <div className="px-4 py-12 text-center">
@@ -249,7 +248,7 @@ const PaymentHistoryPage = () => {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className={`overflow-x-auto transition-opacity duration-200 ${refreshing ? "opacity-70" : "opacity-100"}`}>
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-muted-foreground">
                       <tr>
@@ -283,6 +282,12 @@ const PaymentHistoryPage = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {refreshing && (
+                <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent"></div>
                 </div>
               )}
 

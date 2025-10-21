@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarIcon, Clock, MapPin, Eye, Trash2, RefreshCw, CheckCircle2, XCircle, PlayCircle, ListChecks } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
@@ -10,12 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getMyAppointmentsApi, deleteAppointmentApi, Appointment } from "@/lib/appointmentApi";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Type guard and helpers
-function toVNDate(dateStr?: string) {
-  if (!dateStr) return "—";
-  try { return new Date(dateStr).toLocaleDateString("vi-VN"); } catch { return dateStr; }
-}
+// (removed unused toVNDate helper)
 
 function statusLabel(s?: string) {
   switch (s) {
@@ -42,6 +40,8 @@ type MyAppointment = Appointment & {
 
 export default function BookingHistoryPage() {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<MyAppointment[]>([]);
   const [page, setPage] = useState(1);
@@ -56,9 +56,9 @@ export default function BookingHistoryPage() {
   const [sortKey, setSortKey] = useState<SortKey>("none");
 
   // Fetch data
-  async function fetchData(opts?: { resetPage?: boolean }) {
+  async function fetchData(opts?: { resetPage?: boolean; soft?: boolean }) {
     try {
-      setLoading(true);
+      if (opts?.soft) setRefreshing(true); else setLoading(true);
       setError(null);
       const reqPage = opts?.resetPage ? 1 : page;
       const res = await getMyAppointmentsApi({ page: reqPage, limit, status: statusFilter !== "all" ? statusFilter : undefined });
@@ -69,28 +69,31 @@ export default function BookingHistoryPage() {
         throw new Error(res.message || "Không thể tải dữ liệu lịch hẹn");
       }
 
-      const data = res.data.data as any;
-      const appts: MyAppointment[] = (data.items || data.appointments || []) as MyAppointment[];
-      const p = data.pagination || {};
-      // try to normalize pagination shape
-      const currentPage = p.current_page ?? p.page ?? reqPage;
-      const totalPagesN = p.total_pages ?? p.totalPages ?? 1;
-      const totalDocs = p.total_items ?? p.totalDocs ?? appts.length;
+  const data = res.data.data as { appointments?: MyAppointment[]; items?: MyAppointment[]; pagination?: Partial<{ page: number; limit: number; totalPages: number; totalDocs: number }> };
+  const appts: MyAppointment[] = (data.items || data.appointments || []) ?? [];
+  const p = data.pagination || {};
+  // normalize pagination shape (supports both camelCase and snake_case)
+  const pSnake = p as Record<string, number | undefined>;
+  const currentPage = pSnake.current_page ?? (p as { page?: number }).page ?? reqPage;
+  const totalPagesN = pSnake.total_pages ?? (p as { totalPages?: number }).totalPages ?? 1;
+  const totalDocs = pSnake.total_items ?? (p as { totalDocs?: number }).totalDocs ?? appts.length;
 
       setItems(appts);
       setPage(currentPage);
       setTotalPages(totalPagesN);
       setTotalItems(totalDocs);
-    } catch (e: any) {
-      setError(e?.message || "Lỗi không xác định");
-      toast({ title: "Lỗi", description: e?.message || "Không thể tải lịch hẹn", variant: "destructive" });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Lỗi không xác định";
+      setError(message);
+      toast({ title: "Lỗi", description: message || "Không thể tải lịch hẹn", variant: "destructive" });
     } finally {
-      setLoading(false);
+      if (opts?.soft) setRefreshing(false); else setLoading(false);
+      if (initialLoad) setInitialLoad(false);
     }
   }
 
   useEffect(() => {
-    fetchData();
+    fetchData({ soft: !initialLoad });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, statusFilter]);
 
@@ -127,7 +130,7 @@ export default function BookingHistoryPage() {
     return arr;
   }, [items, fromDate, toDate, sortKey]);
 
-  const handleRefresh = () => fetchData();
+  const handleRefresh = () => fetchData({ soft: true });
   const handleClearFilters = () => {
     setStatusFilter("all");
     setFromDate("");
@@ -170,8 +173,8 @@ export default function BookingHistoryPage() {
               </h1>
               <p className="opacity-90 mt-1">Xem và quản lý lịch sử đặt lịch của bạn</p>
             </div>
-            <Button variant="secondary" onClick={handleRefresh} className="gap-2">
-              <RefreshCw className="w-4 h-4" /> Làm mới
+            <Button variant="secondary" onClick={handleRefresh} className="gap-2" disabled={refreshing} aria-busy={refreshing}>
+              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} /> Làm mới
             </Button>
           </div>
 
@@ -227,7 +230,6 @@ export default function BookingHistoryPage() {
 
                 <div className="flex gap-2 ml-auto">
                   <Button variant="outline" className="gap-2" onClick={handleClearFilters}><Trash2 className="w-4 h-4" /> Xóa bộ lọc</Button>
-                  <Button variant="default" className="gap-2" onClick={handleRefresh}><RefreshCw className="w-4 h-4" /> Tải lại</Button>
                 </div>
               </div>
             </CardContent>
@@ -235,8 +237,8 @@ export default function BookingHistoryPage() {
 
           {/* Table */}
           <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
+            <CardContent className="p-0 relative" aria-busy={refreshing}>
+              <div className={`overflow-x-auto transition-opacity duration-200 ${refreshing ? "opacity-70" : "opacity-100"}`}>
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 text-muted-foreground">
                     <tr>
@@ -250,8 +252,20 @@ export default function BookingHistoryPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {loading ? (
-                      <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Đang tải...</td></tr>
+                    {(initialLoad && loading) ? (
+                      <>
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <tr key={i} className="border-b last:border-0">
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-8" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-40" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-40" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-6 w-24 rounded-full" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-8 w-16" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-10" /></td>
+                          </tr>
+                        ))}
+                      </>
                     ) : error ? (
                       <tr><td colSpan={7} className="px-4 py-6 text-center text-destructive">{error}</td></tr>
                     ) : visibleItems.length === 0 ? (
@@ -263,7 +277,7 @@ export default function BookingHistoryPage() {
                         const timeRange = item.estimated_end_time ? `${item.appoinment_time || ""} - ${item.estimated_end_time}` : item.appoinment_time || "—";
                         const svcName = item.service_type_id?.service_name || "—";
                         const centerName = item.center_id?.name || item.center_id?.center_name || "";
-                        const centerAddress = (item as any).center_id?.address || "";
+                        const centerAddress = item.center_id?.address || "";
                         const st = statusLabel(item.status);
                         return (
                           <tr key={item._id} className="border-b last:border-0">
@@ -297,6 +311,12 @@ export default function BookingHistoryPage() {
                   </tbody>
                 </table>
               </div>
+
+              {refreshing && (
+                <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent"></div>
+                </div>
+              )}
 
               {/* Pagination */}
               <div className="flex items-center justify-between p-4 text-sm text-muted-foreground">
