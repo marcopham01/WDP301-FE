@@ -43,6 +43,7 @@ export interface ServiceCenter {
   center_name: string;
   address?: string;
   phone?: string;
+  email?: string;
   is_active?: boolean;
   working_hours?: WorkingHour[];
 }
@@ -51,6 +52,7 @@ export interface CreateServiceCenterPayload {
   center_name: string;
   address?: string;
   phone?: string;
+  email?: string;
   is_active?: boolean;
   working_hours?: WorkingHour[];
 }
@@ -59,6 +61,7 @@ export interface UpdateServiceCenterPayload {
   center_name?: string;
   address?: string;
   phone?: string;
+  email?: string;
   is_active?: boolean;
 }
 
@@ -123,14 +126,37 @@ export async function createServiceCenterScheduleApi(centerId: string, payload: 
   }
 }
 
-// DEPRECATED FUNCTIONS - Backend không hỗ trợ các endpoint này
-// Giữ lại để tránh lỗi compile, nhưng sẽ return error
+// PUT /api/service-center/update/:id - Cập nhật thông tin trung tâm dịch vụ
 export async function updateServiceCenterApi(id: string, payload: UpdateServiceCenterPayload): Promise<ApiResult<{ success: boolean; data: ServiceCenter }>> {
-  console.warn("[serviceCenterApi] updateServiceCenterApi - API này không tồn tại trên backend");
-  return { ok: false, status: 404, data: null, message: "API endpoint không tồn tại trên backend" };
+  try {
+    const response = await fetch(`/api/service-center/update/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return parseResponse(response);
+  } catch (err: any) {
+    console.error("[serviceCenterApi] Network error", err);
+    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+  }
 }
 
+// DELETE /api/service-center/delete/:id - Xóa trung tâm dịch vụ
 export async function deleteServiceCenterApi(id: string): Promise<ApiResult<{ success: boolean }>> {
-  console.warn("[serviceCenterApi] deleteServiceCenterApi - API này không tồn tại trên backend");
-  return { ok: false, status: 404, data: null, message: "API endpoint không tồn tại trên backend" };
+  try {
+    const response = await fetch(`/api/service-center/delete/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeader(),
+      },
+    });
+    return parseResponse(response);
+  } catch (err: any) {
+    console.error("[serviceCenterApi] Network error", err);
+    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+  }
 }
