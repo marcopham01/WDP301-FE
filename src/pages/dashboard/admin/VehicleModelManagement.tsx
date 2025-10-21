@@ -12,7 +12,7 @@ import {
   VehicleModel,
   CreateVehicleModelPayload
 } from "@/lib/vehicleApi";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import {
   Dialog,
   DialogContent,

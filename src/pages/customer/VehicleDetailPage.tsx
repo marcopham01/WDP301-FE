@@ -7,7 +7,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getUserVehiclesApi, Vehicle } from "@/lib/vehicleApi";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 
 const VehicleDetailPage = () => {
   const navigate = useNavigate();
@@ -55,7 +55,10 @@ const VehicleDetailPage = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
-    navigate("/login");
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
   };
 
   if (loading) {

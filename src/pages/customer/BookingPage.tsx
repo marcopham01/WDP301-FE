@@ -7,7 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { CalendarIcon, Clock, MapPin, Wrench } from "lucide-react";
@@ -83,7 +83,7 @@ export default function BookingPage() {
       return;
     }
     if (!currentUser?.id) {
-  toast.error("Chưa xác thực người dùng", { duration: 3000 });
+  toast.error("Chưa xác thực người dùng");
       return;
     }
 
@@ -137,7 +137,10 @@ export default function BookingPage() {
   // Đăng xuất (giả lập)
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
-    navigate("/login");
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
   };
 
   const getVehicleLabel = (v: Vehicle) => {

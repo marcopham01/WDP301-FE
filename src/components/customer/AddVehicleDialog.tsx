@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Car, Loader2, Plus } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { VehicleModel, getVehicleModelsApi, createVehicleApi } from "@/lib/vehicleApi";
 
 const vehicleSchema = z.object({

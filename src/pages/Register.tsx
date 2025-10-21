@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Checkbox } from "../components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { registerApi } from "@/lib/authApi";
 
 

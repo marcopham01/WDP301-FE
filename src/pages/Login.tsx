@@ -17,7 +17,7 @@ import {
 } from "../components/ui/form";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { FcAutomotive } from "react-icons/fc";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { loginApi } from "@/lib/authApi";
 
 interface LoginFormData {

@@ -7,9 +7,12 @@ import { MessageCircle, Send } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { useAuth } from "@/context/AuthContext/useAuth";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 const ChatPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -37,7 +40,10 @@ const ChatPage = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
-    window.location.href = "/login";
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
   };
 
   return (

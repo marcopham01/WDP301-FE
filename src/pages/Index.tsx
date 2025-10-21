@@ -7,6 +7,7 @@ import Footer from "../components/MainLayout/Footer";
 import { useScrollReveal } from "../lib/useScrollReveal";
 import { useAuth } from "../context/AuthContext/useAuth";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const Index = () => {
   const heroRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
@@ -18,7 +19,10 @@ const Index = () => {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
   };
 
   return (

@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import {
   ServiceType,

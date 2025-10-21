@@ -9,7 +9,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getUserVehiclesApi, Vehicle, updateVehicleApi, UpdateVehiclePayload } from "@/lib/vehicleApi";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 
 const EditVehiclePage = () => {
   const navigate = useNavigate();
@@ -98,7 +98,10 @@ const EditVehiclePage = () => {
   // Đăng xuất (giả lập)
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
-    navigate("/login");
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
   };
 
   if (loading) {

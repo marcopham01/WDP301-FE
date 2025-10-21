@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { getMyTransactionsApi, getAllMyTransactionsApi, Transaction, Pagination } from "@/lib/paymentApi";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { format } from "date-fns";
 import { useSearchParams } from "react-router-dom";
 
@@ -76,7 +76,7 @@ const PaymentHistoryPage = () => {
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Lỗi không xác định";
   setError(message);
-  toast.error(message || "Không thể tải thanh toán", { duration: 3000 });
+  toast.error(message || "Không thể tải thanh toán");
     } finally {
       if (opts?.soft) setRefreshing(false); else setLoading(false);
       if (initialLoad) setInitialLoad(false);
@@ -165,7 +165,10 @@ const PaymentHistoryPage = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
-    window.location.href = "/login";
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 1000);
   };
 
   if (initialLoad && loading) {
@@ -460,7 +463,7 @@ const PaymentHistoryPage = () => {
                       onClick={async () => {
                         if (selectedTxn.checkout_url) {
                           await navigator.clipboard.writeText(selectedTxn.checkout_url);
-                          toast.success("Đã sao chép link thanh toán", { duration: 2000 });
+                          toast.success("Đã sao chép link thanh toán");
                         }
                       }}
                     >

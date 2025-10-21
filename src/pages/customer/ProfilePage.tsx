@@ -9,6 +9,7 @@ import { getProfileApi } from "@/lib/authApi";
 import { useNavigate } from "react-router-dom";
 import { User, Mail, Phone, Calendar, Pencil, Lock } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
+import { toast } from "react-toastify";
 
 interface UserProfile {
   id?: string;
@@ -64,8 +65,10 @@ const ProfilePage = () => {
   const handleLogout = () => {
     // Handle logout logic here - clear user from context and token
     localStorage.removeItem('accessToken');
-    // You might want to call a logout function from AuthContext if available
-    navigate('/login');
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate('/login');
+    }, 1000);
   };
 
   return (

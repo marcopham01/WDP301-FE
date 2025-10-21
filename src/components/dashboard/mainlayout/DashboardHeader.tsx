@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 interface DashboardHeaderProps {
   user: { name: string; role: string };
@@ -20,7 +21,10 @@ export function DashboardHeader({
     onLogout();
     localStorage.removeItem("accessToken");
     localStorage.removeItem("role");
-    navigate("/");
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate("/");
+    }, 1000);
   };
   return (
     <header className="bg-card border-b border-border/50 px-6 py-4">

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Car, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { VehicleModel, getVehicleModelsApi, createVehicleApi } from "@/lib/vehicleApi";
 
 const vehicleSchema = z.object({
