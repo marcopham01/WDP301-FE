@@ -3,7 +3,13 @@ import { Toaster as ToasterUI } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { useAuth } from "./context/AuthContext/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -23,6 +29,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import BookingPage from "./pages/customer/BookingPage";
 import StaffDashboard from "./pages/dashboard/staff/StaffDashboard";
+import StaffOverview from "./pages/dashboard/staff/StaffOverview";
 import ServiceManagement from "./pages/dashboard/admin/ServiceManagement";
 import ServiceCenterManagement from "./pages/dashboard/admin/ServiceCenterManagement";
 import AdminOverview from "./pages/dashboard/admin/AdminOverview";
@@ -31,6 +38,7 @@ import VehicleModelManagement from "./pages/dashboard/admin/VehicleModelManageme
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 import PaymentSuccessPage from "@/pages/customer/PaymentSuccessPage";
 import PaymentCancelPage from "@/pages/customer/PaymentCancelPage";
+import AppointmentManagement from "./pages/dashboard/staff/AppointmentManagement";
 
 const queryClient = new QueryClient();
 
@@ -65,7 +73,10 @@ const AppRoutes = () => {
         <Route path="services" element={<ServiceManagement />} />
         <Route path="service-centers" element={<ServiceCenterManagement />} />
         <Route path="vehicle-models" element={<VehicleModelManagement />} />
-        <Route path="/dashboard/admin/service-center/:centerId/working-hours"   element={<WorkingHoursManagement /> }  />
+        <Route
+          path="/dashboard/admin/service-center/:centerId/working-hours"
+          element={<WorkingHoursManagement />}
+        />
       </Route>
       <Route
         path="/dashboard/staff"
@@ -76,10 +87,11 @@ const AppRoutes = () => {
               onLogout={handleLogout}
             />
           </ProtectedRoute>
-        }
-      />
+        }>
+        <Route index element={<StaffOverview />} />
+        <Route path="appointments" element={<AppointmentManagement />} />
+      </Route>
       {/* Các route con của admin đã được lồng bên trong /dashboard/admin */}
-    
 
       <Route
         path="/customer/profile"
