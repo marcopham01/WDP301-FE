@@ -328,7 +328,7 @@ export default function BookingPage() {
         </div>
       </main>
       {/* Payment Dialog */}
-      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+      <Dialog open={paymentDialogOpen}>
         <DialogContent className="sm:max-w-[640px]">
           <DialogHeader>
             <DialogTitle>Thanh toán đặt lịch</DialogTitle>

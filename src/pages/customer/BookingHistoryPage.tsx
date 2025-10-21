@@ -3,10 +3,11 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Clock, MapPin, Eye, Trash2, RefreshCw, CheckCircle2, XCircle, PlayCircle, ListChecks } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Eye, Trash2, RefreshCw, CheckCircle2, XCircle, PlayCircle, ListChecks, Phone, Mail, User } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { getMyAppointmentsApi, deleteAppointmentApi, Appointment } from "@/lib/appointmentApi";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -36,6 +37,10 @@ type MyAppointment = Appointment & {
   service_type_id?: { _id?: string; service_name?: string };
   center_id?: { _id?: string; name?: string; center_name?: string; address?: string };
   estimated_end_time?: string;
+  notes?: string;
+  note?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export default function BookingHistoryPage() {
@@ -54,6 +59,10 @@ export default function BookingHistoryPage() {
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("none");
+
+  // Dialog state
+  const [selectedAppointment, setSelectedAppointment] = useState<MyAppointment | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   // Fetch data
   async function fetchData(opts?: { resetPage?: boolean; soft?: boolean }) {
@@ -155,6 +164,11 @@ export default function BookingHistoryPage() {
     window.location.href = "/login";
   };
 
+  const handleViewDetail = (appointment: MyAppointment) => {
+    setSelectedAppointment(appointment);
+    setIsDetailDialogOpen(true);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
@@ -248,7 +262,6 @@ export default function BookingHistoryPage() {
                       <th className="text-left px-4 py-3">Thời gian</th>
                       <th className="text-left px-4 py-3">Trạng thái</th>
                       <th className="text-left px-4 py-3">Hành động</th>
-                      <th className="text-left px-4 py-3">Đánh giá</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -262,14 +275,13 @@ export default function BookingHistoryPage() {
                             <td className="px-4 py-3"><Skeleton className="h-4 w-40" /></td>
                             <td className="px-4 py-3"><Skeleton className="h-6 w-24 rounded-full" /></td>
                             <td className="px-4 py-3"><Skeleton className="h-8 w-16" /></td>
-                            <td className="px-4 py-3"><Skeleton className="h-4 w-10" /></td>
                           </tr>
                         ))}
                       </>
                     ) : error ? (
-                      <tr><td colSpan={7} className="px-4 py-6 text-center text-destructive">{error}</td></tr>
+                      <tr><td colSpan={6} className="px-4 py-6 text-center text-destructive">{error}</td></tr>
                     ) : visibleItems.length === 0 ? (
-                      <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Không có lịch hẹn phù hợp</td></tr>
+                      <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">Không có lịch hẹn phù hợp</td></tr>
                     ) : (
                       visibleItems.map((item, idx) => {
                         const row = idx + 1 + (page - 1) * limit;
@@ -295,7 +307,7 @@ export default function BookingHistoryPage() {
                             <td className="px-4 py-3"><Badge variant={st.variant}>{st.text}</Badge></td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
-                                <Button size="sm" variant="ghost" className="h-8 px-2" title="Xem chi tiết"><Eye className="w-4 h-4" /></Button>
+                                <Button size="sm" variant="ghost" className="h-8 px-2" title="Xem chi tiết" onClick={() => handleViewDetail(item)}><Eye className="w-4 h-4" /></Button>
                                 {item.status === "pending" && (
                                   <Button size="sm" variant="ghost" className="h-8 px-2 text-red-600" title="Xóa" onClick={()=> handleDelete(item._id)}>
                                     <Trash2 className="w-4 h-4" />
@@ -303,7 +315,6 @@ export default function BookingHistoryPage() {
                                 )}
                               </div>
                             </td>
-                            <td className="px-4 py-3">-</td>
                           </tr>
                         );
                       })
@@ -348,6 +359,90 @@ export default function BookingHistoryPage() {
         </div>
       </main>
       <Footer />
+
+      {/* Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5" />
+              Chi tiết lịch hẹn
+            </DialogTitle>
+          </DialogHeader>
+          {selectedAppointment && (
+            <div className="space-y-4">
+              {/* Trạng thái */}
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                <span className="font-medium">Trạng thái:</span>
+                <Badge variant={statusLabel(selectedAppointment.status).variant}>
+                  {statusLabel(selectedAppointment.status).text}
+                </Badge>
+              </div>
+
+              {/* Ngày hẹn */}
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-md">
+                <CalendarIcon className="w-5 h-5 text-primary" />
+                <div>
+                  <div className="font-medium">Ngày hẹn</div>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedAppointment.appoinment_date
+                      ? format(new Date(selectedAppointment.appoinment_date), "dd/MM/yyyy (EEEE)")
+                      : "Chưa xác định"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Thời gian */}
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-md">
+                <Clock className="w-5 h-5 text-primary" />
+                <div>
+                  <div className="font-medium">Thời gian</div>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedAppointment.estimated_end_time
+                      ? `${selectedAppointment.appoinment_time || ""} - ${selectedAppointment.estimated_end_time}`
+                      : selectedAppointment.appoinment_time || "Chưa xác định"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dịch vụ */}
+              <div className="p-3 bg-muted/50 rounded-md">
+                <div className="font-medium">Dịch vụ</div>
+                <div className="text-sm text-muted-foreground">
+                  {selectedAppointment.service_type_id?.service_name || "Chưa xác định"}
+                </div>
+              </div>
+
+              {/* Trung tâm */}
+              <div className="p-3 bg-muted/50 rounded-md">
+                <div className="font-medium">Trung tâm</div>
+                <div className="text-sm text-muted-foreground">
+                  {(() => {
+                    const center = selectedAppointment.center_id;
+                    const centerName = center?.center_name || center?.name;
+                    const centerAddress = center?.address;
+                    const centerId = center?._id;
+                    if (centerName) {
+                      return centerAddress ? `${centerName} (${centerAddress})` : centerName;
+                    }
+                    return centerId ? `Trung tâm: ${centerId}` : "Chưa xác định";
+                  })()}
+                </div>
+              </div>
+
+              {/* Mô tả/Ghi chú */}
+              {selectedAppointment.notes && (
+                <div className="p-3 bg-muted/50 rounded-md">
+                  <div className="font-medium">Mô tả</div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {selectedAppointment.notes}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

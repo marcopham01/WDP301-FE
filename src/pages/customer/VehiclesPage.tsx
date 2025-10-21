@@ -93,41 +93,26 @@ const VehiclesPage = () => {
     >
       {/* Main Header */}
       <Header onLogout={handleLogout} />
-
-      {/* Page Header - Modern gradient hero */}
-      <div className="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 shadow-2xl mt-16 overflow-hidden">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2YzAtMi4yMTItMS43ODgtNC00LTRzLTQgMS43ODgtNCA0IDEuNzg4IDQgNCA0IDQtMS43ODggNC00em0wIDI0YzAtMi4yMTItMS43ODgtNC00LTRzLTQgMS43ODgtNCA0IDEuNzg4IDQgNCA0IDQtMS43ODggNC00eiIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
-        <div className="container relative mx-auto px-6 py-12">
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="text-center"
-          >
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl mb-4 shadow-lg">
-              <Car className="h-8 w-8 text-white" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 drop-shadow-lg">
-              Quản lý xe
-            </h1>
-            <p className="text-white/90 text-lg mb-6 drop-shadow">
-              Bạn có <span className="font-bold text-yellow-300">{vehicles.length}</span> xe đã đăng ký
-            </p>
-            <Button
-              className="bg-white hover:bg-gray-100 text-indigo-600 font-semibold px-8 py-6 text-base rounded-xl shadow-2xl hover:shadow-xl transition-all hover:scale-105"
-              onClick={handleOpenAdd}
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Thêm xe
-            </Button>
-          </motion.div>
-        </div>
-      </div>
-
       {/* Main Content */}
-      <div className="flex-1 container mx-auto px-6 py-10">
-        {/* Vehicles Grid */}
+      <main className="flex-1 py-8">
+        <div className="container max-w-[1200px] pt-20 space-y-6">
+          {/* Page Header - Consistent with history pages */}
+          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl p-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+                <Car className="w-6 h-6" /> Quản lý xe
+              </h1>
+              <p className="opacity-90 mt-1">
+                Bạn có <span className="font-bold text-yellow-300">{vehicles.length}</span> xe đã đăng ký
+              </p>
+            </div>
+            <Button variant="secondary" onClick={handleOpenAdd} className="gap-2">
+              <Plus className="w-4 h-4" /> Thêm xe
+            </Button>
+          </div>
+
+          {/* Vehicles Grid */}
+          <div>
         {vehiclesLoading ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -300,7 +285,9 @@ const VehiclesPage = () => {
             </AnimatePresence>
           </motion.div>
         )}
-      </div>
+          </div>
+        </div>
+      </main>
 
       {/* Footer */}
       <Footer />

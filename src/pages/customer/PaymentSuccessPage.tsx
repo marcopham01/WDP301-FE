@@ -115,7 +115,7 @@ const PaymentSuccessPage: React.FC = () => {
 
               <div className="mt-6 flex gap-2 justify-center">
                 <Button onClick={() => navigate("/")}>Về trang chủ</Button>
-                <Button variant="outline" onClick={() => navigate("/customer/payment-history")}>
+                <Button variant="outline" onClick={() => navigate("/customer/payment-history?from=payment")}>
                   Xem lịch sử thanh toán
                 </Button>
               </div>
