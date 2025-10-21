@@ -209,7 +209,7 @@ const AddVehiclePage = () => {
                       {...form.register("current_miliage")}
                     />
                     {form.formState.errors.current_miliage && (
-                      <p className="text-sm text-destructive">{form.formState.errors.current_miliage.message as any}</p>
+                      <p className="text-sm text-destructive">{form.formState.errors.current_miliage.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -221,7 +221,7 @@ const AddVehiclePage = () => {
                       {...form.register("battery_health")}
                     />
                     {form.formState.errors.battery_health && (
-                      <p className="text-sm text-destructive">{form.formState.errors.battery_health.message as any}</p>
+                      <p className="text-sm text-destructive">{form.formState.errors.battery_health.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -233,7 +233,7 @@ const AddVehiclePage = () => {
                       {...form.register("last_service_mileage")}
                     />
                     {form.formState.errors.last_service_mileage && (
-                      <p className="text-sm text-destructive">{form.formState.errors.last_service_mileage.message as any}</p>
+                      <p className="text-sm text-destructive">{form.formState.errors.last_service_mileage.message}</p>
                     )}
                   </div>
                 </div>

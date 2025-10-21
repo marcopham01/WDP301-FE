@@ -7,13 +7,21 @@ import { Button } from "@/components/ui/button";
 import { XCircle } from "lucide-react";
 import { updateAppointmentStatusApi, getMyAppointmentsApi } from "@/lib/appointmentApi";
 
+interface TransactionData {
+  _id?: string;
+  order_code?: number;
+  amount?: number;
+  status?: string;
+  description?: string;
+}
+
 const PaymentCancelPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orderCode = searchParams.get("order_code");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tx, setTx] = useState<any>(null);
+  const [tx, setTx] = useState<TransactionData | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -40,16 +48,16 @@ const PaymentCancelPage: React.FC = () => {
           method: "GET",
           headers,
         });
-        let data: any = null;
+        let data: Record<string, unknown> | null = null;
         try { data = await res.json(); } catch { data = null; }
         if (!res.ok) {
-          setError(data?.message || "Không thể lấy thông tin giao dịch");
+          setError((data as Record<string, unknown>)?.message as string || "Không thể lấy thông tin giao dịch");
         } else {
-          setTx(data?.data || null);
+          setTx((data as Record<string, unknown>)?.data as TransactionData || null);
 
           // Find appointment by payment_id and update its status to 'canceled'
           try {
-            const paymentId = data?.data?._id;
+            const paymentId = (data as Record<string, unknown>)?.data?._id as string;
             if (paymentId) {
               // Add a small delay to ensure backend has processed the payment status update
               await new Promise(resolve => setTimeout(resolve, 500));
@@ -57,27 +65,27 @@ const PaymentCancelPage: React.FC = () => {
               // Get all appointments to find the one with matching payment_id
               const appointmentsRes = await getMyAppointmentsApi({ limit: 100 });
               if (appointmentsRes.ok && appointmentsRes.data?.data) {
-                const appointmentsList = (appointmentsRes.data.data as any).items ||
-                                        (appointmentsRes.data.data as any).appointments || [];
-                const appointment = appointmentsList.find((apt: any) => {
+                const appointmentsList = (appointmentsRes.data?.data as Record<string, unknown>)?.items as Record<string, unknown>[] ||
+                                        (appointmentsRes.data?.data as Record<string, unknown>)?.appointments as Record<string, unknown>[] || [];
+                const appointment = appointmentsList.find((apt: Record<string, unknown>) => {
                   // Check if payment_id is an object with _id property or a string
-                  const aptPaymentId = apt.payment_id?._id || apt.payment_id;
+                  const aptPaymentId = (apt.payment_id as Record<string, unknown>)?._id || apt.payment_id;
                   return String(aptPaymentId) === String(paymentId);
                 });
                 if (appointment) {
                   await updateAppointmentStatusApi({
-                    appointment_id: appointment._id,
+                    appointment_id: (appointment as Record<string, unknown>)._id as string,
                     status: "canceled"
                   });
                 }
               }
             }
-          } catch (err) {
-            console.error("Failed to update appointment status:", err);
+          } catch {
+            console.error("Failed to update appointment status");
             // Don't show error to user, payment cancellation is still successful
           }
         }
-      } catch (err) {
+      } catch {
         setError("Lỗi kết nối máy chủ");
       } finally {
         setLoading(false);

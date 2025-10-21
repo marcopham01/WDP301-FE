@@ -45,7 +45,7 @@ const Login = () => {
       const result = await signInWithPopup(auth, provider);
       const googleToken = await result.user.getIdToken();
       // Gọi API và nhận luôn data
-      const data = await apiRequest("/api/users/loginfirebase", {
+      const response = await fetch("/api/users/loginfirebase", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

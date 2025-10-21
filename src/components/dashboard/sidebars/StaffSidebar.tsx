@@ -1,8 +1,8 @@
-import { Calendar, ClipboardList, Users, Wrench, Settings, MapPin } from "lucide-react";
+import { Calendar, ClipboardList, Users, Wrench, LucideIcon } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const items = [
+const items: Array<{ title: string; icon: LucideIcon; href: string }> = [
   { title: "Tổng quan", icon: ClipboardList, href: "/dashboard/staff" },
   { title: "Quản lý khách hàng", icon: Users, href: "/dashboard/staff/customers" },
   { title: "Quản lý lịch hẹn", icon: Calendar, href: "/dashboard/staff/appointments" },
@@ -31,7 +31,7 @@ export default function StaffSidebar() {
             <SidebarMenu>
               {items.map((item) => {
                 const active = location.pathname === item.href;
-                const Icon = item.icon as any;
+                const Icon: LucideIcon = item.icon;
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton isActive={active} onClick={() => navigate(item.href)}>
@@ -48,5 +48,3 @@ export default function StaffSidebar() {
     </Sidebar>
   );
 }
-
-

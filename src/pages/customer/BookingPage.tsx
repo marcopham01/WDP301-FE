@@ -109,18 +109,18 @@ export default function BookingPage() {
         const appointmentId = res.data.data?._id;
         if (appointmentId) {
           const detail = await getAppointmentByIdApi(appointmentId);
-          const appt: any = detail.data?.data;
-          const pay = appt?.payment_id;
+          const appt = detail.data?.data as Record<string, unknown>;
+          const pay = appt?.payment_id as Record<string, unknown>;
           if (detail.ok && pay) {
             setPaymentInfo({
-              amount: pay.amount,
-              checkout_url: pay.checkout_url,
-              qr_code: pay.qr_code,
-              order_code: pay.order_code,
+              amount: pay.amount as number,
+              checkout_url: pay.checkout_url as string,
+              qr_code: pay.qr_code as string,
+              order_code: pay.order_code as number,
             });
             setPaymentDialogOpen(true);
-          } else if (pay?.checkout_url) {
-            window.open(pay.checkout_url, "_blank");
+          } else if ((pay as Record<string, unknown>)?.checkout_url as string) {
+            window.open((pay as Record<string, unknown>)?.checkout_url as string, "_blank");
           }
         }
       } else {

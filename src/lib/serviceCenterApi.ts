@@ -1,4 +1,4 @@
-export interface ApiResult<T = any> {
+export interface ApiResult<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
   data?: T | null;
@@ -11,7 +11,7 @@ function getAuthHeader() {
 }
 
 async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
-  let data: any = null;
+  let data: T | null = null;
   try {
     data = await response.json();
   } catch {
@@ -21,11 +21,10 @@ async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
     ok: response.ok,
     status: response.status,
     data,
-    message: data?.message || data?.error || undefined,
+    message: (data as Record<string, unknown>)?.message as string || (data as Record<string, unknown>)?.error as string || undefined,
   } as ApiResult<T>;
   if (!result.ok) {
     // Surface details for debugging in dev
-    // eslint-disable-next-line no-console
     console.error("[serviceCenterApi] Error", result.status, result.message, result.data);
   }
   return result;
@@ -83,10 +82,9 @@ export async function getServiceCentersApi(): Promise<ApiResult<{ success: boole
       },
     });
     return parseResponse(response);
-  } catch (err: any) {
-    // eslint-disable-next-line no-console
+  } catch (err: unknown) {
     console.error("[serviceCenterApi] Network error", err);
-    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
   }
 }
 
@@ -102,14 +100,14 @@ export async function createServiceCenterApi(payload: CreateServiceCenterPayload
       body: JSON.stringify(payload),
     });
     return parseResponse(response);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[serviceCenterApi] Network error", err);
-    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
   }
 }
 
 // POST /api/service-center/schedule/create/:id - Tạo lịch làm việc cho trung tâm
-export async function createServiceCenterScheduleApi(centerId: string, payload: CreateSchedulePayload): Promise<ApiResult<{ success: boolean; data: any }>> {
+export async function createServiceCenterScheduleApi(centerId: string, payload: CreateSchedulePayload): Promise<ApiResult<{ success: boolean; data: Record<string, unknown> }>> {
   try {
     const response = await fetch(`/api/service-center/schedule/create/${centerId}`, {
       method: "POST",
@@ -120,9 +118,9 @@ export async function createServiceCenterScheduleApi(centerId: string, payload: 
       body: JSON.stringify(payload),
     });
     return parseResponse(response);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[serviceCenterApi] Network error", err);
-    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
   }
 }
 
@@ -138,9 +136,9 @@ export async function updateServiceCenterApi(id: string, payload: UpdateServiceC
       body: JSON.stringify(payload),
     });
     return parseResponse(response);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[serviceCenterApi] Network error", err);
-    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
   }
 }
 
@@ -155,8 +153,8 @@ export async function deleteServiceCenterApi(id: string): Promise<ApiResult<{ su
       },
     });
     return parseResponse(response);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[serviceCenterApi] Network error", err);
-    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
   }
 }
