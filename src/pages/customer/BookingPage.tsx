@@ -7,7 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { CalendarIcon, Clock, MapPin, Wrench } from "lucide-react";
@@ -79,15 +79,11 @@ export default function BookingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedVehicle || !selectedServiceType || !selectedCenter || !bookingDate || !bookingTime) {
-      toast({
-        title: "Thiếu thông tin",
-        description: "Vui lòng điền đầy đủ thông tin đặt lịch",
-        variant: "destructive",
-      });
+      toast.error("Thiếu thông tin. Vui lòng điền đầy đủ thông tin đặt lịch");
       return;
     }
     if (!currentUser?.id) {
-      toast({ title: "Chưa xác thực người dùng", variant: "destructive" });
+  toast.error("Chưa xác thực người dùng", { duration: 3000 });
       return;
     }
 
@@ -108,10 +104,7 @@ export default function BookingPage() {
       const res = await createAppointmentApi(payload);
       
       if (res.ok && res.data?.success) {
-        toast({
-          title: "Đặt lịch thành công!",
-          description: res.data.message || "Lịch hẹn của bạn đã được tạo. Vui lòng thanh toán đặt cọc để xác nhận.",
-        });
+        toast.success("Đặt lịch thành công! " + (res.data.message || "Lịch hẹn của bạn đã được tạo. Vui lòng thanh toán đặt cọc để xác nhận."));
 
         const appointmentId = res.data.data?._id;
         if (appointmentId) {
@@ -131,19 +124,11 @@ export default function BookingPage() {
           }
         }
       } else {
-        toast({
-          title: "Không thể tạo lịch",
-          description: res.message || "Đã có lỗi xảy ra. Vui lòng thử lại.",
-          variant: "destructive"
-        });
+        toast.error("Không thể tạo lịch. " + (res.message || "Đã có lỗi xảy ra. Vui lòng thử lại."));
       }
     } catch (error) {
       console.error("Booking error:", error);
-      toast({ 
-        title: "Lỗi hệ thống", 
-        description: "Không thể kết nối đến server. Vui lòng thử lại sau.",
-        variant: "destructive" 
-      });
+      toast.error("Lỗi hệ thống. Không thể kết nối đến server. Vui lòng thử lại sau.");
     } finally {
       setLoading(false);
     }
@@ -372,7 +357,7 @@ export default function BookingPage() {
                   onClick={async () => {
                     if (paymentInfo?.checkout_url) {
                       await navigator.clipboard.writeText(paymentInfo.checkout_url);
-                      toast({ title: "Đã sao chép link thanh toán" });
+                      toast.success("Đã sao chép link thanh toán");
                     }
                   }}
                 >

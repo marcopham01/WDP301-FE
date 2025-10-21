@@ -12,7 +12,7 @@ import {
   VehicleModel,
   CreateVehicleModelPayload
 } from "@/lib/vehicleApi";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -59,22 +59,14 @@ const VehicleModelManagement = () => {
     if (res.ok && res.data?.data) {
       setModels(res.data.data);
     } else {
-      toast({
-        title: "Lỗi tải dữ liệu",
-        description: "Không thể tải danh sách model xe",
-        variant: "destructive"
-      });
+      toast.error("Lỗi tải dữ liệu. Không thể tải danh sách model xe");
     }
     setLoading(false);
   };
 
   const handleCreateModel = async () => {
     if (!formData.brand || !formData.model_name || !formData.battery_type) {
-      toast({
-        title: "Thiếu thông tin",
-        description: "Vui lòng điền đầy đủ thông tin bắt buộc",
-        variant: "destructive"
-      });
+      toast.error("Thiếu thông tin. Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
 
@@ -82,10 +74,7 @@ const VehicleModelManagement = () => {
     const res = await createVehicleModelApi(formData);
 
     if (res.ok) {
-      toast({
-        title: "Tạo model thành công",
-        description: "Model xe mới đã được thêm vào hệ thống"
-      });
+      toast.success("Tạo model thành công. Model xe mới đã được thêm vào hệ thống");
       setIsCreateDialogOpen(false);
       setFormData({
         brand: "",
@@ -97,11 +86,7 @@ const VehicleModelManagement = () => {
       });
       loadModels();
     } else {
-      toast({
-        title: "Tạo model thất bại",
-        description: res.message || "Không thể tạo model xe mới",
-        variant: "destructive"
-      });
+      toast.error(res.message || "Tạo model thất bại. Không thể tạo model xe mới");
     }
     setCreating(false);
   };

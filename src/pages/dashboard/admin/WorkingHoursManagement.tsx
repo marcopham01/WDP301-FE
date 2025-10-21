@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ServiceCenter, 
@@ -39,7 +39,7 @@ const WorkingHoursManagement = () => {
   const [saving, setSaving] = useState(false);
   const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
   
-  const { toast } = useToast();
+  // Đã chuyển sang dùng toast của sonner
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -73,28 +73,16 @@ const WorkingHoursManagement = () => {
             setWorkingHours(defaultHours);
           }
         } else {
-          toast({
-            title: "Lỗi",
-            description: "Không tìm thấy trung tâm dịch vụ",
-            variant: "destructive",
-          });
+          toast.error("Không tìm thấy trung tâm dịch vụ");
           navigate("/dashboard/admin/service-centers");
         }
       } else {
-        toast({
-          title: "Lỗi",
-          description: "Không thể tải thông tin trung tâm dịch vụ. " + (response.message || ""),
-          variant: "destructive",
-        });
+        toast.error("Không thể tải thông tin trung tâm dịch vụ. " + (response.message || ""));
         navigate("/dashboard/admin/service-centers");
       }
     } catch (error) {
       console.error("Error loading service center:", error);
-      toast({
-        title: "Lỗi",
-        description: "Đã xảy ra lỗi khi tải thông tin trung tâm dịch vụ.",
-        variant: "destructive",
-      });
+      toast.error("Đã xảy ra lỗi khi tải thông tin trung tâm dịch vụ.");
       navigate("/dashboard/admin/service-centers");
     } finally {
       setLoading(false);
@@ -146,28 +134,17 @@ const WorkingHoursManagement = () => {
       }
       
       if (successCount > 0) {
-        toast({
-          title: "Thành công",
-          description: `Đã tạo lịch làm việc cho ${successCount} ngày`,
-        });
+        toast.success(`Đã tạo lịch làm việc cho ${successCount} ngày`);
         // Reload to get updated data
         loadServiceCenter(centerId);
       }
       
       if (errorMessages.length > 0) {
-        toast({
-          title: "Một số lỗi xảy ra",
-          description: errorMessages.join(', '),
-          variant: "destructive",
-        });
+        toast.error("Một số lỗi xảy ra: " + errorMessages.join(', '));
       }
     } catch (error) {
       console.error("Error saving working hours:", error);
-      toast({
-        title: "Lỗi",
-        description: "Đã xảy ra lỗi khi lưu giờ làm việc.",
-        variant: "destructive",
-      });
+      toast.error("Đã xảy ra lỗi khi lưu giờ làm việc.");
     } finally {
       setSaving(false);
     }

@@ -20,7 +20,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   ServiceCenter,
   getServiceCentersApi,
@@ -48,7 +48,7 @@ const ServiceCenterManagement = () => {
   const [email, setEmail] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  const { toast } = useToast();
+  // Đã chuyển sang dùng toast của sonner
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -62,21 +62,11 @@ const ServiceCenterManagement = () => {
       if (response.ok && response.data?.data) {
         setServiceCenters(response.data.data);
       } else {
-        toast({
-          title: "Lỗi",
-          description:
-            "Không thể tải danh sách trung tâm dịch vụ. " +
-            (response.message || ""),
-          variant: "destructive",
-        });
+        toast.error("Không thể tải danh sách trung tâm dịch vụ. " + (response.message || ""));
       }
     } catch (error) {
       console.error("Error loading service centers:", error);
-      toast({
-        title: "Lỗi",
-        description: "Đã xảy ra lỗi khi tải danh sách trung tâm dịch vụ.",
-        variant: "destructive",
-      });
+      toast.error("Đã xảy ra lỗi khi tải danh sách trung tâm dịch vụ.");
     } finally {
       setLoading(false);
     }
@@ -112,11 +102,7 @@ const ServiceCenterManagement = () => {
 
   const handleCreateServiceCenter = async () => {
     if (!centerName.trim()) {
-      toast({
-        title: "Lỗi",
-        description: "Vui lòng nhập tên trung tâm dịch vụ",
-        variant: "destructive",
-      });
+      toast.error("Vui lòng nhập tên trung tâm dịch vụ");
       return;
     }
 
@@ -131,28 +117,16 @@ const ServiceCenterManagement = () => {
     try {
       const response = await createServiceCenterApi(payload);
       if (response.ok) {
-        toast({
-          title: "Thành công",
-          description: "Đã tạo trung tâm dịch vụ mới thành công",
-        });
+        toast.success("Đã tạo trung tâm dịch vụ mới thành công");
         setIsCreateDialogOpen(false);
         resetForm();
         loadServiceCenters();
       } else {
-        toast({
-          title: "Lỗi",
-          description:
-            "Không thể tạo trung tâm dịch vụ. " + (response.message || ""),
-          variant: "destructive",
-        });
+        toast.error("Không thể tạo trung tâm dịch vụ. " + (response.message || ""));
       }
     } catch (error) {
       console.error("Error creating service center:", error);
-      toast({
-        title: "Lỗi",
-        description: "Đã xảy ra lỗi khi tạo trung tâm dịch vụ mới.",
-        variant: "destructive",
-      });
+      toast.error("Đã xảy ra lỗi khi tạo trung tâm dịch vụ mới.");
     }
   };
 
@@ -160,11 +134,7 @@ const ServiceCenterManagement = () => {
     if (!currentServiceCenter) return;
 
     if (!centerName.trim()) {
-      toast({
-        title: "Lỗi",
-        description: "Vui lòng nhập tên trung tâm dịch vụ",
-        variant: "destructive",
-      });
+      toast.error("Vui lòng nhập tên trung tâm dịch vụ");
       return;
     }
 
@@ -179,27 +149,15 @@ const ServiceCenterManagement = () => {
     try {
       const response = await updateServiceCenterApi(currentServiceCenter._id, payload);
       if (response.ok) {
-        toast({
-          title: "Thành công",
-          description: "Đã cập nhật trung tâm dịch vụ thành công",
-        });
+        toast.success("Đã cập nhật trung tâm dịch vụ thành công");
         setIsEditDialogOpen(false);
         loadServiceCenters();
       } else {
-        toast({
-          title: "Lỗi",
-          description:
-            "Không thể cập nhật trung tâm dịch vụ. " + (response.message || ""),
-          variant: "destructive",
-        });
+        toast.error("Không thể cập nhật trung tâm dịch vụ. " + (response.message || ""));
       }
     } catch (error) {
       console.error("Error updating service center:", error);
-      toast({
-        title: "Lỗi",
-        description: "Đã xảy ra lỗi khi cập nhật trung tâm dịch vụ.",
-        variant: "destructive",
-      });
+      toast.error("Đã xảy ra lỗi khi cập nhật trung tâm dịch vụ.");
     }
   };
 
@@ -209,27 +167,15 @@ const ServiceCenterManagement = () => {
     try {
       const response = await deleteServiceCenterApi(currentServiceCenter._id);
       if (response.ok) {
-        toast({
-          title: "Thành công",
-          description: "Đã xóa trung tâm dịch vụ thành công",
-        });
+        toast.success("Đã xóa trung tâm dịch vụ thành công");
         setIsDeleteDialogOpen(false);
         loadServiceCenters();
       } else {
-        toast({
-          title: "Lỗi",
-          description:
-            "Không thể xóa trung tâm dịch vụ. " + (response.message || ""),
-          variant: "destructive",
-        });
+        toast.error("Không thể xóa trung tâm dịch vụ. " + (response.message || ""));
       }
     } catch (error) {
       console.error("Error deleting service center:", error);
-      toast({
-        title: "Lỗi",
-        description: "Đã xảy ra lỗi khi xóa trung tâm dịch vụ.",
-        variant: "destructive",
-      });
+      toast.error("Đã xảy ra lỗi khi xóa trung tâm dịch vụ.");
     }
   };
 

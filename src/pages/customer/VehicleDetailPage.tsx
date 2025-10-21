@@ -7,7 +7,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getUserVehiclesApi, Vehicle } from "@/lib/vehicleApi";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const VehicleDetailPage = () => {
   const navigate = useNavigate();
@@ -30,19 +30,11 @@ const VehicleDetailPage = () => {
         if (foundVehicle) {
           setVehicle(foundVehicle);
         } else {
-          toast({
-            title: "Không tìm thấy xe",
-            description: "Xe không tồn tại hoặc không thuộc về bạn",
-            variant: "destructive"
-          });
+          toast.error("Không tìm thấy xe. Xe không tồn tại hoặc không thuộc về bạn");
           navigate("/customer/vehicles");
         }
       } else {
-        toast({
-          title: "Lỗi tải dữ liệu",
-          description: "Không thể tải thông tin xe",
-          variant: "destructive"
-        });
+        toast.error("Lỗi tải dữ liệu. Không thể tải thông tin xe");
         navigate("/customer/vehicles");
       }
       setLoading(false);

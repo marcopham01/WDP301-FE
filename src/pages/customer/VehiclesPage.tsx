@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { getUserVehiclesApi, Vehicle, deleteVehicleApi } from "@/lib/vehicleApi";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { VehicleDetailDialog } from "@/components/customer/VehicleDetailDialog";
 import { AddVehicleDialog } from "@/components/customer/AddVehicleDialog";
 import { EditVehicleDialog } from "@/components/customer/EditVehicleDialog";
@@ -56,10 +56,10 @@ const VehiclesPage = () => {
     setDeletingId(vehicleId);
     const res = await deleteVehicleApi(vehicleId);
     if (res.ok) {
-      toast({ title: "Xóa xe thành công" });
+  toast.success("Xóa xe thành công", { duration: 2000 });
       loadVehicles();
     } else {
-      toast({ title: "Không thể xóa xe", description: res.message, variant: "destructive" });
+  toast.error(res.message || "Không thể xóa xe", { duration: 3000 });
     }
     setDeletingId(null);
   };

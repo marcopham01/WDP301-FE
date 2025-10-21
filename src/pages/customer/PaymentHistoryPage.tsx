@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { getMyTransactionsApi, getAllMyTransactionsApi, Transaction, Pagination } from "@/lib/paymentApi";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { useSearchParams } from "react-router-dom";
 
@@ -58,7 +58,7 @@ const PaymentHistoryPage = () => {
         setTransactions([]);
         setTotalItems(0);
         setTotalPages(1);
-        throw new Error(res.message || "Không thể tải dữ liệu thanh toán");
+  throw new Error(res.message || "Không thể tải dữ liệu thanh toán");
       }
 
   const data = res.data.data as { items?: Transaction[]; transactions?: Transaction[]; pagination?: Partial<Pagination> };
@@ -75,8 +75,8 @@ const PaymentHistoryPage = () => {
       setTotalItems(totalDocs);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Lỗi không xác định";
-      setError(message);
-      toast({ title: "Lỗi", description: message || "Không thể tải thanh toán", variant: "destructive" });
+  setError(message);
+  toast.error(message || "Không thể tải thanh toán", { duration: 3000 });
     } finally {
       if (opts?.soft) setRefreshing(false); else setLoading(false);
       if (initialLoad) setInitialLoad(false);
@@ -460,7 +460,7 @@ const PaymentHistoryPage = () => {
                       onClick={async () => {
                         if (selectedTxn.checkout_url) {
                           await navigator.clipboard.writeText(selectedTxn.checkout_url);
-                          toast({ title: "Đã sao chép link thanh toán" });
+                          toast.success("Đã sao chép link thanh toán", { duration: 2000 });
                         }
                       }}
                     >

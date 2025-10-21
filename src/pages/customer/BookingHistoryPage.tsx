@@ -9,7 +9,7 @@ import Footer from "@/components/MainLayout/Footer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { getMyAppointmentsApi, deleteAppointmentApi, Appointment } from "@/lib/appointmentApi";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -94,7 +94,7 @@ export default function BookingHistoryPage() {
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Lỗi không xác định";
       setError(message);
-      toast({ title: "Lỗi", description: message || "Không thể tải lịch hẹn", variant: "destructive" });
+  toast.error(message || "Không thể tải lịch hẹn", { duration: 3000 });
     } finally {
       if (opts?.soft) setRefreshing(false); else setLoading(false);
       if (initialLoad) setInitialLoad(false);
@@ -152,10 +152,10 @@ export default function BookingHistoryPage() {
     if (!confirm("Bạn có chắc muốn xóa lịch hẹn này? Chỉ xóa được khi trạng thái pending.")) return;
     const res = await deleteAppointmentApi(id);
     if (res.ok) {
-      toast({ title: "Đã xóa lịch hẹn" });
+  toast.success("Đã xóa lịch hẹn", { duration: 2000 });
       fetchData();
     } else {
-      toast({ title: "Không thể xóa", description: res.message || "Vui lòng thử lại", variant: "destructive" });
+  toast.error(res.message || "Không thể xóa. Vui lòng thử lại", { duration: 3000 });
     }
   };
 

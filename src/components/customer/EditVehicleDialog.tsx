@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Car, Save, Loader2, X } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Vehicle, updateVehicleApi, UpdateVehiclePayload } from "@/lib/vehicleApi";
 
 const colors = [
@@ -68,18 +68,11 @@ export function EditVehicleDialog({ open, onOpenChange, vehicle, onSuccess }: Ed
     const res = await updateVehicleApi(vehicle._id, formData);
 
     if (res.ok) {
-      toast({
-        title: "Cập nhật thành công",
-        description: "Thông tin xe đã được cập nhật",
-      });
+          toast.success("Cập nhật thành công. Thông tin xe đã được cập nhật.");
       onOpenChange(false);
       onSuccess();
     } else {
-      toast({
-        title: "Cập nhật thất bại",
-        description: res.message || "Không thể cập nhật thông tin xe",
-        variant: "destructive",
-      });
+          toast.error(res.message || "Không thể cập nhật xe");
     }
     setSaving(false);
   };
