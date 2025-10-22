@@ -103,10 +103,160 @@ export type Appointment = {
   status: string;
   appoinment_date?: string;
   appoinment_time?: string;
-  user_id?: { _id?: string; username?: string; fullName?: string; email?: string };
-  vehicle_id?: { _id?: string; brand?: string; model?: string; license_plate?: string };
-  center_id?: { _id?: string; name?: string; center_name?: string; address?: string };
+  estimated_end_time?: string;
+  notes?: string;
+  estimated_cost?: number;
+  reason?: string;
+  user_id?: { 
+    _id?: string; 
+    username?: string; 
+    fullName?: string; 
+    email?: string;
+    phone?: string;
+  };
+  vehicle_id?: { 
+    _id?: string; 
+    brand?: string; 
+    model?: string; 
+    license_plate?: string;
+    vin?: string;
+  };
+  center_id?: { 
+    _id?: string; 
+    name?: string; 
+    center_name?: string; 
+    address?: string;
+    phone?: string;
+  };
+  service_type_id?: {
+    _id?: string;
+    service_name?: string;
+    description?: string;
+    base_price?: number;
+    estimated_duration?: string;
+  };
+  assigned_by?: {
+    _id?: string;
+    username?: string;
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    role?: string;
+  };
+  assigned?: {
+    _id?: string;
+    username?: string;
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    role?: string;
+  };
+  technician_id?: {
+    _id?: string;
+    username?: string;
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    role?: string;
+  };
+  payment_id?: {
+    _id?: string;
+    order_code?: number;
+    amount?: number;
+    status?: string;
+    checkout_url?: string;
+    qr_code?: string;
+  };
+  final_payment_id?: {
+    _id?: string;
+    order_code?: number;
+    amount?: number;
+    status?: string;
+    checkout_url?: string;
+    qr_code?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
 };
+
+// Types cho Technician Schedule
+export interface TechnicianScheduleParams {
+  technician_id?: string;
+  date_from: string;
+  date_to: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface TechnicianInfo {
+  _id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+}
+
+export interface ScheduleItem {
+  _id: string;
+  appoinment_date: string;
+  appoinment_time: string;
+  estimated_end_time?: string;
+  status: string;
+  notes?: string;
+  estimated_cost?: number;
+  user_id: {
+    _id: string;
+    fullName: string;
+    phone: string;
+  };
+  vehicle_id: {
+    _id: string;
+    license_plate: string;
+    brand: string;
+    model: string;
+  };
+  center_id: {
+    _id: string;
+    center_name: string;
+    address: string;
+  };
+  service_type_id: {
+    _id: string;
+    service_name: string;
+    estimated_duration: string;
+  };
+}
+
+export interface TechnicianScheduleResponse {
+  technician?: TechnicianInfo;
+  date_range: {
+    from: string;
+    to: string;
+  };
+  schedules: ScheduleItem[];
+  total_assignments: number;
+}
+
+export interface TechnicianScheduleItem {
+  technician: TechnicianInfo;
+  schedules: ScheduleItem[];
+  total_assignments: number;
+}
+
+export interface TechnicianScheduleListResponse {
+  items: TechnicianScheduleItem[];
+  pagination: {
+    current_page: number;
+    items_per_page: number;
+    total_items: number;
+    total_pages: number;
+    has_next_page: boolean;
+    has_prev_page: boolean;
+  };
+  date_range: {
+    from: string;
+    to: string;
+  };
+}
 
 export type Pagination = {
   page: number;
@@ -224,6 +374,45 @@ export async function deleteAppointmentApi(appointmentId: string): Promise<ApiRe
       "Content-Type": "application/json",
       ...getAuthHeader(),
     },
+  });
+  return parseResponse(response);
+}
+
+// API lấy lịch làm việc của Technician
+export async function getTechnicianScheduleApi(params: TechnicianScheduleParams): Promise<ApiResult<{ success: boolean; data: TechnicianScheduleListResponse }>> {
+  const query = new URLSearchParams();
+  if (params.technician_id) query.set("technician_id", params.technician_id);
+  query.set("date_from", params.date_from);
+  query.set("date_to", params.date_to);
+  if (params.page) query.set("page", String(params.page));
+  if (params.limit) query.set("limit", String(params.limit));
+  
+  const qs = query.toString();
+  const url = qs ? `/api/appointment/technician-schedule?${qs}` : `/api/appointment/technician-schedule`;
+  
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+  });
+  return parseResponse(response);
+}
+
+export interface AssignTechnicianPayload {
+  appointment_id: string;
+  technician_id: string;
+}
+
+export async function assignTechnicianApi(payload: AssignTechnicianPayload): Promise<ApiResult<{ success: boolean }>> {
+  const response = await fetch("/api/appointment/assign-technician", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify(payload),
   });
   return parseResponse(response);
 }

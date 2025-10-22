@@ -1,12 +1,40 @@
-import { Calendar, ClipboardList, Users, Wrench, LucideIcon } from "lucide-react";
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import {
+  Calendar,
+  ClipboardList,
+  Users,
+  Wrench,
+  Settings,
+  MapPin,
+} from "lucide-react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const items: Array<{ title: string; icon: LucideIcon; href: string }> = [
   { title: "Tổng quan", icon: ClipboardList, href: "/dashboard/staff" },
-  { title: "Quản lý khách hàng", icon: Users, href: "/dashboard/staff/customers" },
-  { title: "Quản lý lịch hẹn", icon: Calendar, href: "/dashboard/staff/appointments" },
-  { title: "Quản lý bảo dưỡng", icon: Wrench, href: "/dashboard/staff/maintenance" },
+  {
+    title: "Quản lý khách hàng",
+    icon: Users,
+    href: "/dashboard/staff/customers",
+  },
+  {
+    title: "Quản lý lịch hẹn",
+    icon: Calendar,
+    href: "/dashboard/staff/appointments",
+  },
+  {
+    title: "Quản lý bảo dưỡng",
+    icon: Wrench,
+    href: "/dashboard/staff/maintenance",
+  },
 ];
 
 export default function StaffSidebar() {
@@ -30,11 +58,17 @@ export default function StaffSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                const active = location.pathname === item.href;
-                const Icon: LucideIcon = item.icon;
+                // Check if current path starts with the item href (for nested routes)
+                const active =
+                  location.pathname === item.href ||
+                  (item.href !== "/dashboard/staff" &&
+                    location.pathname.startsWith(item.href));
+                const Icon = item.icon as any;
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton isActive={active} onClick={() => navigate(item.href)}>
+                    <SidebarMenuButton
+                      isActive={active}
+                      onClick={() => navigate(item.href)}>
                       <Icon className="h-4 w-4" />
                       <span className="text-sm">{item.title}</span>
                     </SidebarMenuButton>
