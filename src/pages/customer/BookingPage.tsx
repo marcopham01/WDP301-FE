@@ -7,7 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "react-toastify";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { CalendarIcon, Clock, MapPin, Wrench } from "lucide-react";
@@ -79,15 +79,11 @@ export default function BookingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedVehicle || !selectedServiceType || !selectedCenter || !bookingDate || !bookingTime) {
-      toast({
-        title: "Thiếu thông tin",
-        description: "Vui lòng điền đầy đủ thông tin đặt lịch",
-        variant: "destructive",
-      });
+      toast.error("Thiếu thông tin. Vui lòng điền đầy đủ thông tin đặt lịch");
       return;
     }
     if (!currentUser?.id) {
-      toast({ title: "Chưa xác thực người dùng", variant: "destructive" });
+  toast.error("Chưa xác thực người dùng");
       return;
     }
 
@@ -108,42 +104,31 @@ export default function BookingPage() {
       const res = await createAppointmentApi(payload);
       
       if (res.ok && res.data?.success) {
-        toast({
-          title: "Đặt lịch thành công!",
-          description: res.data.message || "Lịch hẹn của bạn đã được tạo. Vui lòng thanh toán đặt cọc để xác nhận.",
-        });
+        toast.success("Đặt lịch thành công! " + (res.data.message || "Lịch hẹn của bạn đã được tạo. Vui lòng thanh toán đặt cọc để xác nhận."));
 
         const appointmentId = res.data.data?._id;
         if (appointmentId) {
           const detail = await getAppointmentByIdApi(appointmentId);
-          const appt: any = detail.data?.data;
-          const pay = appt?.payment_id;
+          const appt = detail.data?.data as Record<string, unknown>;
+          const pay = appt?.payment_id as Record<string, unknown>;
           if (detail.ok && pay) {
             setPaymentInfo({
-              amount: pay.amount,
-              checkout_url: pay.checkout_url,
-              qr_code: pay.qr_code,
-              order_code: pay.order_code,
+              amount: pay.amount as number,
+              checkout_url: pay.checkout_url as string,
+              qr_code: pay.qr_code as string,
+              order_code: pay.order_code as number,
             });
             setPaymentDialogOpen(true);
-          } else if (pay?.checkout_url) {
-            window.open(pay.checkout_url, "_blank");
+          } else if ((pay as Record<string, unknown>)?.checkout_url as string) {
+            window.open((pay as Record<string, unknown>)?.checkout_url as string, "_blank");
           }
         }
       } else {
-        toast({
-          title: "Không thể tạo lịch",
-          description: res.message || "Đã có lỗi xảy ra. Vui lòng thử lại.",
-          variant: "destructive"
-        });
+        toast.error("Không thể tạo lịch. " + (res.message || "Đã có lỗi xảy ra. Vui lòng thử lại."));
       }
     } catch (error) {
       console.error("Booking error:", error);
-      toast({ 
-        title: "Lỗi hệ thống", 
-        description: "Không thể kết nối đến server. Vui lòng thử lại sau.",
-        variant: "destructive" 
-      });
+      toast.error("Lỗi hệ thống. Không thể kết nối đến server. Vui lòng thử lại sau.");
     } finally {
       setLoading(false);
     }
@@ -152,7 +137,10 @@ export default function BookingPage() {
   // Đăng xuất (giả lập)
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
-    navigate("/login");
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
   };
 
   const getVehicleLabel = (v: Vehicle) => {
@@ -328,7 +316,7 @@ export default function BookingPage() {
         </div>
       </main>
       {/* Payment Dialog */}
-      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+      <Dialog open={paymentDialogOpen}>
         <DialogContent className="sm:max-w-[640px]">
           <DialogHeader>
             <DialogTitle>Thanh toán đặt lịch</DialogTitle>
@@ -372,7 +360,7 @@ export default function BookingPage() {
                   onClick={async () => {
                     if (paymentInfo?.checkout_url) {
                       await navigator.clipboard.writeText(paymentInfo.checkout_url);
-                      toast({ title: "Đã sao chép link thanh toán" });
+                      toast.success("Đã sao chép link thanh toán");
                     }
                   }}
                 >

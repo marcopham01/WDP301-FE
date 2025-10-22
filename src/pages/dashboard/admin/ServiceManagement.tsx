@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import {
   ServiceType,
@@ -50,7 +50,7 @@ const ServiceManagement = () => {
   const [estimatedDuration, setEstimatedDuration] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  const { toast } = useToast();
+  // Đã chuyển sang dùng toast của sonner
   const navigate = useNavigate();
 
   // Dữ liệu mẫu để hiển thị khi không có kết nối API
@@ -87,21 +87,13 @@ const ServiceManagement = () => {
         console.log("Không thể kết nối API, sử dụng dữ liệu mẫu");
         // Sử dụng dữ liệu mẫu khi không thể kết nối API
         setServices(sampleServices);
-        toast({
-          title: "Chế độ offline",
-          description:
-            "Đang hiển thị dữ liệu mẫu do không thể kết nối đến server",
-        });
+        toast("Chế độ offline. Đang hiển thị dữ liệu mẫu do không thể kết nối đến server");
       }
     } catch (error) {
       console.error("Error loading services:", error);
       // Sử dụng dữ liệu mẫu khi có lỗi
       setServices(sampleServices);
-      toast({
-        title: "Chế độ offline",
-        description:
-          "Đang hiển thị dữ liệu mẫu do không thể kết nối đến server",
-      });
+      toast("Chế độ offline. Đang hiển thị dữ liệu mẫu do không thể kết nối đến server");
     } finally {
       setLoading(false);
     }
@@ -137,11 +129,7 @@ const ServiceManagement = () => {
 
   const handleCreateService = async () => {
     if (!serviceName.trim()) {
-      toast({
-        title: "Lỗi",
-        description: "Vui lòng nhập tên dịch vụ",
-        variant: "destructive",
-      });
+      toast.error("Lỗi. Vui lòng nhập tên dịch vụ");
       return;
     }
 
@@ -156,10 +144,7 @@ const ServiceManagement = () => {
     try {
       const response = await createServiceApi(payload);
       if (response.ok) {
-        toast({
-          title: "Thành công",
-          description: "Đã tạo dịch vụ mới thành công",
-        });
+        toast.success("Đã tạo dịch vụ mới thành công");
         setIsCreateDialogOpen(false);
         resetForm();
         loadServices();
@@ -176,10 +161,7 @@ const ServiceManagement = () => {
         };
 
         setServices((prev) => [...prev, newService]);
-        toast({
-          title: "Thành công (Chế độ offline)",
-          description: "Đã thêm dịch vụ mới vào danh sách tạm thời",
-        });
+        toast.success("Đã thêm dịch vụ mới vào danh sách tạm thời (offline)");
         setIsCreateDialogOpen(false);
         resetForm();
       }
@@ -196,10 +178,7 @@ const ServiceManagement = () => {
       };
 
       setServices((prev) => [...prev, newService]);
-      toast({
-        title: "Thành công (Chế độ offline)",
-        description: "Đã thêm dịch vụ mới vào danh sách tạm thời",
-      });
+      toast.success("Đã thêm dịch vụ mới vào danh sách tạm thời (offline)");
       setIsCreateDialogOpen(false);
       resetForm();
     }
@@ -207,11 +186,7 @@ const ServiceManagement = () => {
 
   const handleUpdateService = async () => {
     if (!currentService || !serviceName.trim()) {
-      toast({
-        title: "Lỗi",
-        description: "Vui lòng nhập tên dịch vụ",
-        variant: "destructive",
-      });
+      toast.error("Lỗi. Vui lòng nhập tên dịch vụ");
       return;
     }
 
@@ -226,28 +201,16 @@ const ServiceManagement = () => {
     try {
       const response = await updateServiceApi(currentService._id, payload);
       if (response.ok) {
-        toast({
-          title: "Thành công",
-          description: "Đã cập nhật dịch vụ thành công",
-        });
+        toast.success("Đã cập nhật dịch vụ thành công");
         setIsEditDialogOpen(false);
         resetForm();
         loadServices();
       } else {
-        toast({
-          title: "Lỗi",
-          description:
-            "Không thể cập nhật dịch vụ. " + (response.message || ""),
-          variant: "destructive",
-        });
+        toast.error("Không thể cập nhật dịch vụ. " + (response.message || ""));
       }
     } catch (error) {
       console.error("Error updating service:", error);
-      toast({
-        title: "Lỗi",
-        description: "Đã xảy ra lỗi khi cập nhật dịch vụ.",
-        variant: "destructive",
-      });
+      toast.error("Đã xảy ra lỗi khi cập nhật dịch vụ.");
     }
   };
 
@@ -257,26 +220,15 @@ const ServiceManagement = () => {
     try {
       const response = await deleteServiceApi(currentService._id);
       if (response.ok) {
-        toast({
-          title: "Thành công",
-          description: "Đã xóa dịch vụ thành công",
-        });
+        toast.success("Đã xóa dịch vụ thành công");
         setIsDeleteDialogOpen(false);
         loadServices();
       } else {
-        toast({
-          title: "Lỗi",
-          description: "Không thể xóa dịch vụ. " + (response.message || ""),
-          variant: "destructive",
-        });
+        toast.error("Không thể xóa dịch vụ. " + (response.message || ""));
       }
     } catch (error) {
       console.error("Error deleting service:", error);
-      toast({
-        title: "Lỗi",
-        description: "Đã xảy ra lỗi khi xóa dịch vụ.",
-        variant: "destructive",
-      });
+      toast.error("Đã xảy ra lỗi khi xóa dịch vụ.");
     }
   };
 

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Car, Loader2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "react-toastify";
 import { VehicleModel, getVehicleModelsApi, createVehicleApi } from "@/lib/vehicleApi";
 
 const vehicleSchema = z.object({
@@ -65,11 +65,7 @@ const AddVehiclePage = () => {
       if (res.ok && res.data?.data) {
         setModels(res.data.data);
       } else {
-        toast({
-          title: "Không tải được danh sách model",
-          description: res.message || "Vui lòng thử lại",
-          variant: "destructive",
-        });
+        toast.error("Không tải được danh sách model. " + (res.message || "Vui lòng thử lại"));
       }
       setLoadingModels(false);
     };
@@ -89,10 +85,10 @@ const AddVehiclePage = () => {
     });
 
     if (res.ok) {
-      toast({ title: "Thêm xe thành công" });
+  toast.success("Thêm xe thành công");
       navigate("/");
     } else {
-      toast({ title: "Không thể thêm xe", description: res.message, variant: "destructive" });
+  toast.error(res.message || "Không thể thêm xe");
     }
     setLoading(false);
   };
@@ -213,7 +209,7 @@ const AddVehiclePage = () => {
                       {...form.register("current_miliage")}
                     />
                     {form.formState.errors.current_miliage && (
-                      <p className="text-sm text-destructive">{form.formState.errors.current_miliage.message as any}</p>
+                      <p className="text-sm text-destructive">{form.formState.errors.current_miliage.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -225,7 +221,7 @@ const AddVehiclePage = () => {
                       {...form.register("battery_health")}
                     />
                     {form.formState.errors.battery_health && (
-                      <p className="text-sm text-destructive">{form.formState.errors.battery_health.message as any}</p>
+                      <p className="text-sm text-destructive">{form.formState.errors.battery_health.message}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -237,7 +233,7 @@ const AddVehiclePage = () => {
                       {...form.register("last_service_mileage")}
                     />
                     {form.formState.errors.last_service_mileage && (
-                      <p className="text-sm text-destructive">{form.formState.errors.last_service_mileage.message as any}</p>
+                      <p className="text-sm text-destructive">{form.formState.errors.last_service_mileage.message}</p>
                     )}
                   </div>
                 </div>

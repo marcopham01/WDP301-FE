@@ -1,4 +1,4 @@
-export interface ApiResult<T = unknown> {
+export interface ApiResult<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
   data?: T | null;
@@ -11,7 +11,7 @@ function getAuthHeader() {
 }
 
 async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
-  let data: unknown = null;
+  let data: T | null = null;
   try {
     data = await response.json();
   } catch {
@@ -21,7 +21,7 @@ async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
     ok: response.ok,
     status: response.status,
     data,
-    message: (data as { message?: string; error?: string })?.message || (data as { message?: string; error?: string })?.error || undefined,
+    message: (data as Record<string, unknown>)?.message as string || (data as Record<string, unknown>)?.error as string || undefined,
   } as ApiResult<T>;
 }
 

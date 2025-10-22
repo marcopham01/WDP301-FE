@@ -1,8 +1,9 @@
 import React from "react";
-import { Toaster as ToasterUI } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -43,7 +44,10 @@ const AppRoutes = () => {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
   };
 
   return (
@@ -180,8 +184,18 @@ const AppRoutes = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <ToasterUI />
-      <SonnerToaster />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>

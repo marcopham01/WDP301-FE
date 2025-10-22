@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Checkbox } from "../components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 
-import { toast } from "../hooks/use-toast";
+import { toast } from "react-toastify";
 import { registerApi } from "@/lib/authApi";
 
 
@@ -51,10 +51,7 @@ const Register = () => {
         fullName: data.fullName,
       });
       if (response.ok) {
-        toast({
-          title: "Đăng ký thành công!",
-          description: "Bạn có thể đăng nhập ngay để sử dụng dịch vụ.",
-        });
+        toast.success("Đăng ký thành công! Bạn có thể đăng nhập ngay để sử dụng dịch vụ.");
         setTimeout(() => {
           navigate("/login");
         }, 1500);
@@ -67,17 +64,11 @@ const Register = () => {
         }
         // Nếu có lỗi tổng quát thì vẫn hiện toast
         const errorMsg = response.message || response.data?.message || "Vui lòng kiểm tra lại thông tin hoặc thử lại sau.";
-        toast({
-          title: "Đăng ký thất bại",
-          description: errorMsg,
-        });
+        toast.error("Đăng ký thất bại. " + errorMsg);
       }
     } catch (error) {
       console.error("Registration error:", error);
-      toast({
-        title: "Đăng ký thất bại",
-        description: (error instanceof Error ? error.message : "Có lỗi xảy ra khi đăng ký"),
-      });
+      toast.error("Đăng ký thất bại. " + (error instanceof Error ? error.message : "Có lỗi xảy ra khi đăng ký"));
     } finally {
       setIsLoading(false);
     }

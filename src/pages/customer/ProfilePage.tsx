@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import { getProfileApi } from "@/lib/authApi";
 import { useNavigate } from "react-router-dom";
 import { User, Mail, Phone, Calendar, Pencil, Lock } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
+import { toast } from "react-toastify";
 
 interface UserProfile {
   id?: string;
@@ -64,8 +65,10 @@ const ProfilePage = () => {
   const handleLogout = () => {
     // Handle logout logic here - clear user from context and token
     localStorage.removeItem('accessToken');
-    // You might want to call a logout function from AuthContext if available
-    navigate('/login');
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate('/login');
+    }, 1000);
   };
 
   return (

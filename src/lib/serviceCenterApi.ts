@@ -1,4 +1,4 @@
-export interface ApiResult<T = any> {
+export interface ApiResult<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
   data?: T | null;
@@ -11,7 +11,7 @@ function getAuthHeader() {
 }
 
 async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
-  let data: any = null;
+  let data: T | null = null;
   try {
     data = await response.json();
   } catch {
@@ -21,11 +21,10 @@ async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
     ok: response.ok,
     status: response.status,
     data,
-    message: data?.message || data?.error || undefined,
+    message: (data as Record<string, unknown>)?.message as string || (data as Record<string, unknown>)?.error as string || undefined,
   } as ApiResult<T>;
   if (!result.ok) {
     // Surface details for debugging in dev
-    // eslint-disable-next-line no-console
     console.error("[serviceCenterApi] Error", result.status, result.message, result.data);
   }
   return result;
@@ -43,6 +42,7 @@ export interface ServiceCenter {
   center_name: string;
   address?: string;
   phone?: string;
+  email?: string;
   is_active?: boolean;
   working_hours?: WorkingHour[];
 }
@@ -51,6 +51,7 @@ export interface CreateServiceCenterPayload {
   center_name: string;
   address?: string;
   phone?: string;
+  email?: string;
   is_active?: boolean;
   working_hours?: WorkingHour[];
 }
@@ -59,6 +60,7 @@ export interface UpdateServiceCenterPayload {
   center_name?: string;
   address?: string;
   phone?: string;
+  email?: string;
   is_active?: boolean;
 }
 
@@ -80,10 +82,9 @@ export async function getServiceCentersApi(): Promise<ApiResult<{ success: boole
       },
     });
     return parseResponse(response);
-  } catch (err: any) {
-    // eslint-disable-next-line no-console
+  } catch (err: unknown) {
     console.error("[serviceCenterApi] Network error", err);
-    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
   }
 }
 
@@ -99,14 +100,14 @@ export async function createServiceCenterApi(payload: CreateServiceCenterPayload
       body: JSON.stringify(payload),
     });
     return parseResponse(response);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[serviceCenterApi] Network error", err);
-    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
   }
 }
 
 // POST /api/service-center/schedule/create/:id - Tạo lịch làm việc cho trung tâm
-export async function createServiceCenterScheduleApi(centerId: string, payload: CreateSchedulePayload): Promise<ApiResult<{ success: boolean; data: any }>> {
+export async function createServiceCenterScheduleApi(centerId: string, payload: CreateSchedulePayload): Promise<ApiResult<{ success: boolean; data: Record<string, unknown> }>> {
   try {
     const response = await fetch(`/api/service-center/schedule/create/${centerId}`, {
       method: "POST",
@@ -117,20 +118,43 @@ export async function createServiceCenterScheduleApi(centerId: string, payload: 
       body: JSON.stringify(payload),
     });
     return parseResponse(response);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[serviceCenterApi] Network error", err);
-    return { ok: false, status: 0, data: null, message: String(err?.message || err) };
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
   }
 }
 
-// DEPRECATED FUNCTIONS - Backend không hỗ trợ các endpoint này
-// Giữ lại để tránh lỗi compile, nhưng sẽ return error
+// PUT /api/service-center/update/:id - Cập nhật thông tin trung tâm dịch vụ
 export async function updateServiceCenterApi(id: string, payload: UpdateServiceCenterPayload): Promise<ApiResult<{ success: boolean; data: ServiceCenter }>> {
-  console.warn("[serviceCenterApi] updateServiceCenterApi - API này không tồn tại trên backend");
-  return { ok: false, status: 404, data: null, message: "API endpoint không tồn tại trên backend" };
+  try {
+    const response = await fetch(`/api/service-center/update/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return parseResponse(response);
+  } catch (err: unknown) {
+    console.error("[serviceCenterApi] Network error", err);
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
+  }
 }
 
+// DELETE /api/service-center/delete/:id - Xóa trung tâm dịch vụ
 export async function deleteServiceCenterApi(id: string): Promise<ApiResult<{ success: boolean }>> {
-  console.warn("[serviceCenterApi] deleteServiceCenterApi - API này không tồn tại trên backend");
-  return { ok: false, status: 404, data: null, message: "API endpoint không tồn tại trên backend" };
+  try {
+    const response = await fetch(`/api/service-center/delete/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeader(),
+      },
+    });
+    return parseResponse(response);
+  } catch (err: unknown) {
+    console.error("[serviceCenterApi] Network error", err);
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
+  }
 }

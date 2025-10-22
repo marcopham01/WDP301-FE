@@ -20,12 +20,15 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-toastify";
 import {
   ServiceCenter,
   getServiceCentersApi,
   createServiceCenterApi,
+  updateServiceCenterApi,
+  deleteServiceCenterApi,
   CreateServiceCenterPayload,
+  UpdateServiceCenterPayload,
 } from "@/lib/serviceCenterApi";
 import { useNavigate } from "react-router-dom";
 
@@ -42,9 +45,10 @@ const ServiceCenterManagement = () => {
   const [centerName, setCenterName] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  const { toast } = useToast();
+  // Đã chuyển sang dùng toast của sonner
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -58,21 +62,11 @@ const ServiceCenterManagement = () => {
       if (response.ok && response.data?.data) {
         setServiceCenters(response.data.data);
       } else {
-        toast({
-          title: "Lỗi",
-          description:
-            "Không thể tải danh sách trung tâm dịch vụ. " +
-            (response.message || ""),
-          variant: "destructive",
-        });
+        toast.error("Không thể tải danh sách trung tâm dịch vụ. " + (response.message || ""));
       }
     } catch (error) {
       console.error("Error loading service centers:", error);
-      toast({
-        title: "Lỗi",
-        description: "Đã xảy ra lỗi khi tải danh sách trung tâm dịch vụ.",
-        variant: "destructive",
-      });
+      toast.error("Đã xảy ra lỗi khi tải danh sách trung tâm dịch vụ.");
     } finally {
       setLoading(false);
     }
@@ -82,6 +76,7 @@ const ServiceCenterManagement = () => {
     setCenterName("");
     setAddress("");
     setPhone("");
+    setEmail("");
     setIsActive(true);
   };
 
@@ -95,6 +90,7 @@ const ServiceCenterManagement = () => {
     setCenterName(serviceCenter.center_name);
     setAddress(serviceCenter.address || "");
     setPhone(serviceCenter.phone || "");
+    setEmail(serviceCenter.email || "");
     setIsActive(serviceCenter.is_active !== false);
     setIsEditDialogOpen(true);
   };
@@ -106,11 +102,7 @@ const ServiceCenterManagement = () => {
 
   const handleCreateServiceCenter = async () => {
     if (!centerName.trim()) {
-      toast({
-        title: "Lỗi",
-        description: "Vui lòng nhập tên trung tâm dịch vụ",
-        variant: "destructive",
-      });
+      toast.error("Vui lòng nhập tên trung tâm dịch vụ");
       return;
     }
 
@@ -118,55 +110,73 @@ const ServiceCenterManagement = () => {
       center_name: centerName.trim(),
       address: address.trim() || undefined,
       phone: phone.trim() || undefined,
+      email: email.trim() || undefined,
       is_active: isActive,
     };
 
     try {
       const response = await createServiceCenterApi(payload);
       if (response.ok) {
-        toast({
-          title: "Thành công",
-          description: "Đã tạo trung tâm dịch vụ mới thành công",
-        });
+        toast.success("Đã tạo trung tâm dịch vụ mới thành công");
         setIsCreateDialogOpen(false);
         resetForm();
         loadServiceCenters();
       } else {
-        toast({
-          title: "Lỗi",
-          description:
-            "Không thể tạo trung tâm dịch vụ. " + (response.message || ""),
-          variant: "destructive",
-        });
+        toast.error("Không thể tạo trung tâm dịch vụ. " + (response.message || ""));
       }
     } catch (error) {
       console.error("Error creating service center:", error);
-      toast({
-        title: "Lỗi",
-        description: "Đã xảy ra lỗi khi tạo trung tâm dịch vụ mới.",
-        variant: "destructive",
-      });
+      toast.error("Đã xảy ra lỗi khi tạo trung tâm dịch vụ mới.");
     }
   };
 
   const handleUpdateServiceCenter = async () => {
-    toast({
-      title: "Chức năng chưa hỗ trợ",
-      description:
-        "Backend hiện chưa cung cấp API để cập nhật trung tâm dịch vụ. Vui lòng liên hệ admin để thêm endpoint PUT /api/service-center/update/:id",
-      variant: "destructive",
-    });
-    setIsEditDialogOpen(false);
+    if (!currentServiceCenter) return;
+
+    if (!centerName.trim()) {
+      toast.error("Vui lòng nhập tên trung tâm dịch vụ");
+      return;
+    }
+
+    const payload: UpdateServiceCenterPayload = {
+      center_name: centerName.trim(),
+      address: address.trim() || undefined,
+      phone: phone.trim() || undefined,
+      email: email.trim() || undefined,
+      is_active: isActive,
+    };
+
+    try {
+      const response = await updateServiceCenterApi(currentServiceCenter._id, payload);
+      if (response.ok) {
+        toast.success("Đã cập nhật trung tâm dịch vụ thành công");
+        setIsEditDialogOpen(false);
+        loadServiceCenters();
+      } else {
+        toast.error("Không thể cập nhật trung tâm dịch vụ. " + (response.message || ""));
+      }
+    } catch (error) {
+      console.error("Error updating service center:", error);
+      toast.error("Đã xảy ra lỗi khi cập nhật trung tâm dịch vụ.");
+    }
   };
 
   const handleDeleteServiceCenter = async () => {
-    toast({
-      title: "Chức năng chưa hỗ trợ",
-      description:
-        "Backend hiện chưa cung cấp API để xóa trung tâm dịch vụ. Vui lòng liên hệ admin để thêm endpoint DELETE /api/service-center/delete/:id",
-      variant: "destructive",
-    });
-    setIsDeleteDialogOpen(false);
+    if (!currentServiceCenter) return;
+
+    try {
+      const response = await deleteServiceCenterApi(currentServiceCenter._id);
+      if (response.ok) {
+        toast.success("Đã xóa trung tâm dịch vụ thành công");
+        setIsDeleteDialogOpen(false);
+        loadServiceCenters();
+      } else {
+        toast.error("Không thể xóa trung tâm dịch vụ. " + (response.message || ""));
+      }
+    } catch (error) {
+      console.error("Error deleting service center:", error);
+      toast.error("Đã xảy ra lỗi khi xóa trung tâm dịch vụ.");
+    }
   };
 
   const handleManageWorkingHours = (serviceCenter: ServiceCenter) => {
@@ -205,6 +215,7 @@ const ServiceCenterManagement = () => {
                   <TableHead>Tên trung tâm</TableHead>
                   <TableHead>Địa chỉ</TableHead>
                   <TableHead>Số điện thoại</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Trạng thái</TableHead>
                   <TableHead className="text-right">Thao tác</TableHead>
                 </TableRow>
@@ -212,7 +223,7 @@ const ServiceCenterManagement = () => {
               <TableBody>
                 {serviceCenters.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       Không có trung tâm dịch vụ nào
                     </TableCell>
                   </TableRow>
@@ -224,6 +235,7 @@ const ServiceCenterManagement = () => {
                       </TableCell>
                       <TableCell>{center.address || "-"}</TableCell>
                       <TableCell>{center.phone || "-"}</TableCell>
+                      <TableCell>{center.email || "-"}</TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
@@ -302,6 +314,16 @@ const ServiceCenterManagement = () => {
                 placeholder="Nhập số điện thoại"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Nhập email"
+              />
+            </div>
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -354,6 +376,16 @@ const ServiceCenterManagement = () => {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Nhập số điện thoại"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editEmail">Email</Label>
+              <Input
+                id="editEmail"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Nhập email"
               />
             </div>
             <div className="flex items-center space-x-2">

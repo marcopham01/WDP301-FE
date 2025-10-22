@@ -17,7 +17,7 @@ import {
 } from "../components/ui/form";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { FcAutomotive } from "react-icons/fc";
-import { toast } from "../hooks/use-toast";
+import { toast } from "react-toastify";
 import { loginApi } from "@/lib/authApi";
 
 interface LoginFormData {
@@ -45,7 +45,7 @@ const Login = () => {
       const result = await signInWithPopup(auth, provider);
       const googleToken = await result.user.getIdToken();
       // Gọi API và nhận luôn data
-      const data = await apiRequest("/api/users/loginfirebase", {
+      const response = await fetch("/api/users/loginfirebase", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -70,10 +70,7 @@ const Login = () => {
             fullName: profileData.user.fullName,
             role: userRole,
           });
-          toast({
-            title: "Đăng nhập thành công!",
-            description: "Chào mừng bạn quay trở lại.",
-          });
+          toast.success("Đăng nhập thành công! Chào mừng bạn quay trở lại.");
           if (userRole === "staff") {
             navigate("/dashboard/staff");
           } else if (userRole === "admin") {
@@ -84,16 +81,10 @@ const Login = () => {
             navigate("/");
           }
         } else {
-          toast({
-            title: "Lỗi",
-            description: "Không thể lấy thông tin người dùng.",
-          });
+          toast.error("Không thể lấy thông tin người dùng.");
         }
       } else {
-        toast({
-          title: "Đăng nhập Google thất bại",
-          description: "Vui lòng thử lại.",
-        });
+        toast.error("Đăng nhập Google thất bại. Vui lòng thử lại.");
       }
     } catch (error) {
       console.error("Google login error:", error);
@@ -126,10 +117,7 @@ const Login = () => {
             fullName: data.user.fullName,
             role: userRole,
           });
-          toast({
-            title: "Đăng nhập thành công!",
-            description: "Chào mừng bạn quay trở lại.",
-          });
+          toast.success("Đăng nhập thành công! Chào mừng bạn quay trở lại.");
           setTimeout(() => {
             if (userRole === "staff") {
               navigate("/dashboard/staff");
@@ -142,16 +130,10 @@ const Login = () => {
             }
           }, 500);
         } else {
-          toast({
-            title: "Lỗi",
-            description: "Không thể lấy thông tin người dùng.",
-          });
+          toast.error("Không thể lấy thông tin người dùng.");
         }
       } else {
-        toast({
-          title: "Đăng nhập thất bại",
-          description: "Sai username hoặc password.",
-        });
+        toast.error("Đăng nhập thất bại. Sai username hoặc password.");
       }
     } catch (error) {
       console.error("Login error:", error);

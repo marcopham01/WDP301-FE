@@ -1,24 +1,17 @@
-import { useState } from "react";
+
 import { TechnicianSidebar } from "@/components/dashboard/sidebars/TechnicianSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
   Wrench,
-  Car,
   Clock,
   CheckCircle,
-  AlertCircle,
-  Plus,
-  Search,
-  Filter,
-  Bell,
   Battery,
-  Calendar,
   FileText,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/mainlayout/DashboardLayout";
@@ -38,7 +31,7 @@ export const TechnicianDashboard = ({
   user,
   onLogout,
 }: TechnicianDashboardProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
+
 
   // Mock data
   const assignedTasks = [

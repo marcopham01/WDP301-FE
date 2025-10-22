@@ -9,7 +9,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getUserVehiclesApi, Vehicle, updateVehicleApi, UpdateVehiclePayload } from "@/lib/vehicleApi";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "react-toastify";
 
 const EditVehiclePage = () => {
   const navigate = useNavigate();
@@ -48,19 +48,11 @@ const EditVehiclePage = () => {
               new Date(foundVehicle.purchase_date).toISOString().split('T')[0] : "",
           });
         } else {
-          toast({
-            title: "Không tìm thấy xe",
-            description: "Xe không tồn tại hoặc không thuộc về bạn",
-            variant: "destructive"
-          });
+          toast.error("Không tìm thấy xe. Xe không tồn tại hoặc không thuộc về bạn");
           navigate("/");
         }
       } else {
-        toast({
-          title: "Lỗi tải dữ liệu",
-          description: "Không thể tải thông tin xe",
-          variant: "destructive"
-        });
+        toast.error("Lỗi tải dữ liệu. Không thể tải thông tin xe");
         navigate("/");
       }
       setLoading(false);
@@ -88,17 +80,10 @@ const EditVehiclePage = () => {
     const res = await updateVehicleApi(id, formData);
 
     if (res.ok) {
-      toast({
-        title: "Cập nhật thành công",
-        description: "Thông tin xe đã được cập nhật"
-      });
+      toast.success("Cập nhật thành công. Thông tin xe đã được cập nhật.");
       navigate("/");
     } else {
-      toast({
-        title: "Cập nhật thất bại",
-        description: res.message || "Không thể cập nhật thông tin xe",
-        variant: "destructive"
-      });
+      toast.error(res.message || "Không thể cập nhật xe");
     }
     setSaving(false);
   };
@@ -113,7 +98,10 @@ const EditVehiclePage = () => {
   // Đăng xuất (giả lập)
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
-    navigate("/login");
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
   };
 
   if (loading) {

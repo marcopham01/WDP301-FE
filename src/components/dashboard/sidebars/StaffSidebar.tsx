@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const items = [
+const items: Array<{ title: string; icon: LucideIcon; href: string }> = [
   { title: "Tổng quan", icon: ClipboardList, href: "/dashboard/staff" },
   {
     title: "Quản lý khách hàng",
