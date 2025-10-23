@@ -21,9 +21,8 @@ export function DashboardHeader({
     onLogout();
     localStorage.removeItem("accessToken");
     localStorage.removeItem("role");
-    toast.success("Đăng xuất thành công!");
     setTimeout(() => {
-      navigate("/");
+      navigate("/login");
     }, 1000);
   };
   return (

@@ -23,6 +23,8 @@ import {
   Wrench,
   Clock,
   CheckCircle,
+  X,
+  CalendarDays,
 } from "lucide-react";
 
 export default function AppointmentDetail() {
@@ -39,6 +41,9 @@ export default function AppointmentDetail() {
   const [loadingTechnicians, setLoadingTechnicians] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [techniciansLoaded, setTechniciansLoaded] = useState(false);
+  const [selectedTechnicianForSchedule, setSelectedTechnicianForSchedule] =
+    useState<string>("");
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   function statusLabel(s?: string) {
     switch (s) {
@@ -99,10 +104,19 @@ export default function AppointmentDetail() {
     try {
       setLoadingTechnicians(true);
 
-      // Gọi API lấy schedule cho tất cả technicians (không truyền technician_id cụ thể)
+      // Tính toán khoảng thời gian 30 ngày từ ngày hiện tại
+      const today = new Date();
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+      // Format dates to YYYY-MM-DD
+      const dateFrom = today.toISOString().split("T")[0];
+      const dateTo = thirtyDaysFromNow.toISOString().split("T")[0];
+
+      // Gọi API lấy schedule cho tất cả technicians trong 30 ngày
       const result = await getTechnicianScheduleApi({
-        date_from: appointment.appoinment_date,
-        date_to: appointment.appoinment_date,
+        date_from: dateFrom,
+        date_to: dateTo,
         page: 1,
         limit: 50, // Lấy tối đa 50 technicians
       });
@@ -214,6 +228,63 @@ export default function AppointmentDetail() {
       default:
         return status || "—";
     }
+  };
+
+  // Function để hiển thị lịch làm việc chi tiết
+  const showTechnicianSchedule = (technicianId: string) => {
+    setSelectedTechnicianForSchedule(technicianId);
+    setShowScheduleModal(true);
+  };
+
+  // Function để đóng modal lịch làm việc
+  const closeScheduleModal = () => {
+    setShowScheduleModal(false);
+    setSelectedTechnicianForSchedule("");
+  };
+
+  // Function để lấy thông tin technician được chọn
+  const getSelectedTechnicianInfo = () => {
+    return technicians.find(
+      (tech) => tech._id === selectedTechnicianForSchedule
+    );
+  };
+
+  // Function để lấy schedule của technician được chọn
+  const getSelectedTechnicianSchedule = () => {
+    return technicianSchedules[selectedTechnicianForSchedule] || [];
+  };
+
+  // Function để format ngày tháng
+  const formatScheduleDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, "dd/MM/yyyy");
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Function để kiểm tra xem technician có rảnh vào ngày hẹn không
+  const isTechnicianAvailableOnAppointmentDate = (technicianId: string) => {
+    if (!appointment?.appoinment_date) return true;
+
+    const schedules = technicianSchedules[technicianId] || [];
+    const appointmentDate = new Date(appointment.appoinment_date)
+      .toISOString()
+      .split("T")[0];
+
+    // Kiểm tra xem có lịch hẹn nào vào ngày đó không
+    const hasAppointmentOnDate = schedules.some(
+      (schedule: { appoinment_date?: string }) => {
+        if (!schedule.appoinment_date) return false;
+        const scheduleDate = new Date(schedule.appoinment_date)
+          .toISOString()
+          .split("T")[0];
+        return scheduleDate === appointmentDate;
+      }
+    );
+
+    return !hasAppointmentOnDate;
   };
 
   // Function để load thông tin appointment
@@ -860,7 +931,8 @@ export default function AppointmentDetail() {
                             tech._id
                           );
                           const isSelected = selectedTechnician === tech._id;
-                          const isAvailable = scheduleInfo.isAvailable;
+                          const isAvailable =
+                            isTechnicianAvailableOnAppointmentDate(tech._id);
 
                           return (
                             <Card
@@ -921,8 +993,23 @@ export default function AppointmentDetail() {
                                     </span>
                                   </div>
 
+                                  {/* Nút xem lịch làm việc */}
+                                  <div className="mt-3">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full text-xs"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        showTechnicianSchedule(tech._id);
+                                      }}>
+                                      <CalendarDays className="w-3 h-3 mr-1" />
+                                      Xem lịch làm việc
+                                    </Button>
+                                  </div>
+
                                   {/* Hiển thị chi tiết schedule nếu có */}
-                                  {scheduleInfo.schedules.length > 0 && (
+                                  {/* {scheduleInfo.schedules.length > 0 && (
                                     <div className="mt-2 pt-2 border-t border-gray-200">
                                       <div className="text-xs text-muted-foreground mb-1">
                                         Lịch hẹn hiện tại:
@@ -979,7 +1066,7 @@ export default function AppointmentDetail() {
                                         )}
                                       </div>
                                     </div>
-                                  )}
+                                  )} */}
                                 </div>
 
                                 {isSelected && (
@@ -1099,6 +1186,233 @@ export default function AppointmentDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal hiển thị lịch làm việc chi tiết */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div className="flex items-center gap-3">
+                <CalendarDays className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    Lịch làm việc chi tiết
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {getSelectedTechnicianInfo()?.fullName} -{" "}
+                    {getSelectedTechnicianInfo()?.email}
+                  </p>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={closeScheduleModal}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              {(() => {
+                const selectedTechInfo = getSelectedTechnicianInfo();
+                const selectedTechSchedule = getSelectedTechnicianSchedule();
+
+                if (!selectedTechInfo) {
+                  return (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        Không tìm thấy thông tin kỹ thuật viên
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-6">
+                    {/* Thông tin kỹ thuật viên */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">
+                          Thông tin kỹ thuật viên
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Họ tên
+                            </label>
+                            <p className="text-sm">
+                              {selectedTechInfo.fullName}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Email
+                            </label>
+                            <p className="text-sm">{selectedTechInfo.email}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Số điện thoại
+                            </label>
+                            <p className="text-sm">
+                              {selectedTechInfo.phone || "—"}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">
+                              Tổng số lịch hẹn
+                            </label>
+                            <p className="text-sm">
+                              {selectedTechSchedule.length}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Lịch làm việc */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">
+                          Lịch làm việc (30 ngày tới)
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {selectedTechSchedule.length === 0 ? (
+                          <div className="text-center py-8">
+                            <CalendarDays className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">
+                              Không có lịch hẹn nào
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Kỹ thuật viên hoàn toàn rảnh trong 30 ngày tới
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {selectedTechSchedule.map(
+                              (
+                                schedule: {
+                                  appoinment_date?: string;
+                                  appoinment_time?: string;
+                                  status?: string;
+                                  estimated_cost?: number;
+                                  user_id?: { fullName?: string };
+                                  vehicle_id?: { license_plate?: string };
+                                  center_id?: { _id?: string };
+                                },
+                                index: number
+                              ) => (
+                                <div
+                                  key={index}
+                                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                                  <div className="flex items-start justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="w-4 h-4 text-blue-600" />
+                                      <div>
+                                        <p className="font-medium text-sm">
+                                          {formatScheduleDate(
+                                            schedule.appoinment_date
+                                          )}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {formatScheduleTime(schedule)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Badge
+                                      variant={
+                                        schedule.status === "completed"
+                                          ? "default"
+                                          : schedule.status === "in_progress"
+                                          ? "default"
+                                          : schedule.status === "assigned"
+                                          ? "secondary"
+                                          : "outline"
+                                      }
+                                      className={
+                                        schedule.status === "completed"
+                                          ? "bg-green-100 text-green-800"
+                                          : schedule.status === "in_progress"
+                                          ? "bg-blue-100 text-blue-800"
+                                          : schedule.status === "assigned"
+                                          ? "bg-yellow-100 text-yellow-800"
+                                          : "bg-gray-100 text-gray-800"
+                                      }>
+                                      {formatScheduleStatus(schedule.status)}
+                                    </Badge>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                      <label className="text-xs font-medium text-muted-foreground">
+                                        Khách hàng
+                                      </label>
+                                      <p className="text-sm">
+                                        {schedule.user_id?.fullName || "—"}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <label className="text-xs font-medium text-muted-foreground">
+                                        Biển số xe
+                                      </label>
+                                      <p className="text-sm">
+                                        {schedule.vehicle_id?.license_plate ||
+                                          "—"}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <label className="text-xs font-medium text-muted-foreground">
+                                        Chi phí ước tính
+                                      </label>
+                                      <p className="text-sm">
+                                        {schedule.estimated_cost
+                                          ? `${schedule.estimated_cost.toLocaleString(
+                                              "vi-VN"
+                                            )} VNĐ`
+                                          : "—"}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <label className="text-xs font-medium text-muted-foreground">
+                                        Trung tâm
+                                      </label>
+                                      <p className="text-sm">
+                                        {schedule.center_id?._id
+                                          ? "Đã phân công"
+                                          : "—"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Nút chọn kỹ thuật viên */}
+                    <div className="flex gap-3 pt-4 border-t">
+                      <Button
+                        onClick={() => {
+                          setSelectedTechnician(selectedTechInfo._id);
+                          closeScheduleModal();
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700">
+                        <User className="w-4 h-4 mr-2" />
+                        Chọn kỹ thuật viên này
+                      </Button>
+                      <Button variant="outline" onClick={closeScheduleModal}>
+                        Đóng
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

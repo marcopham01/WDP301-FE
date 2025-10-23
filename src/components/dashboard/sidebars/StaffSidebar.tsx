@@ -5,6 +5,7 @@ import {
   Wrench,
   Settings,
   MapPin,
+  LucideIcon,
 } from "lucide-react";
 import {
   Sidebar,
