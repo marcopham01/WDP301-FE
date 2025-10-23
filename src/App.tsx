@@ -31,6 +31,7 @@ import WorkingHoursManagement from "./pages/dashboard/admin/WorkingHoursManageme
 import VehicleModelManagement from "./pages/dashboard/admin/VehicleModelManagement";
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 import { TechnicianOverview } from "./pages/dashboard/tech/TechnicianOverview";
+import { TaskDetail } from "./pages/dashboard/tech/TaskDetail";
 import PaymentSuccessPage from "@/pages/customer/PaymentSuccessPage";
 import PaymentCancelPage from "@/pages/customer/PaymentCancelPage";
 import AppointmentManagement from "./pages/dashboard/staff/appointments/AppointmentManagement";
@@ -179,6 +180,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }>
         <Route index element={<TechnicianOverview />} />
+        <Route path="task/:appointmentId" element={<TaskDetail />} />
       </Route>
     </Routes>
   );

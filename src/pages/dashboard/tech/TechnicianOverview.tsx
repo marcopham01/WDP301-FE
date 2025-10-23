@@ -4,68 +4,172 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Wrench, Clock, CheckCircle, Battery, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext/useAuth";
+import { useNavigate } from "react-router-dom";
+import {
+  getTechnicianScheduleApi,
+  TechnicianScheduleParams,
+  ScheduleItem,
+  updateAppointmentStatusApi,
+} from "@/lib/appointmentApi";
 
 export const TechnicianOverview = () => {
-  // Mock data
-  const assignedTasks = [
-    {
-      id: 1,
-      vehicle: "Tesla Model 3 - 5YJ3E1EA4LF123456",
-      customer: "Nguyễn Văn An",
-      service: "Bảo dưỡng định kỳ",
-      priority: "high",
-      assignedDate: "2024-01-20",
-      estimatedHours: 3,
-      description:
-        "Kiểm tra tổng thể hệ thống điện, thay dầu phanh, kiểm tra phanh",
-    },
-    {
-      id: 2,
-      vehicle: "VinFast VF8 - VF1VF8EA4LF234567",
-      customer: "Trần Thị Bình",
-      service: "Thay pin",
-      priority: "medium",
-      assignedDate: "2024-01-20",
-      estimatedHours: 5,
-      description: "Thay thế module pin bị hỏng, kiểm tra hệ thống sạc",
-    },
-  ];
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
 
-  const inProgressTasks = [
-    {
-      id: 3,
-      vehicle: "BMW iX - WBAXG91060AL12345",
-      customer: "Lê Văn Cường",
-      service: "Sửa chữa hệ thống sạc",
-      progress: 65,
-      startTime: "09:00",
-      estimatedCompletion: "15:00",
-      description: "Thay thế bộ sạc chính, cập nhật phần mềm",
-    },
-  ];
+  // Lấy dữ liệu schedule của technician
+  useEffect(() => {
+    const fetchTechnicianSchedule = async () => {
+      if (!user?.id) return;
 
-  const completedTasks = [
-    {
-      id: 4,
-      vehicle: "Audi e-tron - WA1VAAGE1LB123456",
-      customer: "Phạm Thị Dung",
-      service: "Kiểm tra định kỳ",
-      completedDate: "2024-01-19",
-      completedTime: "16:30",
-      rating: 5,
-      feedback: "Công việc thực hiện tốt, xe hoạt động ổn định",
-    },
-    {
-      id: 5,
-      vehicle: "Hyundai Kona Electric",
-      customer: "Hoàng Văn Em",
-      service: "Thay lốp và kiểm tra hệ thống",
-      completedDate: "2024-01-18",
-      completedTime: "11:45",
-      rating: 4,
-      feedback: "Làm việc chuyên nghiệp, nhanh chóng",
-    },
-  ];
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Lấy schedule trong 30 ngày gần đây
+        const today = new Date();
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+        const params: TechnicianScheduleParams = {
+          technician_id: user.id,
+          date_from: today.toISOString().split("T")[0],
+          date_to: thirtyDaysFromNow.toISOString().split("T")[0],
+        };
+
+        const result = await getTechnicianScheduleApi(params);
+
+        console.log("Technician Schedule API Response:", result);
+        console.log("Technician ID:", user.id);
+        console.log("Date range:", params.date_from, "to", params.date_to);
+
+        if (result.ok && result.data?.success) {
+          // Lấy schedules từ response - technician chỉ lấy schedule của chính mình
+          const scheduleData = result.data.data;
+          console.log("Schedule Data Structure:", scheduleData);
+
+          // Kiểm tra cấu trúc response và lấy schedules
+          const dataWithSchedules = scheduleData as unknown as {
+            schedules?: ScheduleItem[];
+          };
+          if (
+            dataWithSchedules.schedules &&
+            Array.isArray(dataWithSchedules.schedules)
+          ) {
+            // Trường hợp response có schedules trực tiếp (TechnicianScheduleResponse)
+            setSchedules(dataWithSchedules.schedules);
+          } else if (scheduleData.items && scheduleData.items.length > 0) {
+            // Trường hợp response có items array (TechnicianScheduleListResponse)
+            setSchedules(scheduleData.items[0].schedules);
+          } else {
+            setSchedules([]);
+          }
+        } else {
+          setError(result.message || "Không thể tải dữ liệu lịch làm việc");
+        }
+      } catch (err) {
+        setError("Có lỗi xảy ra khi tải dữ liệu");
+        console.error("Error fetching technician schedule:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTechnicianSchedule();
+  }, [user?.id]);
+
+  // Debug logging để kiểm tra schedules
+  useEffect(() => {
+    console.log("Schedules state updated:", schedules);
+    console.log("Schedules length:", schedules.length);
+  }, [schedules]);
+
+  // Phân loại tasks theo status
+  console.log("All schedules for filtering:", schedules);
+  console.log(
+    "Schedule statuses:",
+    schedules.map((s) => s.status)
+  );
+
+  const assignedTasks = schedules
+    .filter(
+      (schedule) =>
+        schedule.status === "assigned" || schedule.status === "pending"
+    )
+    .map((schedule) => ({
+      id: schedule._id,
+      vehicle: `${schedule.vehicle_id.brand} ${schedule.vehicle_id.model} - ${schedule.vehicle_id.license_plate}`,
+      customer: schedule.user_id.fullName,
+      service: schedule.service_type_id.service_name,
+      priority: "medium", // Có thể thêm logic để xác định priority
+      assignedDate: schedule.appoinment_date,
+      estimatedHours:
+        parseInt(schedule.service_type_id.estimated_duration) || 2,
+      description: schedule.notes || "Không có mô tả chi tiết",
+      estimatedCost: schedule.estimated_cost,
+      centerName: schedule.center_id.center_name,
+      centerAddress: schedule.center_id.address,
+      customerPhone: schedule.user_id.phone,
+      vehicleVin: (schedule.vehicle_id as { vin?: string })?.vin || "N/A",
+      serviceDescription:
+        (schedule.service_type_id as { description?: string })?.description ||
+        "Không có mô tả",
+    }));
+
+  console.log("Assigned tasks:", assignedTasks);
+
+  const inProgressTasks = schedules
+    .filter(
+      (schedule) =>
+        schedule.status === "in_progress" || schedule.status === "working"
+    )
+    .map((schedule) => ({
+      id: schedule._id,
+      vehicle: `${schedule.vehicle_id.brand} ${schedule.vehicle_id.model} - ${schedule.vehicle_id.license_plate}`,
+      customer: schedule.user_id.fullName,
+      service: schedule.service_type_id.service_name,
+      progress: 50, // Có thể thêm logic để tính progress thực tế
+      startTime: schedule.appoinment_time,
+      estimatedCompletion: schedule.estimated_end_time || "16:00",
+      description: schedule.notes || "Không có mô tả chi tiết",
+      estimatedCost: schedule.estimated_cost,
+      centerName: schedule.center_id.center_name,
+      centerAddress: schedule.center_id.address,
+      customerPhone: schedule.user_id.phone,
+      vehicleVin: (schedule.vehicle_id as { vin?: string })?.vin || "N/A",
+      serviceDescription:
+        (schedule.service_type_id as { description?: string })?.description ||
+        "Không có mô tả",
+    }));
+
+  const completedTasks = schedules
+    .filter(
+      (schedule) =>
+        schedule.status === "completed" || schedule.status === "done"
+    )
+    .map((schedule) => ({
+      id: schedule._id,
+      vehicle: `${schedule.vehicle_id.brand} ${schedule.vehicle_id.model} - ${schedule.vehicle_id.license_plate}`,
+      customer: schedule.user_id.fullName,
+      service: schedule.service_type_id.service_name,
+      completedDate: schedule.appoinment_date,
+      completedTime: schedule.appoinment_time,
+      rating: 5, // Có thể thêm logic để lấy rating thực tế
+      feedback: "Công việc hoàn thành tốt", // Có thể thêm logic để lấy feedback thực tế
+      estimatedCost: schedule.estimated_cost,
+      centerName: schedule.center_id.center_name,
+      centerAddress: schedule.center_id.address,
+      customerPhone: schedule.user_id.phone,
+      vehicleVin: (schedule.vehicle_id as { vin?: string })?.vin || "N/A",
+      serviceDescription:
+        (schedule.service_type_id as { description?: string })?.description ||
+        "Không có mô tả",
+    }));
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -92,6 +196,81 @@ export const TechnicianOverview = () => {
         return priority;
     }
   };
+
+  // Function để navigate đến trang task detail
+  const handleViewDetails = (appointmentId: string) => {
+    navigate(`/dashboard/technician/task/${appointmentId}`);
+  };
+
+  // Function để bắt đầu công việc (đổi status thành in_progress)
+  const handleStartWork = async (appointmentId: string) => {
+    try {
+      setUpdating(true);
+      const result = await updateAppointmentStatusApi({
+        appointment_id: appointmentId,
+        status: "in_progress",
+      });
+
+      if (result.ok && result.data?.success) {
+        // Cập nhật local state
+        setSchedules((prevSchedules) =>
+          prevSchedules.map((schedule) =>
+            schedule._id === appointmentId
+              ? { ...schedule, status: "in_progress" }
+              : schedule
+          )
+        );
+        console.log("Đã bắt đầu công việc thành công");
+      } else {
+        setError(result.message || "Không thể bắt đầu công việc");
+      }
+    } catch (err) {
+      setError("Có lỗi xảy ra khi bắt đầu công việc");
+      console.error("Error starting work:", err);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <main className="flex-1 p-6 bg-background">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold mb-2">Dashboard Kỹ thuật viên</h2>
+          <p className="text-muted-foreground">
+            Quản lý công việc được giao và tiến độ thực hiện
+          </p>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <main className="flex-1 p-6 bg-background">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold mb-2">Dashboard Kỹ thuật viên</h2>
+          <p className="text-muted-foreground">
+            Quản lý công việc được giao và tiến độ thực hiện
+          </p>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Thử lại</Button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1 p-6 bg-background">
@@ -144,7 +323,7 @@ export const TechnicianOverview = () => {
                 <p className="text-sm text-muted-foreground">
                   Hoàn thành tuần này
                 </p>
-                <p className="text-2xl font-bold">8</p>
+                <p className="text-2xl font-bold">{completedTasks.length}</p>
               </div>
             </div>
           </CardContent>
@@ -160,7 +339,16 @@ export const TechnicianOverview = () => {
                 <p className="text-sm text-muted-foreground">
                   Đánh giá trung bình
                 </p>
-                <p className="text-2xl font-bold">4.8</p>
+                <p className="text-2xl font-bold">
+                  {completedTasks.length > 0
+                    ? (
+                        completedTasks.reduce(
+                          (sum, task) => sum + task.rating,
+                          0
+                        ) / completedTasks.length
+                      ).toFixed(1)
+                    : "0.0"}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -230,15 +418,33 @@ export const TechnicianOverview = () => {
                             {task.estimatedHours} giờ
                           </p>
                         </div>
+                        <div>
+                          <p className="text-muted-foreground">
+                            Chi phí dự kiến
+                          </p>
+                          <p className="font-medium">
+                            {task.estimatedCost?.toLocaleString("vi-VN")} VNĐ
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Trung tâm</p>
+                          <p className="font-medium">{task.centerName}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex gap-2">
-                    <Button className="bg-primary text-primary-foreground">
-                      Bắt đầu công việc
+                    <Button
+                      className="bg-primary text-primary-foreground"
+                      onClick={() => handleStartWork(task.id)}
+                      disabled={updating}>
+                      {updating ? "Đang cập nhật..." : "Bắt đầu công việc"}
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewDetails(task.id)}>
                       Xem chi tiết
                     </Button>
                   </div>
@@ -285,6 +491,18 @@ export const TechnicianOverview = () => {
                           <p className="font-medium">
                             {task.estimatedCompletion}
                           </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">
+                            Chi phí dự kiến
+                          </p>
+                          <p className="font-medium">
+                            {task.estimatedCost?.toLocaleString("vi-VN")} VNĐ
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Trung tâm</p>
+                          <p className="font-medium">{task.centerName}</p>
                         </div>
                       </div>
 
@@ -361,6 +579,16 @@ export const TechnicianOverview = () => {
                           <p className="text-muted-foreground">Đánh giá</p>
                           <p className="font-medium">{task.rating}/5 sao</p>
                         </div>
+                        <div>
+                          <p className="text-muted-foreground">Chi phí</p>
+                          <p className="font-medium">
+                            {task.estimatedCost?.toLocaleString("vi-VN")} VNĐ
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Trung tâm</p>
+                          <p className="font-medium">{task.centerName}</p>
+                        </div>
                       </div>
 
                       {task.feedback && (
@@ -375,7 +603,10 @@ export const TechnicianOverview = () => {
                   </div>
 
                   <div className="flex gap-2 mt-4">
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewDetails(task.id)}>
                       Xem chi tiết
                     </Button>
                   </div>
