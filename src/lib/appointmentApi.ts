@@ -405,6 +405,7 @@ export interface AssignTechnicianPayload {
   technician_id: string;
 }
 
+// API gán technician cho appointment
 export async function assignTechnicianApi(payload: AssignTechnicianPayload): Promise<ApiResult<{ success: boolean }>> {
   const response = await fetch("/api/appointment/assign-technician", {
     method: "PUT",
