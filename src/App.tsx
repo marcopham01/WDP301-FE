@@ -36,6 +36,7 @@ import PaymentSuccessPage from "@/pages/customer/PaymentSuccessPage";
 import PaymentCancelPage from "@/pages/customer/PaymentCancelPage";
 import AppointmentManagement from "./pages/dashboard/staff/appointments/AppointmentManagement";
 import AppointmentDetail from "./pages/dashboard/staff/appointments/AppointmentDetail";
+import SocketTestPage from "./pages/customer/SocketTestPage";
 
 const queryClient = new QueryClient();
 
@@ -163,6 +164,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={["customer"]}>
             <PaymentHistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/socket-test"
+        element={
+          <ProtectedRoute allowedRoles={["customer"]}>
+            <SocketTestPage />
           </ProtectedRoute>
         }
       />

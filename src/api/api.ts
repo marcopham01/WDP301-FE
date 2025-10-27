@@ -1,4 +1,6 @@
-const BASE_URL = "https://wdp-cx4ay950n-huyphan1232203s-projects.vercel.app";
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
 
 export async function apiRequest(
   endpoint: string,
