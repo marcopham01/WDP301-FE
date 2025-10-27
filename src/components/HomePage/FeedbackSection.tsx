@@ -1,8 +1,9 @@
-import { useState } from "react";
+
 import FeedbackCard from "./FeedbackCard";
 import { FaAmazon } from "react-icons/fa";
 import {  SiHbo, SiStarz } from "react-icons/si";
 import { TbBrandWix } from "react-icons/tb";
+import Marquee from "react-fast-marquee";
 
 const feedbacks = [
   {
@@ -25,9 +26,8 @@ const feedbacks = [
   },
 ];
 
+
 export default function FeedbackSection() {
-  const [showAll, setShowAll] = useState(false);
-  const visibleFeedbacks = showAll ? feedbacks : feedbacks.slice(0, 6);
 
   return (
     <section className="py-16 bg-gradient-to-b from-blue-50 to-white">
@@ -38,21 +38,15 @@ export default function FeedbackSection() {
         <p className="text-center text-gray-500 mb-10 max-w-2xl mx-auto">
           Our mission is to drive progress and enhance the lives of our customers by delivering superior products and services that exceed expectations.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 justify-items-center">
-          {visibleFeedbacks.map((fb) => (
-            <FeedbackCard key={fb.name + fb.company} {...fb} />
-          ))}
+        <div className="relative flex w-full items-center justify-center overflow-hidden rounded-xl border bg-white py-6 shadow-md">
+          <Marquee pauseOnHover={true} speed={80} gradient={true} gradientWidth={60} className="w-full">
+            {feedbacks.concat(feedbacks).map((fb, idx) => (
+              <div className="mx-4" key={fb.name + fb.company + idx}>
+                <FeedbackCard {...fb} />
+              </div>
+            ))}
+          </Marquee>
         </div>
-        {feedbacks.length > 6 && (
-          <div className="text-center mt-8">
-            <button
-              className="px-5 py-2 rounded bg-orange-500 text-white font-semibold hover:bg-orange-600 transition"
-              onClick={() => setShowAll((v) => !v)}
-            >
-              {showAll ? "Ẩn bớt" : "Xem tất cả"}
-            </button>
-          </div>
-        )}
       </div>
     </section>
   );
