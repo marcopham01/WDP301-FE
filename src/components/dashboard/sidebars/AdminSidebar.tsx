@@ -7,6 +7,7 @@ import {
   DollarSign,
   Home,
   MapPin,
+  Package,
 } from "lucide-react";
 
 import {
@@ -37,7 +38,8 @@ const adminMenuItems = [
   { title: "Quản lý phương tiện", icon: Car, href: "/dashboard/admin/vehicle-models" },
   { title: "Quản lý lịch hẹn", icon: FileText },
   { title: "Quản lý kỹ thuật viên", icon: Users },
-  { title: "Quản lý phụ tùng", icon: Settings },
+  { title: "Quản lý phụ tùng", icon: Settings, href: "/dashboard/admin/parts" },
+  { title: "Quản lý Inventory", icon: Package, href: "/dashboard/admin/inventory" },
   { title: "Báo cáo & Thống kê", icon: BarChart3 },
   { title: "Quản lý tài chính", icon: DollarSign },
 ];
