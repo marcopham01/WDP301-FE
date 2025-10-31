@@ -216,7 +216,9 @@ const PartManagement = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate("/dashboard/admin")}>\n            <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại\n          </Button>
+          <Button variant="outline" onClick={() => navigate("/dashboard/admin")}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
+          </Button>
           <h1 className="text-2xl font-bold">Quản lý Phụ tùng</h1>
         </div>
         <Button onClick={openCreate}>
