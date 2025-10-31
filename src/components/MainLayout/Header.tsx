@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import SwipeButton from "@/components/ui/swipe-button";
-import { Car, Zap, Menu, X, User, LogOut, Bell, Calendar, CreditCard } from "lucide-react";
+import { Car, Zap, Menu, X, User, LogOut, Bell, Calendar, CreditCard, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext/useAuth";
@@ -59,7 +59,45 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
       active: location.pathname === "/",
     },
     { label: "Đặt lịch", href: "/booking", active: location.pathname.startsWith("/booking") },
-    { label: "Về chúng tôi", href: "/about", active: location.pathname.startsWith("/about") },
+    { 
+      label: "Về chúng tôi", 
+      href: "#features",
+      onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+        e.preventDefault();
+        if (location.pathname !== "/") {
+          // Nếu không ở trang chủ, chuyển về trang chủ trước
+          navigate("/");
+          // Sau đó scroll đến phần features với offset
+          setTimeout(() => {
+            const featuresSection = document.getElementById('features-section');
+            if (featuresSection) {
+              const headerHeight = 80; // Chiều cao của header cố định
+              const elementPosition = featuresSection.getBoundingClientRect().top + window.pageYOffset;
+              const offsetPosition = elementPosition - headerHeight;
+              
+              window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+              });
+            }
+          }, 100);
+        } else {
+          // Nếu đã ở trang chủ, scroll trực tiếp với offset
+          const featuresSection = document.getElementById('features-section');
+          if (featuresSection) {
+            const headerHeight = 80; // Chiều cao của header cố định
+            const elementPosition = featuresSection.getBoundingClientRect().top + window.pageYOffset;
+            const offsetPosition = elementPosition - headerHeight;
+            
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }
+      },
+      active: false 
+    },
     { label: "Liên hệ", href: "/contact", active: location.pathname.startsWith("/contact") },
   ];
   const menuItems = navItems || defaultNavItems;
@@ -107,11 +145,21 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
             {user ? (
               <>
                 {location.pathname.startsWith('/customer') && (
-                  <NotificationDropdown>
-                    <Button variant="ghost" size="icon" className="relative cursor-pointer">
-                      <Bell className="h-5 w-5" />
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="relative"
+                      onClick={() => navigate('/customer/chat')}
+                    >
+                      <MessageCircle className="h-5 w-5" />
                     </Button>
-                  </NotificationDropdown>
+                    <NotificationDropdown>
+                      <Button variant="ghost" size="icon" className="relative cursor-pointer">
+                        <Bell className="h-5 w-5" />
+                      </Button>
+                    </NotificationDropdown>
+                  </>
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -138,10 +186,6 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                   <DropdownMenuItem onClick={() => navigate("/customer/profile")}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Hồ sơ</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/customer/chat")}>
-                    <Bell className="mr-2 h-4 w-4" />
-                    <span>Trung tâm chat</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/customer/vehicles")}>
                     <Car className="mr-2 h-4 w-4" />
@@ -244,10 +288,6 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                     <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/profile"); }}>
                       <User className="mr-2 h-4 w-4" />
                       <span>Hồ sơ</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/chat"); }}>
-                      <Bell className="mr-2 h-4 w-4" />
-                      <span>Trung tâm chat</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/vehicles"); }}>
                       <Car className="mr-2 h-4 w-4" />

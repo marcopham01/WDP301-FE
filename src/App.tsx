@@ -36,6 +36,10 @@ import PaymentSuccessPage from "@/pages/customer/PaymentSuccessPage";
 import PaymentCancelPage from "@/pages/customer/PaymentCancelPage";
 import AppointmentManagement from "./pages/dashboard/staff/appointments/AppointmentManagement";
 import AppointmentDetail from "./pages/dashboard/staff/appointments/AppointmentDetail";
+import CustomersPage from "./pages/dashboard/staff/customers/CustomersPage";
+import TechnicianSchedulePage from "./pages/dashboard/staff/TechnicianSchedulePage";
+import QueuePage from "./pages/dashboard/staff/QueuePage";
+import StaffChatPage from "./pages/dashboard/staff/StaffChatPage";
 import SocketTestPage from "./pages/customer/SocketTestPage";
 
 const queryClient = new QueryClient();
@@ -92,6 +96,10 @@ const AppRoutes = () => {
         <Route index element={<StaffOverview />} />
         <Route path="appointments" element={<AppointmentManagement />} />
         <Route path="appointments/:id" element={<AppointmentDetail />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="technician-schedule" element={<TechnicianSchedulePage />} />
+        <Route path="queue" element={<QueuePage />} />
+        <Route path="chat" element={<StaffChatPage />} />
       </Route>
       {/* Các route con của admin đã được lồng bên trong /dashboard/admin */}
 

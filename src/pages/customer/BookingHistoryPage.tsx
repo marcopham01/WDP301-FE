@@ -177,13 +177,13 @@ export default function BookingHistoryPage() {
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col bg-gradient-to-br from-ev-green-light via-green-50/30 to-teal-50/20"
     >
       <Header onLogout={handleLogout} />
       <main className="flex-1 py-8">
         <div className="container max-w-[1200px] pt-20 space-y-6">
           {/* Hero / Header */}
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl p-6 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-ev-green to-teal-500 text-white rounded-xl p-6 flex items-center justify-between">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
                 <Clock className="w-6 h-6" /> Lịch sử đặt lịch

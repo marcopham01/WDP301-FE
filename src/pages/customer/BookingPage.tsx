@@ -287,7 +287,7 @@ export default function BookingPage() {
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="min-h-screen flex flex-col bg-gray-50"
+      className="min-h-screen flex flex-col bg-gradient-to-br from-ev-green-light via-green-50/30 to-teal-50/20"
     >
       <Header onLogout={handleLogout} />
       <main className="flex-1 py-8">
@@ -316,9 +316,9 @@ export default function BookingPage() {
                       className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-colors",
                         currentStep === step.id
-                          ? "bg-blue-600 text-white"
+                          ? "bg-ev-green text-white"
                           : currentStep > step.id
-                          ? "bg-green-500 text-white"
+                          ? "bg-teal-500 text-white"
                           : "bg-gray-200 text-gray-500"
                       )}
                     >
@@ -327,7 +327,7 @@ export default function BookingPage() {
                     <div className="mt-2 text-center">
                       <div className={cn(
                         "text-sm font-medium",
-                        currentStep === step.id ? "text-blue-600" : "text-gray-500"
+                        currentStep === step.id ? "text-ev-green" : "text-gray-500"
                       )}>
                         {step.title}
                       </div>
@@ -337,7 +337,7 @@ export default function BookingPage() {
                   {index < STEPS.length - 1 && (
                     <div className={cn(
                       "h-0.5 flex-1 mx-2 transition-colors",
-                      currentStep > step.id ? "bg-green-500" : "bg-gray-200"
+                      currentStep > step.id ? "bg-teal-500" : "bg-gray-200"
                     )} />
                   )}
                 </div>
@@ -352,7 +352,7 @@ export default function BookingPage() {
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 max-w-md mx-auto">
               <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-ev-green to-teal-500 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
               />
             </div>
@@ -386,7 +386,7 @@ export default function BookingPage() {
                           className={cn(
                             "cursor-pointer transition-all hover:shadow-md",
                             selectedVehicle === vehicle._id
-                              ? "border-blue-500 border-2 bg-blue-50"
+                              ? "border-ev-green border-2 bg-green-50"
                               : "border-gray-200"
                           )}
                           onClick={() => setSelectedVehicle(vehicle._id)}
@@ -395,11 +395,11 @@ export default function BookingPage() {
                             <div className="flex items-start gap-3">
                               <div className={cn(
                                 "p-3 rounded-lg",
-                                selectedVehicle === vehicle._id ? "bg-blue-100" : "bg-gray-100"
+                                selectedVehicle === vehicle._id ? "bg-green-100" : "bg-gray-100"
                               )}>
                                 <Car className={cn(
                                   "h-6 w-6",
-                                  selectedVehicle === vehicle._id ? "text-blue-600" : "text-gray-600"
+                                  selectedVehicle === vehicle._id ? "text-ev-green" : "text-gray-600"
                                 )} />
                               </div>
                               <div className="flex-1">
@@ -410,7 +410,7 @@ export default function BookingPage() {
                                 </p>
                               </div>
                               {selectedVehicle === vehicle._id && (
-                                <Check className="h-5 w-5 text-blue-600" />
+                                <Check className="h-5 w-5 text-ev-green" />
                               )}
                             </div>
                           </CardContent>
@@ -422,7 +422,7 @@ export default function BookingPage() {
                     {!showAddVehicleForm && (
                       <button
                         onClick={handleShowAddForm}
-                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-500 hover:border-blue-500 hover:text-blue-500 transition-colors flex items-center justify-center gap-2"
+                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-500 hover:border-ev-green hover:text-ev-green transition-colors flex items-center justify-center gap-2"
                       >
                         <Plus className="h-5 w-5" />
                         Thêm xe
@@ -431,7 +431,7 @@ export default function BookingPage() {
 
                     {/* Inline Add Vehicle Form */}
                     {showAddVehicleForm && (
-                      <Card className="border-2 border-blue-200 bg-blue-50">
+                      <Card className="border-2 border-green-200 bg-green-50">
                         <CardContent className="p-6">
                           <h3 className="text-lg font-semibold mb-4">Thông tin xe mới</h3>
                           <div className="space-y-4">
@@ -540,7 +540,7 @@ export default function BookingPage() {
                             </div>
 
                             {/* Info Box */}
-                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-4 rounded-xl">
+                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 p-4 rounded-xl">
                               <h4 className="font-semibold text-gray-900 mb-2">💡 Lưu ý:</h4>
                               <ul className="text-sm text-gray-700 space-y-1">
                                 <li>• Biển số, model và màu xe là bắt buộc</li>
@@ -591,7 +591,7 @@ export default function BookingPage() {
                       className={cn(
                         "cursor-pointer transition-all hover:shadow-md",
                         selectedCenter === center._id
-                          ? "border-blue-500 border-2 bg-blue-50"
+                          ? "border-ev-green border-2 bg-green-50"
                           : "border-gray-200"
                       )}
                       onClick={() => setSelectedCenter(center._id)}
@@ -621,7 +621,7 @@ export default function BookingPage() {
                             )}
                           </div>
                           {selectedCenter === center._id && (
-                            <Check className="h-5 w-5 text-blue-600 ml-2" />
+                            <Check className="h-5 w-5 text-ev-green ml-2" />
                           )}
                         </div>
                       </CardContent>
@@ -658,7 +658,7 @@ export default function BookingPage() {
                         className={cn(
                           "cursor-pointer transition-all hover:shadow-md",
                           selectedServiceType === service._id
-                            ? "border-blue-500 border-2 bg-blue-50"
+                            ? "border-ev-green border-2 bg-green-50"
                             : "border-gray-200"
                         )}
                         onClick={() => setSelectedServiceType(service._id)}
@@ -669,7 +669,7 @@ export default function BookingPage() {
                               <div className="flex items-center gap-2 mb-2">
                                 <Wrench className={cn(
                                   "h-5 w-5",
-                                  selectedServiceType === service._id ? "text-blue-600" : "text-gray-600"
+                                  selectedServiceType === service._id ? "text-ev-green" : "text-gray-600"
                                 )} />
                                 <h3 className="font-semibold text-lg">{service.service_name}</h3>
                                 {service.base_price && (
@@ -684,7 +684,7 @@ export default function BookingPage() {
                               {service.base_price && (
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm text-muted-foreground">Giá cơ bản:</span>
-                                  <span className="text-lg font-bold text-blue-600">
+                                  <span className="text-lg font-bold text-ev-green">
                                     {service.base_price.toLocaleString("vi-VN")} đ
                                   </span>
                                 </div>
@@ -696,7 +696,7 @@ export default function BookingPage() {
                               )}
                             </div>
                             {selectedServiceType === service._id && (
-                              <Check className="h-5 w-5 text-blue-600 ml-2" />
+                              <Check className="h-5 w-5 text-ev-green ml-2" />
                             )}
                           </div>
                         </CardContent>
@@ -788,7 +788,7 @@ export default function BookingPage() {
                                     className={cn(
                                       "w-full text-left px-3 py-2 rounded-md transition-colors hover:bg-gray-100",
                                       bookingTime === time 
-                                        ? "bg-blue-100 text-blue-700 font-medium" 
+                                        ? "bg-green-100 text-ev-green font-medium" 
                                         : "text-gray-700"
                                     )}
                                   >
@@ -831,17 +831,17 @@ export default function BookingPage() {
                           className={cn(
                             "flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all",
                             paymentMethod === "online"
-                              ? "border-blue-500 bg-blue-50"
+                              ? "border-ev-green bg-green-50"
                               : "border-gray-200 hover:border-gray-300"
                           )}
                           onClick={() => setPaymentMethod("online")}
                         >
                           <div className={cn(
                             "w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center",
-                            paymentMethod === "online" ? "border-blue-500" : "border-gray-300"
+                            paymentMethod === "online" ? "border-ev-green" : "border-gray-300"
                           )}>
                             {paymentMethod === "online" && (
-                              <div className="w-3 h-3 rounded-full bg-blue-500" />
+                              <div className="w-3 h-3 rounded-full bg-ev-green" />
                             )}
                           </div>
                           <div className="flex-1">
@@ -855,17 +855,17 @@ export default function BookingPage() {
                           className={cn(
                             "flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all",
                             paymentMethod === "later"
-                              ? "border-blue-500 bg-blue-50"
+                              ? "border-ev-green bg-green-50"
                               : "border-gray-200 hover:border-gray-300"
                           )}
                           onClick={() => setPaymentMethod("later")}
                         >
                           <div className={cn(
                             "w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center",
-                            paymentMethod === "later" ? "border-blue-500" : "border-gray-300"
+                            paymentMethod === "later" ? "border-ev-green" : "border-gray-300"
                           )}>
                             {paymentMethod === "later" && (
-                              <div className="w-3 h-3 rounded-full bg-blue-500" />
+                              <div className="w-3 h-3 rounded-full bg-ev-green" />
                             )}
                           </div>
                           <div className="flex-1">
@@ -931,7 +931,7 @@ export default function BookingPage() {
                         <div className="border-t pt-3">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-muted-foreground">Tiền cọc dịch vụ:</span>
-                            <span className="text-lg font-bold text-blue-600">
+                            <span className="text-lg font-bold text-ev-green">
                               {selectedServiceData?.base_price
                                 ? `${(selectedServiceData.base_price * 0.1).toLocaleString("vi-VN")} đ`
                                 : "—"}
@@ -981,7 +981,7 @@ export default function BookingPage() {
           {/* Help text */}
           <div className="mt-8 text-center">
             <p className="text-sm text-muted-foreground">
-              Cần hỗ trợ? Liên hệ hotline: <a href="tel:1900 1234" className="text-blue-600 hover:underline">1900 1234</a>
+              Cần hỗ trợ? Liên hệ hotline: <a href="tel:1900 1234" className="text-ev-green hover:underline">1900 1234</a>
             </p>
           </div>
         </div>

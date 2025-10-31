@@ -184,13 +184,13 @@ const PaymentHistoryPage = () => {
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col bg-gradient-to-br from-ev-green-light via-green-50/30 to-teal-50/20"
     >
       <Header onLogout={handleLogout} />
       <main className="flex-1 py-8">
         <div className="container max-w-[1200px] pt-20 space-y-6">
           {/* Hero / Header */}
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl p-6 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-ev-green to-teal-500 text-white rounded-xl p-6 flex items-center justify-between">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
                 <CreditCard className="w-6 h-6" /> Lịch sử thanh toán
@@ -302,7 +302,7 @@ const PaymentHistoryPage = () => {
                       {transactions.map((txn) => (
                         <tr key={txn._id} className="border-b last:border-0 hover:bg-muted/30">
                           <td className="px-4 py-3">
-                            <span className="text-blue-600 font-medium">#{txn.order_code}</span>
+                            <span className="text-ev-green font-medium">#{txn.order_code}</span>
                           </td>
                           <td className="px-4 py-3">
                             <div className="font-medium">{txn.description}</div>
@@ -335,16 +335,16 @@ const PaymentHistoryPage = () => {
                                   <Button 
                                     size="sm" 
                                     variant="ghost" 
-                                    className="h-8 px-2 hover:bg-blue-50" 
+                                    className="h-8 px-2 hover:bg-green-50" 
                                     title="Xem chi tiết thanh toán"
                                     onClick={() => handleViewPaymentDetail(txn)}
                                   >
-                                    <Eye className="w-4 h-4 text-blue-600" />
+                                    <Eye className="w-4 h-4 text-ev-green" />
                                   </Button>
                                   <Button 
                                     size="sm" 
                                     variant="default"
-                                    className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white gap-1" 
+                                    className="h-8 px-3 bg-gradient-to-r from-ev-green to-teal-500 hover:from-green-700 hover:to-teal-600 text-white gap-1" 
                                     title="Thanh toán ngay"
                                     onClick={() => handlePayNow(txn)}
                                   >
@@ -356,11 +356,11 @@ const PaymentHistoryPage = () => {
                                 <Button 
                                   size="sm" 
                                   variant="ghost" 
-                                  className="h-8 px-2 hover:bg-blue-50" 
+                                  className="h-8 px-2 hover:bg-green-50" 
                                   title="Xem chi tiết"
                                   onClick={() => handleViewPaymentDetail(txn)}
                                 >
-                                  <Eye className="w-4 h-4 text-blue-600" />
+                                  <Eye className="w-4 h-4 text-ev-green" />
                                 </Button>
                               )}
                             </div>

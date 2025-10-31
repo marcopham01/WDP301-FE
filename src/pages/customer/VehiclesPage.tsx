@@ -92,7 +92,7 @@ const VehiclesPage = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 flex flex-col"
+      className="min-h-screen bg-gradient-to-br from-ev-green-light via-green-50/30 to-teal-50/20 flex flex-col"
     >
       {/* Main Header */}
       <Header onLogout={handleLogout} />
@@ -100,7 +100,7 @@ const VehiclesPage = () => {
       <main className="flex-1 py-8">
         <div className="container max-w-[1200px] pt-20 space-y-6">
           {/* Page Header - Consistent with history pages */}
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl p-6 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-ev-green to-teal-500 text-white rounded-xl p-6 flex items-center justify-between">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
                 <Car className="w-6 h-6" /> Quản lý xe
@@ -122,7 +122,7 @@ const VehiclesPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-center py-20"
           >
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4 shadow-lg">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-ev-green to-teal-500 rounded-2xl mb-4 shadow-lg">
               <div className="animate-spin rounded-full h-8 w-8 border-3 border-white border-t-transparent"></div>
             </div>
             <p className="text-gray-600 font-medium">Đang tải danh sách xe...</p>
@@ -143,7 +143,7 @@ const VehiclesPage = () => {
                   Bắt đầu bằng việc thêm xe đầu tiên của bạn và trải nghiệm dịch vụ tuyệt vời
                 </p>
                 <Button
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-8 py-6 text-base rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                  className="bg-gradient-to-r from-ev-green to-teal-500 hover:from-green-700 hover:to-teal-600 text-white font-semibold px-8 py-6 text-base rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
                   onClick={handleOpenAdd}
                 >
                   <Plus className="h-5 w-5 mr-2" />
@@ -176,12 +176,12 @@ const VehiclesPage = () => {
                   >
                     <Card className="group relative shadow-xl hover:shadow-2xl transition-all duration-300 border-0 bg-white overflow-hidden hover:scale-[1.02]">
                       {/* Gradient accent bar */}
-                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-ev-green via-teal-500 to-emerald-500"></div>
                       
                       <CardContent className="p-6">
                         {/* Vehicle Header */}
                         <div className="flex items-start gap-4 mb-6">
-                          <div className="relative w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                          <div className="relative w-16 h-16 bg-gradient-to-br from-ev-green to-teal-500 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
                             <Car className="h-8 w-8 text-white" />
                             <div className="absolute -top-1 -right-1">
                               <Badge className="bg-gradient-to-r from-yellow-400 to-orange-400 text-xs font-bold border-2 border-white shadow-md">
@@ -190,7 +190,7 @@ const VehiclesPage = () => {
                             </div>
                           </div>
                           <div className="flex-1">
-                            <h3 className="font-bold text-xl text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">
+                            <h3 className="font-bold text-xl text-gray-900 mb-1 group-hover:text-ev-green transition-colors">
                               {getModelLabel(v)}
                             </h3>
                             <div className="flex items-center gap-2">
@@ -203,9 +203,9 @@ const VehiclesPage = () => {
 
                         {/* Vehicle Info Grid - Modern cards */}
                         <div className="grid grid-cols-2 gap-3 mb-6">
-                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100 hover:shadow-md transition-shadow">
+                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-100 hover:shadow-md transition-shadow">
                             <div className="flex items-center gap-2 mb-2">
-                              <Calendar className="w-4 h-4 text-indigo-600" />
+                              <Calendar className="w-4 h-4 text-ev-green" />
                               <div className="text-xs text-gray-600 uppercase tracking-wide font-semibold">Năm</div>
                             </div>
                             <div className="text-xl font-bold text-gray-900">
@@ -213,9 +213,9 @@ const VehiclesPage = () => {
                             </div>
                           </div>
                           
-                          <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-100 hover:shadow-md transition-shadow">
+                          <div className="bg-gradient-to-br from-teal-50 to-cyan-50 p-4 rounded-xl border border-teal-100 hover:shadow-md transition-shadow">
                             <div className="flex items-center gap-2 mb-2">
-                              <Palette className="w-4 h-4 text-purple-600" />
+                              <Palette className="w-4 h-4 text-teal-600" />
                               <div className="text-xs text-gray-600 uppercase tracking-wide font-semibold">Màu</div>
                             </div>
                             <div className="text-xl font-bold text-gray-900 capitalize">
@@ -223,9 +223,9 @@ const VehiclesPage = () => {
                             </div>
                           </div>
                           
-                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-100 hover:shadow-md transition-shadow">
+                          <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-4 rounded-xl border border-emerald-100 hover:shadow-md transition-shadow">
                             <div className="flex items-center gap-2 mb-2">
-                              <Zap className="w-4 h-4 text-green-600" />
+                              <Zap className="w-4 h-4 text-emerald-600" />
                               <div className="text-xs text-gray-600 uppercase tracking-wide font-semibold">Loại pin</div>
                             </div>
                             <div className="text-xl font-bold text-gray-900">
@@ -233,9 +233,9 @@ const VehiclesPage = () => {
                             </div>
                           </div>
                           
-                          <div className="bg-gradient-to-br from-orange-50 to-yellow-50 p-4 rounded-xl border border-orange-100 hover:shadow-md transition-shadow">
+                          <div className="bg-gradient-to-br from-lime-50 to-yellow-50 p-4 rounded-xl border border-lime-100 hover:shadow-md transition-shadow">
                             <div className="flex items-center gap-2 mb-2">
-                              <Battery className="w-4 h-4 text-orange-600" />
+                              <Battery className="w-4 h-4 text-lime-600" />
                               <div className="text-xs text-gray-600 uppercase tracking-wide font-semibold">Pin (kWh)</div>
                             </div>
                             <div className="text-xl font-bold text-gray-900">
@@ -249,7 +249,7 @@ const VehiclesPage = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1 text-sm border-2 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 font-semibold transition-all group/btn"
+                            className="flex-1 text-sm border-2 border-gray-200 hover:border-ev-green hover:bg-green-50 hover:text-ev-green font-semibold transition-all group/btn"
                             onClick={() => handleOpenDetail(v)}
                           >
                             <Eye className="h-4 w-4 mr-1.5 group-hover/btn:scale-110 transition-transform" />
