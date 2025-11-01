@@ -8,6 +8,7 @@ import {
   Home,
   MapPin,
   Package,
+  AlertTriangle,
 } from "lucide-react";
 
 import {
@@ -40,6 +41,7 @@ const adminMenuItems = [
   { title: "Quản lý kỹ thuật viên", icon: Users },
   { title: "Quản lý phụ tùng", icon: Settings, href: "/dashboard/admin/parts" },
   { title: "Quản lý Inventory", icon: Package, href: "/dashboard/admin/inventory" },
+  { title: "Quản lý Issue Types", icon: AlertTriangle, href: "/dashboard/admin/issue-types" },
   { title: "Báo cáo & Thống kê", icon: BarChart3 },
   { title: "Quản lý tài chính", icon: DollarSign },
 ];

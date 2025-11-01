@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,9 +80,6 @@ const InventoryManagement = () => {
   const [parts, setParts] = useState<PartItem[]>([]);
   const [centers, setCenters] = useState<ServiceCenter[]>([]);
   const [loadingDropdowns, setLoadingDropdowns] = useState(false);
-
-  const canPrev = useMemo(() => page > 1, [page]);
-  const canNext = useMemo(() => page < totalPages, [page, totalPages]);
 
   const loadData = useCallback(
     async (override?: { page?: number; filters?: typeof filterRef.current }) => {
@@ -332,7 +329,7 @@ const InventoryManagement = () => {
 
       <Card className="mb-4">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div>
               <Label htmlFor="partNameFilter">Tên phụ tùng</Label>
               <Input
@@ -358,18 +355,6 @@ const InventoryManagement = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="lowStockFilter"
-                  checked={lowStockFilter}
-                  onChange={(e) => setLowStockFilter(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <Label htmlFor="lowStockFilter">Chỉ hiện tồn kho thấp</Label>
-              </div>
-            </div>
             <div className="flex items-end gap-2">
               <Button onClick={onFilter} variant="secondary" className="flex-1">
                 <Search className="mr-2 h-4 w-4" /> Lọc
@@ -391,8 +376,18 @@ const InventoryManagement = () => {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle>Danh sách Inventory</CardTitle>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="lowStockFilter"
+              checked={lowStockFilter}
+              onChange={(e) => setLowStockFilter(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <Label htmlFor="lowStockFilter" className="cursor-pointer">Chỉ hiện tồn kho thấp</Label>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -476,25 +471,33 @@ const InventoryManagement = () => {
                   )}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify-between mt-4">
-                <div>
-                  Trang {page}/{totalPages}
+              {/* Pagination */}
+              {items.length > 0 && (
+                <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                  <div>
+                    {items.length > 0 ? (
+                      <span>
+                        {`${(page - 1) * limit + 1}-${(page - 1) * limit + items.length}`} của {items.length} kết quả
+                      </span>
+                    ) : (
+                      <span>0 kết quả</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>{"<"}</Button>
+                    <span className="min-w-8 text-center">{page}</span>
+                    <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>{">"}</Button>
+                    <Select value={String(limit)} onValueChange={(v)=> { setLimit(Number(v)); setPage(1); }}>
+                      <SelectTrigger className="w-[90px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5 / page</SelectItem>
+                        <SelectItem value="10">10 / page</SelectItem>
+                        <SelectItem value="20">20 / page</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    disabled={!canPrev}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                    Trước
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={!canNext}
-                    onClick={() => setPage((p) => p + 1)}>
-                    Sau
-                  </Button>
-                </div>
-              </div>
+              )}
             </>
           )}
         </CardContent>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowLeft, Pencil, Plus, Trash2, Search } from "lucide-react";
 import {
   Dialog,
@@ -59,9 +66,6 @@ const PartManagement = () => {
   const [description, setDescription] = useState("");
   const [supplier, setSupplier] = useState("");
   const [warrantyMonth, setWarrantyMonth] = useState<string>("");
-
-  const canPrev = useMemo(() => page > 1, [page]);
-  const canNext = useMemo(() => page < totalPages, [page, totalPages]);
 
   const loadData = useCallback(async (override?: { page?: number; q?: string }) => {
     setLoading(true);
@@ -310,19 +314,33 @@ const PartManagement = () => {
                   )}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify-between mt-4">
-                <div>
-                  Trang {page}/{totalPages}
+              {/* Pagination */}
+              {items.length > 0 && (
+                <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                  <div>
+                    {items.length > 0 ? (
+                      <span>
+                        {`${(page - 1) * limit + 1}-${(page - 1) * limit + items.length}`} của {items.length} kết quả
+                      </span>
+                    ) : (
+                      <span>0 kết quả</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>{"<"}</Button>
+                    <span className="min-w-8 text-center">{page}</span>
+                    <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>{">"}</Button>
+                    <Select value={String(limit)} onValueChange={(v)=> { setLimit(Number(v)); setPage(1); }}>
+                      <SelectTrigger className="w-[90px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5 / page</SelectItem>
+                        <SelectItem value="10">10 / page</SelectItem>
+                        <SelectItem value="20">20 / page</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" disabled={!canPrev} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                    Trước
-                  </Button>
-                  <Button variant="outline" disabled={!canNext} onClick={() => setPage((p) => p + 1)}>
-                    Sau
-                  </Button>
-                </div>
-              </div>
+              )}
             </>
           )}
         </CardContent>
