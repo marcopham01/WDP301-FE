@@ -32,6 +32,7 @@ import VehicleModelManagement from "./pages/dashboard/admin/VehicleModelManageme
 import PartManagement from "./pages/dashboard/admin/PartManagement";
 import InventoryManagement from "./pages/dashboard/admin/InventoryManagement";
 import IssueTypeManagement from "./pages/dashboard/admin/IssueTypeManagement";
+import CustomerManagement from "./pages/dashboard/admin/CustomerManagement";
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 import { TechnicianOverview } from "./pages/dashboard/tech/TechnicianOverview";
 import { TaskDetail } from "./pages/dashboard/tech/TaskDetail";
@@ -80,6 +81,7 @@ const AppRoutes = () => {
         <Route index element={<AdminOverview />} />
         <Route path="services" element={<ServiceManagement />} />
         <Route path="service-centers" element={<ServiceCenterManagement />} />
+        <Route path="customers" element={<CustomerManagement />} />
         <Route path="vehicle-models" element={<VehicleModelManagement />} />
         <Route path="parts" element={<PartManagement />} />
         <Route path="inventory" element={<InventoryManagement />} />

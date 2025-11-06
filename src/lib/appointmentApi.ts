@@ -33,6 +33,8 @@ export interface CreateAppointmentPayload {
   vehicle_id: string; // ID xe cần bảo dưỡng
   center_id: string; // ID trung tâm bảo dưỡng
   service_type_id: string; // ID loại dịch vụ bảo dưỡng (REQUIRED)
+  // Optional: nếu người dùng chọn KTV cụ thể
+  technician_id?: string;
 }
 
 export interface CreateAppointmentResponse {
@@ -379,7 +381,9 @@ export async function deleteAppointmentApi(appointmentId: string): Promise<ApiRe
 }
 
 // API lấy lịch làm việc của Technician
-export async function getTechnicianScheduleApi(params: TechnicianScheduleParams): Promise<ApiResult<{ success: boolean; data: TechnicianScheduleListResponse }>> {
+export async function getTechnicianScheduleApi(
+  params: TechnicianScheduleParams
+): Promise<ApiResult<{ success: boolean; data: TechnicianScheduleListResponse | TechnicianScheduleResponse }>> {
   const query = new URLSearchParams();
   if (params.technician_id) query.set("technician_id", params.technician_id);
   query.set("date_from", params.date_from);

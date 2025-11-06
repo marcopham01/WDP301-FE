@@ -62,3 +62,47 @@ export async function registerApi(payload: RegisterPayload) {
     message: data?.message || data?.error || undefined,
   };
 }
+
+// Lấy tất cả profiles (admin)
+export interface UserProfileItem {
+  _id: string;
+  username?: string;
+  fullName: string;
+  email: string;
+  phoneNumber?: string;
+  role?: string;
+}
+
+export async function getAllProfilesApi(params?: { page?: number; limit?: number; role?: string; id?: string }) {
+  const token = localStorage.getItem("accessToken");
+  const qs = new URLSearchParams();
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.limit) qs.set("limit", String(params.limit));
+  if (params?.role) qs.set("role", params.role);
+  if (params?.id) qs.set("id", params.id);
+  const url = `/api/users/getallprofile${qs.toString() ? `?${qs.toString()}` : ""}`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token ? `Bearer ${token}` : undefined,
+    },
+  });
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  return {
+    ok: response.ok,
+    status: response.status,
+    data,
+    message: data?.message || data?.error || undefined,
+  } as {
+    ok: boolean;
+    status: number;
+    data?: { success?: boolean; data?: unknown } | null;
+    message?: string;
+  };
+}

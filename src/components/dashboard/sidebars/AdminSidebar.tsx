@@ -35,7 +35,7 @@ const adminMenuItems = [
     icon: Settings,
     href: "/dashboard/admin/services",
   },
-  { title: "Quản lý khách hàng", icon: Users },
+  { title: "Quản lý khách hàng", icon: Users, href: "/dashboard/admin/customers" },
   { title: "Quản lý phương tiện", icon: Car, href: "/dashboard/admin/vehicle-models" },
   { title: "Quản lý lịch hẹn", icon: FileText },
   { title: "Quản lý kỹ thuật viên", icon: Users },

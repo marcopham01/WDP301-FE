@@ -19,9 +19,9 @@ import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { getUserVehiclesApi, Vehicle, VehicleModel, getVehicleModelsApi, createVehicleApi } from "@/lib/vehicleApi";
 import { getAllServicesApi, ServiceType } from "@/lib/serviceApi";
-import { getServiceCentersApi, ServiceCenter } from "@/lib/serviceCenterApi";
+import { getServiceCentersApi, ServiceCenter, getTechniciansApi, Technician } from "@/lib/serviceCenterApi";
 import { getProfileApi } from "@/lib/authApi";
-import { createAppointmentApi, getAppointmentByIdApi } from "@/lib/appointmentApi";
+import { createAppointmentApi, getAppointmentByIdApi, getTechnicianScheduleApi, TechnicianScheduleResponse } from "@/lib/appointmentApi";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 // Stepper steps
@@ -53,6 +53,13 @@ export default function BookingPage() {
   const [paymentMethod, setPaymentMethod] = useState("online");
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [vehicleModels, setVehicleModels] = useState<VehicleModel[]>([]);
+  const [centerTechnicians, setCenterTechnicians] = useState<Technician[]>([]);
+  const [loadingTechnicians, setLoadingTechnicians] = useState(false);
+  const [assignedTechnician, setAssignedTechnician] = useState<{ fullName?: string; phone?: string; email?: string } | null>(null);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string>(""); // user_id of technician; "" means auto
+  const [techScheduleBusyTimes, setTechScheduleBusyTimes] = useState<Set<string>>(new Set());
+  const [techDayBookedCount, setTechDayBookedCount] = useState<number>(0);
+  const [loadingTechSchedule, setLoadingTechSchedule] = useState<boolean>(false);
   
   // Form states for adding vehicle
   const [newVehicle, setNewVehicle] = useState({
@@ -115,6 +122,113 @@ export default function BookingPage() {
     load();
   }, []);
 
+  // Load technicians whenever user selects a service center
+  useEffect(() => {
+    const loadTechs = async () => {
+      if (!selectedCenter) {
+        setCenterTechnicians([]);
+        setSelectedTechnicianId("");
+        return;
+      }
+      setLoadingTechnicians(true);
+      try {
+        const res = await getTechniciansApi(selectedCenter);
+        if (res.ok && res.data?.data) {
+          setCenterTechnicians(res.data.data);
+        } else {
+          setCenterTechnicians([]);
+        }
+      } catch (e) {
+        console.error("loadTechnicians error", e);
+        setCenterTechnicians([]);
+      } finally {
+        setLoadingTechnicians(false);
+      }
+    };
+    loadTechs();
+  }, [selectedCenter]);
+
+  // Load technician availability for the selected date when a technician is chosen
+  useEffect(() => {
+    const fetchTechSchedule = async () => {
+      if (!selectedTechnicianId || !bookingDate) {
+        setTechScheduleBusyTimes(new Set());
+        setTechDayBookedCount(0);
+        return;
+      }
+      setLoadingTechSchedule(true);
+      try {
+        const dayStr = format(bookingDate, "yyyy-MM-dd");
+        const res = await getTechnicianScheduleApi({
+          technician_id: selectedTechnicianId,
+          date_from: dayStr,
+          date_to: dayStr,
+        });
+        if (res.ok && res.data && res.data.data) {
+          const dataUnion = res.data.data as TechnicianScheduleResponse | { items: unknown[] };
+          if (!('technician' in dataUnion)) {
+            // Unexpected shape for this call with technician_id; reset
+            setTechScheduleBusyTimes(new Set());
+            setTechDayBookedCount(0);
+            setLoadingTechSchedule(false);
+            return;
+          }
+          const payload = dataUnion as TechnicianScheduleResponse;
+          const schedules = payload.schedules || [];
+          // Build a set of busy time slots considering estimated durations
+          const busy = new Set<string>();
+          // Active statuses that block the slot
+          const blockStatuses = new Set(["pending", "assigned", "accepted", "in_progress", "deposited"]);
+          // Determine service duration (minutes) from selected service or fallback 60
+          const serviceDurationMin = Number(
+            (selectedServiceType && (serviceTypes.find(s => s._id === selectedServiceType)?.estimated_duration)) || 60
+          );
+
+          // Helper to convert HH:mm to minutes since 00:00
+          const toMin = (t: string) => {
+            const [h, m] = t.split(":").map(Number);
+            return h * 60 + m;
+          };
+
+          // For each existing appointment on that day, mark overlapping start times as busy
+          schedules
+            .filter((s) => s.appoinment_date?.startsWith(dayStr) && blockStatuses.has(s.status))
+            .forEach((s) => {
+              const existStart = toMin(s.appoinment_time);
+              const existEnd = s.estimated_end_time && /^\d{2}:\d{2}$/.test(s.estimated_end_time)
+                ? toMin(s.estimated_end_time)
+                : existStart + Number(s.service_type_id?.estimated_duration ?? 60);
+
+              timeSlots.forEach((slot) => {
+                const slotStart = toMin(slot);
+                const slotEnd = slotStart + serviceDurationMin;
+                const overlap = (slotStart >= existStart && slotStart < existEnd)
+                  || (slotEnd > existStart && slotEnd <= existEnd)
+                  || (slotStart <= existStart && slotEnd >= existEnd);
+                if (overlap) busy.add(slot);
+              });
+            });
+
+          setTechScheduleBusyTimes(busy);
+          setTechDayBookedCount(
+            schedules.filter((s) => s.appoinment_date?.startsWith(dayStr) && blockStatuses.has(s.status)).length
+          );
+        } else {
+          setTechScheduleBusyTimes(new Set());
+          setTechDayBookedCount(0);
+        }
+      } catch (e) {
+        console.error("getTechnicianScheduleApi error", e);
+        setTechScheduleBusyTimes(new Set());
+        setTechDayBookedCount(0);
+      } finally {
+        setLoadingTechSchedule(false);
+      }
+    };
+    fetchTechSchedule();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTechnicianId, bookingDate, selectedServiceType]);
+
   const handleSubmit = async () => {
     if (!selectedVehicle || !selectedServiceType || !selectedCenter || !bookingDate || !bookingTime) {
       toast.error("Thiếu thông tin. Vui lòng điền đầy đủ thông tin đặt lịch (bao gồm ngày và giờ)");
@@ -136,12 +250,36 @@ export default function BookingPage() {
         vehicle_id: selectedVehicle,
         center_id: selectedCenter,
         service_type_id: selectedServiceType,
+        ...(selectedTechnicianId ? { technician_id: selectedTechnicianId } : {}),
       };
 
       const res = await createAppointmentApi(payload);
       
-      if (res.ok && res.data?.success) {
-        toast.success("Đặt lịch thành công! " + (res.data.message || "Lịch hẹn của bạn đã được tạo."));
+  if (res.ok && res.data?.success) {
+        // ✨ Hiển thị thông báo thành công
+        toast.success("🎉 Đặt lịch thành công! " + (res.data.message || "Lịch hẹn của bạn đã được tạo."));
+
+        // ✨ Kiểm tra và hiển thị Technician đã được tự động gán
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        const appointmentAny: any = res.data.data as unknown;
+        if ((appointmentAny as any)?.technician_id) {
+          const technicianInfo = (appointmentAny as any).technician_id as { fullName?: string; phone?: string; email?: string };
+          const techName = technicianInfo.fullName || "N/A";
+          const techPhone = technicianInfo.phone || "";
+          setAssignedTechnician(technicianInfo);
+          
+          // Hiển thị thông báo về technician
+          setTimeout(() => {
+            toast.info(
+              `🔧 Kỹ thuật viên phụ trách: ${techName}${techPhone ? ` - ${techPhone}` : ""}`,
+              { autoClose: 8000 }
+            );
+          }, 1000);
+        } else {
+          // Nếu không có technician_id, có thể là do không có technician rảnh
+          console.warn("⚠️ Appointment được tạo nhưng chưa có technician_id");
+        }
+        /* eslint-enable @typescript-eslint/no-explicit-any */
 
         const appointmentId = res.data.data?._id;
         if (appointmentId) {
@@ -308,40 +446,62 @@ export default function BookingPage() {
 
           {/* Stepper */}
           <div className="mb-8">
-            <div className="flex items-center justify-between max-w-3xl mx-auto">
-              {STEPS.map((step, index) => (
-                <div key={step.id} className="flex items-center flex-1">
-                  <div className="flex flex-col items-center flex-1">
-                    <div
-                      className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-colors",
-                        currentStep === step.id
-                          ? "bg-ev-green text-white"
-                          : currentStep > step.id
-                          ? "bg-teal-500 text-white"
-                          : "bg-gray-200 text-gray-500"
-                      )}
-                    >
-                      {currentStep > step.id ? <Check className="h-5 w-5" /> : step.id}
-                    </div>
-                    <div className="mt-2 text-center">
-                      <div className={cn(
-                        "text-sm font-medium",
-                        currentStep === step.id ? "text-ev-green" : "text-gray-500"
-                      )}>
-                        {step.title}
+            <div className="relative max-w-4xl mx-auto px-4">
+              {/* Track line (background) */}
+              <div className="absolute left-4 right-4 top-5 h-1 bg-gray-200 rounded-full" />
+              {/* Progress line (animated) */}
+              <motion.div
+                className="absolute left-4 top-5 h-1 bg-gradient-to-r from-ev-green to-teal-500 rounded-full"
+                animate={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
+              />
+
+              {/* Markers */}
+              <div className="grid grid-cols-4 gap-0">
+                {STEPS.map((step) => {
+                  const isDone = currentStep > step.id;
+                  const isActive = currentStep === step.id;
+                  return (
+                    <div key={step.id} className="relative flex flex-col items-center">
+                      <div className="relative z-10">
+                        {isActive && (
+                          <motion.span
+                            className="absolute -inset-2 rounded-full bg-ev-green/15"
+                            animate={{ scale: [1, 1.15, 1] }}
+                            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                          />
+                        )}
+                        <motion.div
+                          className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm shadow-sm transition-colors",
+                            isActive
+                              ? "bg-ev-green text-white"
+                              : isDone
+                              ? "bg-teal-500 text-white"
+                              : "bg-gray-200 text-gray-600"
+                          )}
+                          animate={{ scale: isActive ? 1.05 : 1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                          aria-current={isActive ? 'step' : undefined}
+                        >
+                          {isDone ? <Check className="h-5 w-5" /> : step.id}
+                        </motion.div>
                       </div>
-                      <div className="text-xs text-gray-400 hidden sm:block">{step.subtitle}</div>
+                      <div className="mt-2 text-center min-h-[40px]">
+                        <div
+                          className={cn(
+                            "text-sm font-medium",
+                            isActive ? "text-ev-green" : "text-gray-600"
+                          )}
+                        >
+                          {step.title}
+                        </div>
+                        <div className="text-xs text-gray-400 hidden sm:block">{step.subtitle}</div>
+                      </div>
                     </div>
-                  </div>
-                  {index < STEPS.length - 1 && (
-                    <div className={cn(
-                      "h-0.5 flex-1 mx-2 transition-colors",
-                      currentStep > step.id ? "bg-teal-500" : "bg-gray-200"
-                    )} />
-                  )}
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -635,6 +795,43 @@ export default function BookingPage() {
                     <p className="text-muted-foreground">Không tìm thấy trung tâm nào</p>
                   </div>
                 )}
+
+                {/* Technicians of selected center */}
+                {selectedCenter && (
+                  <div className="mt-6">
+                    <div className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <Wrench className="h-4 w-4" />
+                      Kỹ thuật viên của trung tâm đã chọn
+                    </div>
+                    <div className="rounded-lg border p-4 bg-gray-50">
+                      {loadingTechnicians ? (
+                        <div className="text-sm text-muted-foreground">Đang tải kỹ thuật viên...</div>
+                      ) : centerTechnicians.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">Trung tâm này chưa có kỹ thuật viên.</div>
+                      ) : (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {centerTechnicians.map((t) => (
+                            <div key={t._id} className="flex items-start justify-between rounded-md bg-white p-3 border">
+                              <div>
+                                <div className="font-medium">{t.user.fullName}</div>
+                                <div className="text-xs text-muted-foreground">{t.user.email}</div>
+                                {t.user.phone && (
+                                  <div className="text-xs text-muted-foreground">{t.user.phone}</div>
+                                )}
+                              </div>
+                              <Badge className={t.status === 'on' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}>
+                                {t.status === 'on' ? 'Hoạt động' : 'Không hoạt động'}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground mt-3">
+                        Hệ thống sẽ tự động phân công kỹ thuật viên khi bạn hoàn tất đặt lịch.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -725,6 +922,34 @@ export default function BookingPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Left: Date and Notes */}
                   <div className="space-y-4">
+                          {/* Technician selection (optional) */}
+                          <div>
+                            <Label className="text-sm font-medium mb-2 block">Chọn kỹ thuật viên (tùy chọn)</Label>
+                            <Select
+                              value={selectedTechnicianId || "auto"}
+                              onValueChange={(v) => setSelectedTechnicianId(v === "auto" ? "" : v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Tự động (hệ thống phân công)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="auto">Tự động (hệ thống phân công)</SelectItem>
+                                {centerTechnicians
+                                  .filter(t => t.status === 'on')
+                                  .map((t) => (
+                                    <SelectItem key={t._id} value={t.user._id}>
+                                      {t.user.fullName}{t.user.phone ? ` — ${t.user.phone}` : ''}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            {!selectedTechnicianId && (
+                              <div className="text-xs text-muted-foreground mt-2">
+                                Bạn đang để hệ thống tự phân công KTV. Chọn KTV để xem lịch rảnh/bận theo ngày/giờ.
+                              </div>
+                            )}
+                          </div>
+
                     <div>
                       <Label className="text-sm font-medium mb-2 block">Chọn ngày</Label>
                       <Popover>
@@ -781,20 +1006,42 @@ export default function BookingPage() {
                             </div>
                             <div className="max-h-64 overflow-y-auto p-2">
                               <div className="space-y-1">
-                                {timeSlots.map((time) => (
-                                  <button
-                                    key={time}
-                                    onClick={() => setBookingTime(time)}
-                                    className={cn(
-                                      "w-full text-left px-3 py-2 rounded-md transition-colors hover:bg-gray-100",
-                                      bookingTime === time 
-                                        ? "bg-green-100 text-ev-green font-medium" 
-                                        : "text-gray-700"
-                                    )}
-                                  >
-                                    {time}
-                                  </button>
-                                ))}
+                                {timeSlots.map((time) => {
+                                  const isBusy = selectedTechnicianId ? techScheduleBusyTimes.has(time) : false;
+                                  return (
+                                    <button
+                                      key={time}
+                                      onClick={() => {
+                                        if (isBusy) {
+                                          toast.warn("Khung giờ này KTV đã bận. Vui lòng chọn giờ khác hoặc để hệ thống tự động.");
+                                          return;
+                                        }
+                                        setBookingTime(time);
+                                      }}
+                                      disabled={!!selectedTechnicianId && isBusy}
+                                      className={cn(
+                                        "w-full text-left px-3 py-2 rounded-md transition-colors",
+                                        bookingTime === time
+                                          ? "bg-green-100 text-ev-green font-medium"
+                                          : isBusy
+                                          ? "text-gray-400 bg-gray-50 cursor-not-allowed"
+                                          : "text-gray-700 hover:bg-gray-100"
+                                      )}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span>{time}</span>
+                                        {selectedTechnicianId && (
+                                          <Badge className={cn(
+                                            "text-xs",
+                                            isBusy ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+                                          )}>
+                                            {isBusy ? "Bận" : "Rảnh"}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
                               </div>
                               <div className="mt-2 pt-2 border-t">
                                 <button
@@ -807,6 +1054,17 @@ export default function BookingPage() {
                             </div>
                           </PopoverContent>
                         </Popover>
+                        {selectedTechnicianId && bookingDate && (
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            {loadingTechSchedule ? (
+                              <span>Đang tải lịch của KTV...</span>
+                            ) : (
+                              <span>
+                                Đã đặt trong ngày: <span className="font-medium">{techDayBookedCount}/4</span> slot (tối đa 4 slot/ngày)
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -929,6 +1187,28 @@ export default function BookingPage() {
                         </div>
 
                         <div className="border-t pt-3">
+                          <div className="text-xs text-muted-foreground mb-1">Kỹ thuật viên:</div>
+                          {selectedTechnicianId ? (
+                            <div className="text-sm">
+                              Đã chọn: {centerTechnicians.find(t => t.user._id === selectedTechnicianId)?.user.fullName || "KTV"}
+                            </div>
+                          ) : (
+                            <div className="text-sm">
+                              Sẽ được tự động phân công
+                              {centerTechnicians.length > 0 && (
+                                <span className="text-muted-foreground"> — {centerTechnicians.filter(t=>t.status==='on').length}/{centerTechnicians.length} đang hoạt động</span>
+                              )}
+                            </div>
+                          )}
+                          {assignedTechnician && (
+                            <div className="text-xs text-blue-700 mt-1">
+                              Dự kiến phụ trách: {assignedTechnician.fullName}
+                              {assignedTechnician.phone ? ` - ${assignedTechnician.phone}` : ''}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="border-t pt-3">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-muted-foreground">Tiền cọc dịch vụ:</span>
                             <span className="text-lg font-bold text-ev-green">
@@ -998,6 +1278,15 @@ export default function BookingPage() {
           </DialogHeader>
 
           <div className="space-y-4">
+            {assignedTechnician && (
+              <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm">
+                🔧 Kỹ thuật viên phụ trách: <span className="font-medium">{assignedTechnician.fullName}</span>
+                {assignedTechnician.phone ? (
+                  <span className="text-muted-foreground"> — {assignedTechnician.phone}</span>
+                ) : null}
+              </div>
+            )}
+
             <div className="rounded-md bg-muted p-4">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">Số tiền</div>
