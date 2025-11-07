@@ -55,11 +55,11 @@ const Footer = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4" />
-                <span>1900 1234</span>
+                <span>+84 (12) 345-6789</span>
               </div>
               <div className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4" />
-                <span>Hồ Chí Minh, Việt Nam</span>
+                <span>FPT University HCMC</span>
               </div>
             </div>
           </div>

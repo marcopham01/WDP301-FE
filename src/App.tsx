@@ -45,6 +45,8 @@ import TechnicianSchedulePage from "./pages/dashboard/staff/TechnicianSchedulePa
 import QueuePage from "./pages/dashboard/staff/QueuePage";
 import StaffChatPage from "./pages/dashboard/staff/StaffChatPage";
 import SocketTestPage from "./pages/customer/SocketTestPage";
+import ContactPage from "./pages/ContactPage";
+import AboutPage from "./pages/AboutPage";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +68,8 @@ const AppRoutes = () => {
       <Route path="*" element={<NotFound />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+  <Route path="/about" element={<AboutPage />} />
+      <Route path="/contact" element={<ContactPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route

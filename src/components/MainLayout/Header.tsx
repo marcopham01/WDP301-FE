@@ -59,45 +59,7 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
       active: location.pathname === "/",
     },
     { label: "Đặt lịch", href: "/booking", active: location.pathname.startsWith("/booking") },
-    { 
-      label: "Về chúng tôi", 
-      href: "#features",
-      onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
-        e.preventDefault();
-        if (location.pathname !== "/") {
-          // Nếu không ở trang chủ, chuyển về trang chủ trước
-          navigate("/");
-          // Sau đó scroll đến phần features với offset
-          setTimeout(() => {
-            const featuresSection = document.getElementById('features-section');
-            if (featuresSection) {
-              const headerHeight = 80; // Chiều cao của header cố định
-              const elementPosition = featuresSection.getBoundingClientRect().top + window.pageYOffset;
-              const offsetPosition = elementPosition - headerHeight;
-              
-              window.scrollTo({
-                top: offsetPosition,
-                behavior: 'smooth'
-              });
-            }
-          }, 100);
-        } else {
-          // Nếu đã ở trang chủ, scroll trực tiếp với offset
-          const featuresSection = document.getElementById('features-section');
-          if (featuresSection) {
-            const headerHeight = 80; // Chiều cao của header cố định
-            const elementPosition = featuresSection.getBoundingClientRect().top + window.pageYOffset;
-            const offsetPosition = elementPosition - headerHeight;
-            
-            window.scrollTo({
-              top: offsetPosition,
-              behavior: 'smooth'
-            });
-          }
-        }
-      },
-      active: false 
-    },
+    { label: "Về chúng tôi", href: "/about", active: location.pathname.startsWith("/about") },
     { label: "Liên hệ", href: "/contact", active: location.pathname.startsWith("/contact") },
   ];
   const menuItems = navItems || defaultNavItems;
