@@ -104,6 +104,11 @@ export interface CreatePaymentRequest {
   amount: number;
   description: string;
   customer?: CustomerInfo;
+  /**
+   * Optional: number of seconds before the payment link expires (server will compute timeoutAt)
+   * If omitted, backend default (PAYMENT_EXPIRED_TIME) is used.
+   */
+  timeoutSeconds?: number;
 }
 
 export interface CreatePaymentResponse {

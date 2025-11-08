@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
-import { getMyTransactionsApi, getAllMyTransactionsApi, Transaction, Pagination } from "@/lib/paymentApi";
+import { getMyTransactionsApi, getAllMyTransactionsApi, retryPaymentApi, cancelPaymentApi, Transaction, Pagination, normalizeTransaction, RetryPaymentResponse } from "@/lib/paymentApi";
 import { toast } from "react-toastify";
 import { format } from "date-fns";
 import { useSearchParams } from "react-router-dom";
+import { PaymentDialog } from "@/components/customer/PaymentDialog";
 
 const PaymentHistoryPage = () => {
   const [searchParams] = useSearchParams();
@@ -28,6 +29,10 @@ const PaymentHistoryPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  // Global retrying flag + specific payment being retried to prevent double-click race
+  const [retrying, setRetrying] = useState(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const [showDetailDialog, setShowDetailDialog] = useState(false);  // Fetch all transactions for statistics
   async function fetchAllTransactions() {
     try {
@@ -48,10 +53,11 @@ const PaymentHistoryPage = () => {
       if (opts?.soft) setRefreshing(true); else setLoading(true);
       setError(null);
       const reqPage = opts?.resetPage ? 1 : page;
+      const statusParam = statusFilter !== "all" ? (statusFilter.toUpperCase() as Transaction["status"]) : undefined;
       const res = await getMyTransactionsApi({
         page: reqPage,
         limit,
-        status: statusFilter !== "all" ? (statusFilter as "pending" | "paid" | "cancelled") : undefined,
+        status: statusParam,
       });
 
       if (!res.ok || !res.data?.data) {
@@ -111,9 +117,12 @@ const PaymentHistoryPage = () => {
 
   // Counters - use allTransactions for stats
   const counters = useMemo(() => {
-    const paidTxns = allTransactions.filter(t => t.status === "paid");
-    const pendingTxns = allTransactions.filter(t => t.status === "pending");
-    const cancelledTxns = allTransactions.filter(t => t.status === "cancelled");
+    const paidTxns = allTransactions.filter(t => (t.status || "").toUpperCase() === "PAID");
+    const pendingTxns = allTransactions.filter(t => (t.status || "").toUpperCase() === "PENDING");
+    const cancelledTxns = allTransactions.filter(t => {
+      const s = (t.status || "").toUpperCase();
+      return s === "CANCELLED" || s === "FAILED" || s === "EXPIRED" || s === "TIMEOUT";
+    });
 
     const paidAmount = paidTxns.reduce((sum, t) => sum + t.amount, 0);
     const pendingCount = pendingTxns.length;
@@ -123,39 +132,129 @@ const PaymentHistoryPage = () => {
     return { paidAmount, pendingCount, cancelledCount, totalCount };
   }, [allTransactions]);
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { label: 'Đang chờ', variant: 'secondary' as const, className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' },
-      paid: { label: 'Đã thanh toán', variant: 'default' as const, className: 'bg-green-100 text-green-800 hover:bg-green-100' },
-      cancelled: { label: 'Đã hủy', variant: 'destructive' as const, className: 'bg-red-100 text-red-800 hover:bg-red-100' }
+  const getStatusBadge = (raw: string) => {
+    const status = raw?.toUpperCase() || "PENDING";
+    const map: Record<string, { label: string; className: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+      PENDING: { label: "Đang chờ", variant: "secondary", className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" },
+      PAID: { label: "Đã thanh toán", variant: "default", className: "bg-green-100 text-green-800 hover:bg-green-100" },
+      FAILED: { label: "Thất bại", variant: "destructive", className: "bg-red-100 text-red-800 hover:bg-red-100" },
+      CANCELLED: { label: "Đã hủy", variant: "destructive", className: "bg-red-100 text-red-800 hover:bg-red-100" },
+      EXPIRED: { label: "Hết hạn (link)\n", variant: "destructive", className: "bg-red-100 text-red-800 hover:bg-red-100" },
+      TIMEOUT: { label: "Quá thời gian", variant: "destructive", className: "bg-orange-100 text-orange-800 hover:bg-orange-100" },
     };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-
-    return (
-      <Badge variant={config.variant} className={config.className}>
-        {config.label}
-      </Badge>
-    );
+    const cfg = map[status] || map.PENDING;
+    return <Badge variant={cfg.variant} className={cfg.className}>{cfg.label}</Badge>;
   };
 
-  // Open payment dialog
   const openPaymentDialog = (txn: Transaction) => {
-    setSelectedTxn(txn);
+    const normalized = normalizeTransaction(txn);
+    setSelectedTxn(normalized);
     setShowPaymentDialog(true);
   };
 
-  const handlePayNow = (txn: Transaction) => {
-    openPaymentDialog(txn);
+  const isPending = (status: string) => status.toUpperCase() === "PENDING";
+  const canPayStatus = (status: string) => ["PENDING", "FAILED", "CANCELLED", "EXPIRED", "TIMEOUT"].includes(status.toUpperCase());
+  
+  // Helper để phân biệt text button
+  const getPaymentButtonText = (status: string) => {
+    return status.toUpperCase() === "PENDING" ? "Thanh toán" : "Thanh toán lại";
   };
 
+  const handleRetry = async (txn: Transaction) => {
+    // Guard: prevent duplicate clicks while retrying the same transaction
+    if (retrying && retryingId === txn._id) {
+      return;
+    }
+    try {
+      setRetrying(true);
+      setRetryingId(txn._id);
+      const res = await retryPaymentApi(txn._id);
+      if (res.ok && res.data?.data) {
+          toast.success("Tạo lại giao dịch thành công");
+        fetchData({ soft: true });
+  const data: RetryPaymentResponse["data"] = res.data.data as RetryPaymentResponse["data"];
+        const updated: Transaction = {
+          ...txn,
+          orderCode: data.newOrderCode,
+          order_code: data.newOrderCode,
+          checkoutUrl: data.checkoutUrl,
+          checkout_url: data.checkoutUrl,
+          qrCode: data.qrCode,
+          qr_code: data.qrCode,
+          status: "PENDING" as Transaction["status"],
+          timeoutAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        };
+        openPaymentDialog(updated);
+      } else {
+          toast.error(res.message || "Không thể thanh toán lại");
+      }
+    } catch (e) {
+      console.error("Retry payment error", e);
+      toast.error("Lỗi tạo lại thanh toán");
+    } finally {
+      setRetrying(false);
+      setRetryingId(null);
+    }
+  };
+
+  const handleCancelPayment = async (txn: Transaction) => {
+    try {
+      setCancelling(true);
+  const order = txn.order_code || txn.orderCode;
+      if (!order) return;
+      const res = await cancelPaymentApi(order);
+      if (res.ok) {
+        toast.success("Đã hủy giao dịch");
+        fetchData({ soft: true });
+        if (selectedTxn?._id === txn._id) {
+          setSelectedTxn({ ...selectedTxn, status: "CANCELLED" } as Transaction);
+        }
+      } else {
+        toast.error(res.message || "Không thể hủy");
+      }
+    } catch (e) {
+      console.error("Cancel payment error", e);
+      toast.error("Lỗi hủy giao dịch");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const isTxnExpired = (txn: Transaction) => {
+    const t = txn.timeoutAt || txn.expiredAt || txn.timeout_at || txn.expired_at;
+    if (!t) return false;
+    return new Date(t).getTime() <= Date.now();
+  };
+
+  const handlePayNow = (txn: Transaction) => openPaymentDialog(txn);
+
   const handleViewPaymentDetail = (txn: Transaction) => {
-    setSelectedTxn(txn);
+    const normalized = normalizeTransaction(txn);
+    console.log("🔍 View Detail - Original:", txn);
+    console.log("🔍 View Detail - Normalized:", normalized);
+    console.log("🔍 Order Code:", normalized.orderCode, normalized.order_code);
+    setSelectedTxn(normalized);
     setShowDetailDialog(true);
   };
 
 
 
+    const handlePayment = async (txn: Transaction) => {
+      const pending = isPending(txn.status);
+      const expiredNow = isTxnExpired(txn);
+      if (pending) {
+        if (expiredNow) {
+          toast.info("Liên kết đã hết hạn. Đang tạo lại giao dịch mới...");
+          await handleRetry(txn); // tạo giao dịch mới
+        } else {
+          toast.info("Tiếp tục thanh toán giao dịch hiện tại");
+          openPaymentDialog(txn);
+        }
+        return;
+      }
+      // Các trạng thái khác: tạo giao dịch mới
+      await handleRetry(txn);
+    };
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -299,10 +398,14 @@ const PaymentHistoryPage = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {transactions.map((txn) => (
+                      {transactions.map((txn) => {
+                        const normalized = normalizeTransaction(txn);
+                        const orderCode = normalized.orderCode || normalized.order_code;
+                        const timeoutAt = normalized.timeoutAt || normalized.timeout_at;
+                        return (
                         <tr key={txn._id} className="border-b last:border-0 hover:bg-muted/30">
                           <td className="px-4 py-3">
-                            <span className="text-ev-green font-medium">#{txn.order_code}</span>
+                            <span className="text-ev-green font-medium">#{orderCode || '--'}</span>
                           </td>
                           <td className="px-4 py-3">
                             <div className="font-medium">{txn.description}</div>
@@ -319,10 +422,10 @@ const PaymentHistoryPage = () => {
                             <div className="text-xs text-muted-foreground">{format(new Date(txn.createdAt), "HH:mm")}</div>
                           </td>
                           <td className="px-4 py-3">
-                            {txn.expired_at ? (
+                            {timeoutAt ? (
                               <>
-                                <div className="text-sm">{format(new Date(txn.expired_at), "dd/MM/yyyy")}</div>
-                                <div className="text-xs text-muted-foreground">{format(new Date(txn.expired_at), "HH:mm")}</div>
+                                <div className="text-sm">{format(new Date(timeoutAt), "dd/MM/yyyy")}</div>
+                                <div className="text-xs text-muted-foreground">{format(new Date(timeoutAt), "HH:mm")}</div>
                               </>
                             ) : (
                               <span className="text-xs text-muted-foreground">--</span>
@@ -330,7 +433,7 @@ const PaymentHistoryPage = () => {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              {txn.status === 'pending' && txn.checkout_url ? (
+                              {isPending(txn.status) && txn.checkout_url && !isTxnExpired(txn) ? (
                                 <>
                                   <Button 
                                     size="sm" 
@@ -351,6 +454,60 @@ const PaymentHistoryPage = () => {
                                     <CreditCard className="w-4 h-4" />
                                     Thanh toán
                                   </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 px-2 text-red-600"
+                                    disabled={cancelling || retrying}
+                                    title="Hủy giao dịch"
+                                    onClick={() => handleCancelPayment(txn)}
+                                  >
+                                    {cancelling ? "Đang hủy..." : "Hủy"}
+                                  </Button>
+                                </>
+                              ) : (isPending(txn.status) && isTxnExpired(txn)) ? (
+                                <>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-8 px-2 hover:bg-green-50" 
+                                    title="Xem chi tiết thanh toán"
+                                    onClick={() => handleViewPaymentDetail(txn)}
+                                  >
+                                    <Eye className="w-4 h-4 text-ev-green" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 px-2 text-orange-600 border-orange-300"
+                                    disabled={retrying && retryingId === txn._id}
+                                    title="Liên kết hết hạn - tạo lại"
+                                    onClick={() => handlePayment(txn)}
+                                  >
+                                    {(retrying && retryingId === txn._id) ? "Đang xử lý..." : "Tạo lại giao dịch"}
+                                  </Button>
+                                </>
+                              ) : canPayStatus(txn.status) ? (
+                                <>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-8 px-2 hover:bg-green-50" 
+                                    title="Xem chi tiết thanh toán"
+                                    onClick={() => handleViewPaymentDetail(txn)}
+                                  >
+                                    <Eye className="w-4 h-4 text-ev-green" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 px-2 text-blue-600"
+                                    disabled={retrying && retryingId === txn._id}
+                                    title={getPaymentButtonText(txn.status)}
+                                      onClick={() => handlePayment(txn)}
+                                  >
+                                    {(retrying && retryingId === txn._id) ? "Đang xử lý..." : getPaymentButtonText(txn.status)}
+                                  </Button>
                                 </>
                               ) : (
                                 <Button 
@@ -366,7 +523,8 @@ const PaymentHistoryPage = () => {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -411,161 +569,129 @@ const PaymentHistoryPage = () => {
       </main>
       <Footer />
 
-       {/* Payment Dialog */}
-       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-             <DialogTitle>Thanh toán đơn hàng</DialogTitle>
-            <DialogDescription>
-               {selectedTxn?.status === 'pending' 
-                 ? 'Vui lòng thanh toán để hoàn tất đơn hàng'
-                 : `Thông tin chi tiết giao dịch #${selectedTxn?.order_code}`
-               }
-            </DialogDescription>
-          </DialogHeader>
-          {selectedTxn && (
-            <div className="space-y-4">
-               {/* Amount Section */}
-               <div className="rounded-md bg-muted p-4">
-                 <div className="flex items-center justify-between mb-3">
-                   <div className="text-sm text-muted-foreground">Mã đơn hàng</div>
-                   <div className="text-sm font-medium">#{selectedTxn.order_code}</div>
-                 </div>
-                 <div className="flex items-center justify-between mb-3">
-                   <div className="text-sm text-muted-foreground">Số tiền</div>
-                   <div className="text-xl font-bold text-primary">{formatPrice(selectedTxn.amount)}</div>
-                 </div>
-                 <div className="flex items-center justify-between mb-3">
-                   <div className="text-sm text-muted-foreground">Trạng thái</div>
-                   {getStatusBadge(selectedTxn.status)}
-                 </div>
-                 <div className="flex items-start justify-between">
-                   <div className="text-sm text-muted-foreground">Mô tả</div>
-                   <div className="text-sm font-medium text-right max-w-[240px]">{selectedTxn.description}</div>
-                 </div>
-              </div>
-
-              {/* Payment Actions for pending status */}
-              {selectedTxn.status === 'pending' && (
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Thanh toán online</div>
-                  <div className="flex gap-2">
-                    <Button
-                      disabled={!selectedTxn.checkout_url}
-                      onClick={() => selectedTxn.checkout_url && window.open(selectedTxn.checkout_url, "_blank")}
-                    >
-                      Mở trang thanh toán
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={!selectedTxn.checkout_url}
-                      onClick={async () => {
-                        if (selectedTxn.checkout_url) {
-                          await navigator.clipboard.writeText(selectedTxn.checkout_url);
-                          toast.success("Đã sao chép link thanh toán");
-                        }
-                      }}
-                    >
-                      Sao chép link
-                    </Button>
-                  </div>
-                  {!selectedTxn.checkout_url && (
-                    <div className="text-xs text-muted-foreground">Liên kết thanh toán không có sẵn cho giao dịch này.</div>
-                  )}
-                </div>
-              )}               {/* Transaction Details for completed transactions */}
-               {selectedTxn.status !== 'pending' && (
-                 <div className="space-y-2 pt-2 border-t">
-                   <div className="text-sm font-medium mb-2">Chi tiết giao dịch</div>
-                   <div className="flex justify-between text-sm">
-                     <span className="text-muted-foreground">Ngày tạo:</span>
-                     <span className="font-medium">{format(new Date(selectedTxn.createdAt), "dd/MM/yyyy HH:mm")}</span>
-                   </div>
-                   {selectedTxn.expired_at && (
-                     <div className="flex justify-between text-sm">
-                       <span className="text-muted-foreground">Hết hạn:</span>
-                       <span className="font-medium">{format(new Date(selectedTxn.expired_at), "dd/MM/yyyy HH:mm")}</span>
-                     </div>
-                   )}
-                   {selectedTxn.paid_at && (
-                     <div className="flex justify-between text-sm">
-                       <span className="text-muted-foreground">Đã thanh toán:</span>
-                       <span className="font-medium">{format(new Date(selectedTxn.paid_at), "dd/MM/yyyy HH:mm")}</span>
-                     </div>
-                   )}
-                 </div>
-               )}
-             </div>
-           )}
-
-           <DialogFooter>
-             {selectedTxn?.status === 'pending' ? (
-               <Button 
-                 variant="outline" 
-                 onClick={() => setShowPaymentDialog(false)}
-                  >
-                 Đóng
-               </Button>
-             ) : (
-               <Button 
-                 onClick={() => setShowPaymentDialog(false)}
-               >
-                 Đóng
-               </Button>
-             )}
-           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+       {/* Payment Dialog - Using shared component */}
+       <PaymentDialog
+         open={showPaymentDialog}
+         onOpenChange={setShowPaymentDialog}
+         paymentInfo={selectedTxn ? {
+           amount: selectedTxn.amount,
+           checkout_url: selectedTxn.checkoutUrl || selectedTxn.checkout_url,
+           qr_code: selectedTxn.qrCode || selectedTxn.qr_code,
+           order_code: selectedTxn.orderCode || selectedTxn.order_code,
+           timeoutAt: selectedTxn.timeoutAt || selectedTxn.timeout_at,
+           status: selectedTxn.status,
+           description: selectedTxn.description,
+         } : null}
+         technician={null}
+         onCancel={selectedTxn ? () => handleCancelPayment(selectedTxn) : undefined}
+         onViewHistory={() => {
+           setShowPaymentDialog(false);
+           // Already on history page, just refresh
+           fetchData({ soft: true });
+         }}
+       />
 
       {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Chi tiết giao dịch</DialogTitle>
+            <DialogTitle>Chi tiết thanh toán</DialogTitle>
             <DialogDescription>
               Thông tin chi tiết giao dịch #{selectedTxn?.order_code}
             </DialogDescription>
           </DialogHeader>
           {selectedTxn && (
             <div className="space-y-4">
-              <div className="rounded-md bg-muted p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">Mã đơn hàng</div>
-                  <div className="text-sm font-medium">#{selectedTxn.order_code}</div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">Số tiền</div>
-                  <div className="text-lg font-bold text-primary">{formatPrice(selectedTxn.amount)}</div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">Trạng thái</div>
-                  {getStatusBadge(selectedTxn.status)}
-                </div>
-                <div className="flex items-start justify-between">
-                  <div className="text-sm text-muted-foreground">Mô tả</div>
-                  <div className="text-sm font-medium text-right max-w-[240px]">{selectedTxn.description}</div>
+              {/* Thông tin thanh toán */}
+              <div className="space-y-3 rounded-lg bg-muted/30 p-3">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase">Thông tin thanh toán</h3>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
+                  <div className="space-y-0.5">
+                    <div className="text-[11px] text-muted-foreground">Mã đơn hàng</div>
+                    <button
+                      type="button"
+                      onClick={async () => { 
+                        const code = selectedTxn.orderCode || selectedTxn.order_code;
+                        await navigator.clipboard.writeText(String(code)); 
+                        toast.success('Đã sao chép'); 
+                      }}
+                      className="inline-flex items-center rounded border bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 transition"
+                      title="Sao chép"
+                    >
+                      #{selectedTxn.orderCode || selectedTxn.order_code || 'N/A'}
+                    </button>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-[11px] text-muted-foreground">Trạng thái</div>
+                    <div>{getStatusBadge(selectedTxn.status)}</div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-[11px] text-muted-foreground">Số tiền</div>
+                    <div className="text-ev-green font-bold">{formatPrice(selectedTxn.amount)}</div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-[11px] text-muted-foreground">Phương thức</div>
+                    <div className="text-xs font-medium">PAYOS</div>
+                  </div>
+                  <div className="space-y-0.5 col-span-2">
+                    <div className="text-[11px] text-muted-foreground">Mô tả</div>
+                    <div className="text-xs leading-relaxed">{selectedTxn.description || '---'}</div>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2 pt-2 border-t">
-                <div className="text-sm font-medium mb-2">Thông tin giao dịch</div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Ngày tạo:</span>
-                  <span className="font-medium">{format(new Date(selectedTxn.createdAt), "dd/MM/yyyy HH:mm")}</span>
+              {/* Thông tin giao dịch */}
+              <div className="space-y-3 rounded-lg bg-muted/30 p-3">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase">Thông tin giao dịch</h3>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div className="space-y-0.5">
+                    <div className="text-[11px] text-muted-foreground">Phí giao dịch</div>
+                    <div className="text-xs font-medium">0 ₫</div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-[11px] text-muted-foreground">Webhook</div>
+                    <div className="inline-flex items-center rounded border border-yellow-400 bg-yellow-50 px-1.5 py-0.5 text-[10px] font-medium text-yellow-700">Chưa nhận</div>
+                  </div>
                 </div>
-                {selectedTxn.expired_at && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Hết hạn:</span>
-                    <span className="font-medium">{format(new Date(selectedTxn.expired_at), "dd/MM/yyyy HH:mm")}</span>
-                  </div>
-                )}
-                {selectedTxn.paid_at && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Đã thanh toán:</span>
-                    <span className="font-medium">{format(new Date(selectedTxn.paid_at), "dd/MM/yyyy HH:mm")}</span>
-                  </div>
-                )}
+              </div>
+
+              {/* Lịch sử thanh toán */}
+              <div className="space-y-2.5 rounded-lg bg-muted/30 p-3">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase">Lịch sử thanh toán</h3>
+                <ol className="space-y-2 text-xs">
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                    <div className="flex-1 leading-tight">
+                      <div className="font-medium">Tạo thanh toán</div>
+                      <div className="text-[11px] text-muted-foreground">{format(new Date(selectedTxn.createdAt), 'dd/MM/yyyy HH:mm')}</div>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-slate-400 flex-shrink-0" />
+                    <div className="flex-1 leading-tight">
+                      <div className="font-medium">Cập nhật cuối</div>
+                      <div className="text-[11px] text-muted-foreground">{format(new Date(selectedTxn.updatedAt), 'dd/MM/yyyy HH:mm')}</div>
+                    </div>
+                  </li>
+                  {selectedTxn.paid_at && (
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-green-500 flex-shrink-0" />
+                      <div className="flex-1 leading-tight">
+                        <div className="font-medium">Đã thanh toán</div>
+                        <div className="text-[11px] text-muted-foreground">{format(new Date(selectedTxn.paid_at), 'dd/MM/yyyy HH:mm')}</div>
+                      </div>
+                    </li>
+                  )}
+                  {(selectedTxn.timeout_at || selectedTxn.expired_at) && (
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                      <div className="flex-1 leading-tight">
+                        <div className="font-medium">Hết hạn</div>
+                        <div className="text-[11px] text-muted-foreground">{format(new Date(selectedTxn.timeout_at || selectedTxn.expired_at as string), 'dd/MM/yyyy HH:mm')}</div>
+                      </div>
+                    </li>
+                  )}
+                </ol>
               </div>
             </div>
           )}

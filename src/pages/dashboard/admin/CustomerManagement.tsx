@@ -44,6 +44,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { getAllProfilesApi, UserProfileItem } from "@/lib/authApi";
+import { getAllVehiclesApi, Vehicle } from "@/lib/vehicleApi";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -67,6 +68,9 @@ const CustomerManagement = () => {
   // Dialog states
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerData | null>(null);
+  const [isVehicleDialogOpen, setIsVehicleDialogOpen] = useState(false);
+  const [customerVehicles, setCustomerVehicles] = useState<Vehicle[]>([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
 
   useEffect(() => {
     loadCustomers();
@@ -172,6 +176,41 @@ const CustomerManagement = () => {
   const handleViewCustomer = (customer: CustomerData) => {
     setSelectedCustomer(customer);
     setIsViewDialogOpen(true);
+  };
+
+  const handleViewVehicles = async (customer: CustomerData) => {
+    setSelectedCustomer(customer);
+    setIsVehicleDialogOpen(true);
+    setLoadingVehicles(true);
+    setCustomerVehicles([]);
+    
+    try {
+      // Gọi API lấy tất cả xe (admin/staff có quyền)
+      const res = await getAllVehiclesApi();
+      if (res.ok && res.data?.data) {
+        // Filter xe theo user_id của khách hàng
+        const userVehicles = res.data.data.filter((vehicle) => {
+          const userId = typeof vehicle.user_id === "string" 
+            ? vehicle.user_id 
+            : vehicle.user_id?._id;
+          return userId === customer._id;
+        });
+        
+        setCustomerVehicles(userVehicles);
+        if (userVehicles.length === 0) {
+          toast.info(`${customer.fullName} chưa có xe nào được đăng ký`);
+        }
+      } else {
+        toast.error(res.message || "Không thể tải danh sách xe");
+        setCustomerVehicles([]);
+      }
+    } catch (error) {
+      console.error("Error loading vehicles:", error);
+      toast.error("Lỗi khi tải danh sách xe");
+      setCustomerVehicles([]);
+    } finally {
+      setLoadingVehicles(false);
+    }
   };
 
   const handleExportData = () => {
@@ -621,9 +660,7 @@ const CustomerManagement = () => {
                 <Button
                   variant="outline"
                   className="flex-1"
-                  onClick={() =>
-                    toast.info("Tính năng xem xe sẽ được cập nhật sớm")
-                  }
+                  onClick={() => handleViewVehicles(selectedCustomer)}
                 >
                   Xem danh sách xe
                 </Button>
@@ -635,6 +672,166 @@ const CustomerManagement = () => {
             <Button
               variant="outline"
               onClick={() => setIsViewDialogOpen(false)}
+            >
+              Đóng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Vehicle List Dialog */}
+      <Dialog open={isVehicleDialogOpen} onOpenChange={setIsVehicleDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Danh sách xe của khách hàng</DialogTitle>
+            <DialogDescription>
+              {selectedCustomer && (
+                <span>
+                  Xem danh sách xe đã đăng ký của{" "}
+                  <strong>{selectedCustomer.fullName}</strong>
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {loadingVehicles ? (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : customerVehicles.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <span className="text-3xl">🚗</span>
+                </div>
+                <p className="text-muted-foreground">
+                  Khách hàng chưa đăng ký xe nào
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {customerVehicles.map((vehicle) => {
+                  const model = vehicle.model_id;
+                  const modelInfo = typeof model === "object" && model
+                    ? `${model.brand || ""} ${model.model_name || ""}`.trim()
+                    : "Không rõ";
+                  const year = typeof model === "object" && model?.year ? `(${model.year})` : "";
+                  
+                  // Màu cho color badge
+                  const colorBadgeMap: Record<string, string> = {
+                    "white": "bg-gray-100 text-gray-800 border-gray-300",
+                    "trắng": "bg-gray-100 text-gray-800 border-gray-300",
+                    "black": "bg-gray-800 text-white border-gray-900",
+                    "đen": "bg-gray-800 text-white border-gray-900",
+                    "silver": "bg-slate-200 text-slate-800 border-slate-300",
+                    "bạc": "bg-slate-200 text-slate-800 border-slate-300",
+                    "red": "bg-red-100 text-red-800 border-red-300",
+                    "đỏ": "bg-red-100 text-red-800 border-red-300",
+                    "blue": "bg-blue-100 text-blue-800 border-blue-300",
+                    "xanh dương": "bg-blue-100 text-blue-800 border-blue-300",
+                    "green": "bg-green-100 text-green-800 border-green-300",
+                    "xanh lá": "bg-green-100 text-green-800 border-green-300",
+                    "gray": "bg-gray-200 text-gray-800 border-gray-400",
+                    "xám": "bg-gray-200 text-gray-800 border-gray-400",
+                    "yellow": "bg-yellow-100 text-yellow-800 border-yellow-300",
+                    "vàng": "bg-yellow-100 text-yellow-800 border-yellow-300",
+                    "orange": "bg-orange-100 text-orange-800 border-orange-300",
+                    "cam": "bg-orange-100 text-orange-800 border-orange-300",
+                    "purple": "bg-purple-100 text-purple-800 border-purple-300",
+                    "tím": "bg-purple-100 text-purple-800 border-purple-300",
+                  };
+                  
+                  const colorLower = (vehicle.color || "").toLowerCase();
+                  const colorClass = colorBadgeMap[colorLower] || "bg-gray-100 text-gray-800 border-gray-300";
+                  
+                  return (
+                    <Card key={vehicle._id} className="overflow-hidden hover:shadow-lg transition-all border-2">
+                        <CardHeader className="bg-gradient-to-br from-blue-50 to-purple-50 pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <span className="text-2xl">🚗</span>
+                                <span className="font-bold">{vehicle.license_plate}</span>
+                            </CardTitle>
+                              <p className="text-sm text-muted-foreground mt-1">
+                              {modelInfo} {year}
+                            </p>
+                          </div>
+                          <Badge 
+                            variant="outline" 
+                              className={cn("font-semibold shadow-md border-2", colorClass)}
+                          >
+                            {vehicle.color || "N/A"}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                        <CardContent className="pt-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="bg-white p-2 rounded-lg border">
+                            <div className="text-xs text-muted-foreground mb-1">VIN</div>
+                            <div className="font-mono text-xs font-semibold text-indigo-700">{vehicle.vin || "N/A"}</div>
+                          </div>
+                          <div className="bg-white p-2 rounded-lg border">
+                            <div className="text-xs text-muted-foreground mb-1">Năm sản xuất</div>
+                            <div className="font-bold text-purple-700">
+                              {typeof model === "object" && model?.year ? model.year : "N/A"}
+                            </div>
+                          </div>
+                          {vehicle.current_miliage !== undefined && (
+                            <div className="bg-blue-50 p-2 rounded-lg border border-blue-200">
+                              <div className="text-xs text-blue-700 mb-1 font-medium">Số km hiện tại</div>
+                              <div className="font-bold text-blue-900">
+                                {vehicle.current_miliage.toLocaleString("vi-VN")} km
+                              </div>
+                            </div>
+                          )}
+                          {vehicle.battery_health !== undefined && (
+                            <div className={cn(
+                              "p-2 rounded-lg border",
+                              vehicle.battery_health >= 80 ? "bg-green-50 border-green-200" :
+                              vehicle.battery_health >= 50 ? "bg-yellow-50 border-yellow-200" : "bg-red-50 border-red-200"
+                            )}>
+                              <div className={cn(
+                                "text-xs mb-1 font-medium",
+                                vehicle.battery_health >= 80 ? "text-green-700" :
+                                vehicle.battery_health >= 50 ? "text-yellow-700" : "text-red-700"
+                              )}>Sức khỏe pin</div>
+                              <div className="font-bold flex items-center gap-1.5">
+                                <div 
+                                  className={cn(
+                                    "w-2.5 h-2.5 rounded-full animate-pulse",
+                                    vehicle.battery_health >= 80 ? "bg-green-500" :
+                                    vehicle.battery_health >= 50 ? "bg-yellow-500" : "bg-red-500"
+                                  )}
+                                />
+                                <span className={cn(
+                                  vehicle.battery_health >= 80 ? "text-green-900" :
+                                  vehicle.battery_health >= 50 ? "text-yellow-900" : "text-red-900"
+                                )}>
+                                  {vehicle.battery_health}%
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {vehicle.purchase_date && (
+                          <div className="pt-2 border-t text-xs flex items-center gap-1.5 text-muted-foreground">
+                            <Calendar className="w-3 h-3" />
+                            <span>Ngày mua: {format(new Date(vehicle.purchase_date), "dd/MM/yyyy", { locale: vi })}</span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsVehicleDialogOpen(false)}
             >
               Đóng
             </Button>

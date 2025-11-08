@@ -300,12 +300,17 @@ export async function getAppointmentsApi(
   if (params.page) query.set("page", String(params.page));
   if (params.limit) query.set("limit", String(params.limit));
   if (params.status) query.set("status", params.status);
+  // Add cache-busting parameter
+  query.set("_t", String(Date.now()));
   const qs = query.toString();
-  const url = qs ? `/api/appointment/list?${qs}` : `/api/appointment/list`;
+  const url = `/api/appointment/list?${qs}`;
   const response = await fetch(url, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
       ...getAuthHeader(),
     },
   });

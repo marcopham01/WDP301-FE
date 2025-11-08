@@ -22,7 +22,8 @@ import { getAllServicesApi, ServiceType } from "@/lib/serviceApi";
 import { getServiceCentersApi, ServiceCenter, getTechniciansApi, Technician } from "@/lib/serviceCenterApi";
 import { getProfileApi } from "@/lib/authApi";
 import { createAppointmentApi, getAppointmentByIdApi, getTechnicianScheduleApi, TechnicianScheduleResponse } from "@/lib/appointmentApi";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { createPaymentLinkApi } from "@/lib/paymentApi";
+import { PaymentDialog } from "@/components/customer/PaymentDialog"
 
 // Stepper steps
 const STEPS = [
@@ -49,7 +50,7 @@ export default function BookingPage() {
   const [notes, setNotes] = useState("");
   const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [paymentInfo, setPaymentInfo] = useState<{ amount?: number; checkout_url?: string; qr_code?: string; order_code?: number } | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<{ amount?: number; checkout_url?: string; qr_code?: string; order_code?: number; timeoutAt?: string; status?: string; description?: string } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState("online");
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [vehicleModels, setVehicleModels] = useState<VehicleModel[]>([]);
@@ -178,7 +179,7 @@ export default function BookingPage() {
           // Build a set of busy time slots considering estimated durations
           const busy = new Set<string>();
           // Active statuses that block the slot
-          const blockStatuses = new Set(["pending", "assigned", "accepted", "in_progress", "deposited"]);
+          const blockStatuses = new Set(["pending", "assigned", "check_in", "in_progress", "repaired"]);
           // Determine service duration (minutes) from selected service or fallback 60
           const serviceDurationMin = Number(
             (selectedServiceType && (serviceTypes.find(s => s._id === selectedServiceType)?.estimated_duration)) || 60
@@ -281,21 +282,113 @@ export default function BookingPage() {
         }
         /* eslint-enable @typescript-eslint/no-explicit-any */
 
+        // 1) Try to use payment returned directly from create API (if available)
+        const created = res.data.data as Record<string, unknown> | undefined;
+        const createdPayment = (created?.payment_id || (created && (created as Record<string, unknown>).payment)) as {
+          amount?: number;
+          checkoutUrl?: string; checkout_url?: string;
+          qrCode?: string; qr_code?: string;
+          orderCode?: number; order_code?: number;
+          timeoutAt?: string; timeout_at?: string;
+          status?: string;
+        } | undefined;
+        if (createdPayment && (createdPayment.checkoutUrl || createdPayment.checkout_url || createdPayment.qrCode || createdPayment.qr_code)) {
+          setPaymentInfo({
+            amount: createdPayment.amount,
+            checkout_url: createdPayment.checkoutUrl || createdPayment.checkout_url,
+            qr_code: createdPayment.qrCode || createdPayment.qr_code,
+            order_code: (createdPayment.orderCode || createdPayment.order_code) as number,
+            timeoutAt: createdPayment.timeoutAt || createdPayment.timeout_at,
+            status: createdPayment.status || "PENDING",
+            description: `Thanh toán booking #${(created?._id as string || '').slice(-6)} - Thay dầu hộp số xe điện`,
+          });
+          setPaymentDialogOpen(true);
+          setLoading(false);
+          return; // Stop here; dialog already opened
+        }
+
         const appointmentId = res.data.data?._id;
         if (appointmentId) {
           const detail = await getAppointmentByIdApi(appointmentId);
           const appt = detail.data?.data as Record<string, unknown>;
-          const pay = appt?.payment_id as Record<string, unknown>;
-          if (detail.ok && pay) {
+          // Try multiple shapes to extract payment
+          type RawPayment = {
+            _id?: string;
+            amount?: number;
+            checkoutUrl?: string; checkout_url?: string;
+            qrCode?: string; qr_code?: string;
+            orderCode?: number; order_code?: number;
+            timeoutAt?: string; timeout_at?: string;
+            status?: string;
+          } | undefined;
+          const apptAny = appt as Record<string, unknown> | undefined;
+          const createRespAny = res.data?.data as Record<string, unknown> | undefined;
+          const payCandidates: RawPayment[] = [
+            apptAny?.payment_id as RawPayment,
+            apptAny?.payment as RawPayment,
+            createRespAny?.payment_id as RawPayment,
+            createRespAny?.payment as RawPayment,
+          ];
+
+          let paymentFound: Record<string, unknown> | null = null;
+          for (const cand of payCandidates) {
+            if (!cand) continue;
+            if (cand._id) { paymentFound = cand as Record<string, unknown>; break; }
+            if (cand.checkoutUrl || cand.checkout_url || cand.qrCode || cand.qr_code) { paymentFound = cand as Record<string, unknown>; break; }
+          }
+
+          if (!paymentFound) {
+            // Direct fallback: create payment link (history endpoint not available)
+            console.warn("[BookingPage] Không tìm thấy payment trong appointment. Tạo link thanh toán mới (direct fallback).");
+            const service = selectedServiceData;
+            const basePrice = service?.base_price || 0;
+            const depositAmount = Math.round(basePrice * 0.10);
+            if (depositAmount > 0) {
+              try {
+                const createPayRes = await createPaymentLinkApi({
+                  amount: depositAmount,
+                  description: service?.service_name ? `Đặt cọc ${service.service_name}`.slice(0,25) : "Dat coc dich vu",
+                  customer: currentUser ? { username: currentUser.username, fullName: currentUser.username, email: "", } : undefined,
+                  // Set timeoutSeconds = 60s to match backend PAYMENT_EXPIRED_TIME constant
+                  timeoutSeconds: 60,
+                });
+                if (createPayRes.ok && createPayRes.data?.data) {
+                  const d = createPayRes.data.data;
+                  console.log('📦 Backend Payment Response:', d);
+                  setPaymentInfo({
+                    amount: d.amount,
+                    checkout_url: d.checkoutUrl,
+                    qr_code: d.qrCode,
+                    order_code: d.orderCode,
+                    timeoutAt: d.timeoutAt,
+                    status: "PENDING",
+                    description: service?.service_name ? `Đặt cọc ${service.service_name}` : "Đặt cọc dịch vụ",
+                  });
+                  setPaymentDialogOpen(true);
+                  toast.info("Đã tạo link thanh toán đặt cọc");
+                } else {
+                  console.error("[BookingPage] Fallback create payment thất bại", createPayRes.message);
+                  toast.error("Không thể tạo link thanh toán. Vui lòng thử lại hoặc liên hệ hỗ trợ.");
+                }
+              } catch (e) {
+                console.error("[BookingPage] Lỗi tạo payment fallback", e);
+                toast.error("Lỗi tạo link thanh toán. Vui lòng thử lại sau.");
+              }
+            } else {
+              console.warn("[BookingPage] base_price không hợp lệ, bỏ qua tạo payment fallback.");
+            }
+          } else {
+            const p = paymentFound as RawPayment & Record<string, unknown>;
             setPaymentInfo({
-              amount: pay.amount as number,
-              checkout_url: pay.checkout_url as string,
-              qr_code: pay.qr_code as string,
-              order_code: pay.order_code as number,
+              amount: p.amount as number,
+              checkout_url: (p.checkoutUrl || p.checkout_url) as string,
+              qr_code: (p.qrCode || p.qr_code) as string,
+              order_code: (p.orderCode || p.order_code) as number,
+              timeoutAt: (p.timeoutAt || p.timeout_at) as string | undefined,
+              status: (p.status as string) || "PENDING",
+              description: (p.description as string) || `Thanh toán booking #${appointmentId?.slice(-6)}`,
             });
             setPaymentDialogOpen(true);
-          } else if ((pay as Record<string, unknown>)?.checkout_url as string) {
-            window.open((pay as Record<string, unknown>)?.checkout_url as string, "_blank");
           }
         }
       } else {
@@ -308,6 +401,28 @@ export default function BookingPage() {
       setLoading(false);
     }
   };
+
+  const handleCancelPayment = async () => {
+    try {
+      if (!paymentInfo?.order_code) return;
+      // Call cancel payment API
+      const res = await fetch(`/api/payment/cancel/${paymentInfo.order_code}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success("Đã hủy giao dịch thanh toán");
+        setPaymentInfo((prev) => prev ? { ...prev, status: "CANCELLED" } : prev);
+      } else {
+        toast.error(json?.message || "Không thể hủy thanh toán");
+      }
+    } catch (e) {
+      console.error("Cancel payment error", e);
+      toast.error("Lỗi hủy thanh toán");
+    }
+  };
+
 
   const handleNext = () => {
     if (currentStep === 1 && !selectedVehicle) {
@@ -943,9 +1058,13 @@ export default function BookingPage() {
                                   ))}
                               </SelectContent>
                             </Select>
-                            {!selectedTechnicianId && (
+                            {!selectedTechnicianId ? (
                               <div className="text-xs text-muted-foreground mt-2">
-                                Bạn đang để hệ thống tự phân công KTV. Chọn KTV để xem lịch rảnh/bận theo ngày/giờ.
+                                💡 Bạn đang để hệ thống tự động phân công KTV. Chọn một KTV cụ thể để xem lịch rảnh/bận chi tiết theo giờ.
+                              </div>
+                            ) : (
+                              <div className="text-xs text-green-700 bg-green-50 rounded p-2 mt-2">
+                                ✓ Đã chọn KTV cụ thể. Các khung giờ bận sẽ được đánh dấu màu xám và không thể chọn.
                               </div>
                             )}
                           </div>
@@ -1013,29 +1132,38 @@ export default function BookingPage() {
                                       key={time}
                                       onClick={() => {
                                         if (isBusy) {
-                                          toast.warn("Khung giờ này KTV đã bận. Vui lòng chọn giờ khác hoặc để hệ thống tự động.");
+                                          toast.warn("⏰ Khung giờ này KTV đã có lịch. Vui lòng chọn giờ khác hoặc để hệ thống tự động phân công.", {
+                                            autoClose: 3000,
+                                          });
                                           return;
                                         }
                                         setBookingTime(time);
                                       }}
                                       disabled={!!selectedTechnicianId && isBusy}
+                                      title={
+                                        selectedTechnicianId
+                                          ? isBusy
+                                            ? `${time} - Khung giờ này KTV đã có lịch hẹn. Không thể chọn.`
+                                            : `${time} - Khung giờ này KTV đang rảnh. Click để chọn.`
+                                          : `${time} - Click để chọn giờ hẹn.`
+                                      }
                                       className={cn(
                                         "w-full text-left px-3 py-2 rounded-md transition-colors",
                                         bookingTime === time
-                                          ? "bg-green-100 text-ev-green font-medium"
+                                          ? "bg-green-100 text-ev-green font-medium border-2 border-green-400"
                                           : isBusy
-                                          ? "text-gray-400 bg-gray-50 cursor-not-allowed"
-                                          : "text-gray-700 hover:bg-gray-100"
+                                          ? "text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
+                                          : "text-gray-700 hover:bg-gray-100 hover:border hover:border-gray-300"
                                       )}
                                     >
                                       <div className="flex items-center justify-between">
-                                        <span>{time}</span>
+                                        <span className={bookingTime === time ? "font-semibold" : ""}>{time}</span>
                                         {selectedTechnicianId && (
                                           <Badge className={cn(
                                             "text-xs",
                                             isBusy ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
                                           )}>
-                                            {isBusy ? "Bận" : "Rảnh"}
+                                            {isBusy ? "🚫 Bận" : "✓ Rảnh"}
                                           </Badge>
                                         )}
                                       </div>
@@ -1055,13 +1183,25 @@ export default function BookingPage() {
                           </PopoverContent>
                         </Popover>
                         {selectedTechnicianId && bookingDate && (
-                          <div className="mt-2 text-xs text-muted-foreground">
+                          <div className="mt-2 text-xs">
                             {loadingTechSchedule ? (
-                              <span>Đang tải lịch của KTV...</span>
+                              <span className="text-muted-foreground">⏳ Đang tải lịch của KTV...</span>
                             ) : (
-                              <span>
-                                Đã đặt trong ngày: <span className="font-medium">{techDayBookedCount}/4</span> slot (tối đa 4 slot/ngày)
-                              </span>
+                              <div className="space-y-1">
+                                <div className="text-muted-foreground">
+                                  📅 Đã đặt trong ngày: <span className="font-medium text-foreground">{techDayBookedCount}/4 slot</span> (tối đa 4 slot/ngày)
+                                </div>
+                                {techScheduleBusyTimes.size > 0 && (
+                                  <div className="text-amber-700 bg-amber-50 rounded px-2 py-1">
+                                    ⚠️ {techScheduleBusyTimes.size} khung giờ không khả dụng (màu xám)
+                                  </div>
+                                )}
+                                {techDayBookedCount >= 4 && (
+                                  <div className="text-red-700 bg-red-50 rounded px-2 py-1 font-medium">
+                                    🚫 KTV đã đủ 4 slot. Vui lòng chọn ngày khác hoặc KTV khác.
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
                         )}
@@ -1268,82 +1408,17 @@ export default function BookingPage() {
       </main>
 
       {/* Payment Dialog */}
-      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[640px]">
-          <DialogHeader>
-            <DialogTitle>Thanh toán đặt lịch</DialogTitle>
-            <DialogDescription>
-              Vui lòng thanh toán tiền đặt cọc để xác nhận lịch hẹn
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {assignedTechnician && (
-              <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm">
-                🔧 Kỹ thuật viên phụ trách: <span className="font-medium">{assignedTechnician.fullName}</span>
-                {assignedTechnician.phone ? (
-                  <span className="text-muted-foreground"> — {assignedTechnician.phone}</span>
-                ) : null}
-              </div>
-            )}
-
-            <div className="rounded-md bg-muted p-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">Số tiền</div>
-                <div className="text-xl font-bold text-primary">
-                  {paymentInfo?.amount ? paymentInfo.amount.toLocaleString("vi-VN") + " VND" : "—"}
-                </div>
-              </div>
-            </div>
-
-            {paymentInfo?.qr_code && (
-              <div className="flex flex-col items-center gap-2">
-                <img
-                  src={paymentInfo.qr_code}
-                  alt="QR thanh toán"
-                  className="w-56 h-56 object-contain rounded-md border"
-                />
-                <div className="text-xs text-muted-foreground">Quét mã để thanh toán</div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Thanh toán online</div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => paymentInfo?.checkout_url && window.open(paymentInfo.checkout_url, "_blank")}
-                >
-                  Mở trang thanh toán
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    if (paymentInfo?.checkout_url) {
-                      await navigator.clipboard.writeText(paymentInfo.checkout_url);
-                      toast.success("Đã sao chép link thanh toán");
-                    }
-                  }}
-                >
-                  Sao chép link
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setPaymentDialogOpen(false);
-              navigate("/customer/booking-history");
-            }}>
-              Xem lịch đặt
-            </Button>
-            <Button variant="destructive" onClick={() => setPaymentDialogOpen(false)}>
-              Đóng
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        paymentInfo={paymentInfo}
+        technician={assignedTechnician}
+        onCancel={handleCancelPayment}
+        onViewHistory={() => {
+          setPaymentDialogOpen(false);
+          navigate("/customer/booking-history");
+        }}
+      />
 
       <Footer />
     </motion.div>
