@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import SwipeButton from "@/components/ui/swipe-button";
 import { Car, Zap, Menu, X, User, LogOut, Bell, Calendar, CreditCard, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -170,19 +169,21 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
               </DropdownMenu>
               </>
             ) : (
-              <SwipeButton
-                firstText="Đăng nhập"
-                secondText="Đăng ký"
-                firstClass="bg-ev-green text-white"
-                secondClass="bg-black text-white"
-                onClick={e => {
-                  if (e.currentTarget.matches(':hover')) {
-                    navigate('/register');
-                  } else {
-                    navigate('/login');
-                  }
-                }}
-              />
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/login')}
+                  className="h-10 px-5 min-w-[120px] text-sm font-medium rounded-md border border-ev-green/40 bg-ev-green/5 text-ev-green hover:bg-ev-green/10 hover:text-ev-green"
+                >
+                  Đăng nhập
+                </Button>
+                <Button
+                  onClick={() => navigate('/register')}
+                  className="h-10 px-5 min-w-[120px] text-sm font-medium rounded-md bg-ev-green text-white hover:bg-ev-green/90"
+                >
+                  Đăng ký
+                </Button>
+              </div>
             )}
           </div>
 
@@ -271,21 +272,21 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <SwipeButton
-                  firstText="Đăng nhập"
-                  secondText="Đăng ký"
-                  firstClass="bg-ev-green text-white"
-                  secondClass="bg-black text-white"
-                  className="justify-start"
-                  onClick={e => {
-                    setIsMenuOpen(false);
-                    if (e.currentTarget.matches(':hover')) {
-                      navigate('/register');
-                    } else {
-                      navigate('/login');
-                    }
-                  }}
-                />
+                <div className="flex flex-col gap-3">
+                  <Button
+                    variant="outline"
+                    className="h-11 px-5 w-full text-sm font-medium rounded-md border border-ev-green/40 bg-ev-green/5 text-ev-green hover:bg-ev-green/10 hover:text-ev-green"
+                    onClick={() => { setIsMenuOpen(false); navigate('/login'); }}
+                  >
+                    Đăng nhập
+                  </Button>
+                  <Button
+                    className="h-11 px-5 w-full text-sm font-medium rounded-md bg-ev-green text-white hover:bg-ev-green/90"
+                    onClick={() => { setIsMenuOpen(false); navigate('/register'); }}
+                  >
+                    Đăng ký
+                  </Button>
+                </div>
               )}
             </div>
           </nav>
