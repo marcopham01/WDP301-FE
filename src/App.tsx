@@ -37,6 +37,8 @@ import PaymentCancelPage from "@/pages/customer/PaymentCancelPage";
 import AppointmentManagement from "./pages/dashboard/staff/appointments/AppointmentManagement";
 import AppointmentDetail from "./pages/dashboard/staff/appointments/AppointmentDetail";
 import SocketTestPage from "./pages/customer/SocketTestPage";
+import ChecklistManagement from "./pages/dashboard/staff/maintenance/ChecklistManagement";
+import ChecklistDetail from "./pages/dashboard/staff/maintenance/ChecklistDetail";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +94,8 @@ const AppRoutes = () => {
         <Route index element={<StaffOverview />} />
         <Route path="appointments" element={<AppointmentManagement />} />
         <Route path="appointments/:id" element={<AppointmentDetail />} />
+        <Route path="maintenance" element={<ChecklistManagement />} />
+        <Route path="maintenance/:checklistId" element={<ChecklistDetail />} />
       </Route>
       {/* Các route con của admin đã được lồng bên trong /dashboard/admin */}
 
