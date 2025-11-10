@@ -106,3 +106,24 @@ export async function getAllProfilesApi(params?: { page?: number; limit?: number
     message?: string;
   };
 }
+
+// Quên mật khẩu - gửi email reset
+export async function forgotPasswordApi(email: string) {
+  const response = await fetch("/api/users/forgotPassword", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  return {
+    ok: response.ok,
+    status: response.status,
+    data,
+    message: data?.message || data?.error || undefined,
+  };
+}

@@ -91,7 +91,8 @@ export function EditVehicleDialog({ open, onOpenChange, vehicle, onSuccess }: Ed
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            {/* Icon container color synced with vehicle card (green gradient) */}
+            <div className="w-12 h-12 bg-gradient-to-br from-ev-green to-teal-500 rounded-xl flex items-center justify-center shadow-lg">
               <Car className="h-6 w-6 text-white" />
             </div>
             <div>
