@@ -6,6 +6,7 @@ export interface Notification {
   due_date: Date;
   message: string;
   is_sent: boolean;
+  is_read?: boolean;
   vehicle_id: {
     _id: string;
     license_plate: string;
@@ -52,3 +53,52 @@ export async function getNotifications(): Promise<GetNotificationsResponse> {
     };
   }
 }
+
+/**
+ * Đánh dấu 1 thông báo đã đọc
+ */
+export async function markNotificationAsRead(notificationId: string): Promise<void> {
+  const token = localStorage.getItem("accessToken");
+  
+  if (!token) {
+    throw new Error("No access token found");
+  }
+
+  try {
+    await apiRequest(`/api/notifications/${notificationId}/read`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    console.log("✅ Notification marked as read:", notificationId);
+  } catch (error) {
+    console.error("❌ Error marking notification as read:", error);
+    throw error;
+  }
+}
+
+/**
+ * Đánh dấu tất cả thông báo đã đọc
+ */
+export async function markAllNotificationsAsRead(): Promise<void> {
+  const token = localStorage.getItem("accessToken");
+  
+  if (!token) {
+    throw new Error("No access token found");
+  }
+
+  try {
+    await apiRequest("/api/notifications/read-all", {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    console.log("✅ All notifications marked as read");
+  } catch (error) {
+    console.error("❌ Error marking all notifications as read:", error);
+    throw error;
+  }
+}
+
