@@ -1,3 +1,7 @@
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
+
 export interface ApiResult<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
@@ -109,7 +113,7 @@ export async function getInventoryApi(params: {
   if (part_name && part_name.trim()) qs.set("part_name", part_name.trim());
   if (low_stock !== undefined) qs.set("low_stock", String(low_stock));
 
-  const response = await fetch(`/api/inventory?${qs.toString()}`, {
+  const response = await fetch(`${BASE_URL}/api/inventory?${qs.toString()}`, {
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeader(),
@@ -121,7 +125,7 @@ export async function getInventoryApi(params: {
 export async function getInventoryByIdApi(
   id: string
 ): Promise<ApiResult<GetInventoryDetailResponse>> {
-  const response = await fetch(`/api/inventory/${id}`, {
+  const response = await fetch(`${BASE_URL}/api/inventory/${id}`, {
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeader(),
@@ -133,7 +137,7 @@ export async function getInventoryByIdApi(
 export async function createInventoryApi(
   payload: CreateInventoryPayload
 ): Promise<ApiResult<GetInventoryDetailResponse>> {
-  const response = await fetch(`/api/inventory`, {
+  const response = await fetch(`${BASE_URL}/api/inventory`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -148,7 +152,7 @@ export async function updateInventoryApi(
   id: string,
   payload: UpdateInventoryPayload
 ): Promise<ApiResult<GetInventoryDetailResponse>> {
-  const response = await fetch(`/api/inventory/${id}`, {
+  const response = await fetch(`${BASE_URL}/api/inventory/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -168,7 +172,7 @@ export async function deleteInventoryApi(
     data?: { inventory_id: string; appointment_id: string; center_id: string };
   }>
 > {
-  const response = await fetch(`/api/inventory/${id}`, {
+  const response = await fetch(`${BASE_URL}/api/inventory/${id}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",

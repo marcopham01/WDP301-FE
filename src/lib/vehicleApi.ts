@@ -1,3 +1,7 @@
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
+
 export interface ApiResult<T = unknown> {
   ok: boolean;
   status: number;
@@ -64,7 +68,7 @@ async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
 
 // GET: /api/vehicle/get -> list vehicle models
 export async function getVehicleModelsApi(): Promise<ApiResult<{ success: boolean; data: VehicleModel[] }>> {
-  const response = await fetch("/api/vehicle/get", {
+  const response = await fetch(`${BASE_URL}/api/vehicle/get`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -76,7 +80,7 @@ export async function getVehicleModelsApi(): Promise<ApiResult<{ success: boolea
 
 // POST: /api/vehicle/createModel
 export async function createVehicleModelApi(payload: CreateVehicleModelPayload): Promise<ApiResult<{ success: boolean }>> {
-  const response = await fetch("/api/vehicle/createModel", {
+  const response = await fetch(`${BASE_URL}/api/vehicle/createModel`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -108,7 +112,7 @@ export interface UpdateVehiclePayload {
 }
 
 export async function createVehicleApi(payload: CreateVehiclePayload): Promise<ApiResult<{ success: boolean }>> {
-  const response = await fetch("/api/vehicle/createVehicle", {
+  const response = await fetch(`${BASE_URL}/api/vehicle/createVehicle`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -121,7 +125,7 @@ export async function createVehicleApi(payload: CreateVehiclePayload): Promise<A
 
 // PUT: /api/vehicle/update/{id}
 export async function updateVehicleApi(vehicleId: string, payload: UpdateVehiclePayload): Promise<ApiResult<{ success: boolean }>> {
-  const response = await fetch(`/api/vehicle/update/${vehicleId}`, {
+  const response = await fetch(`${BASE_URL}/api/vehicle/update/${vehicleId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -134,7 +138,7 @@ export async function updateVehicleApi(vehicleId: string, payload: UpdateVehicle
 
 // GET: /api/vehicle/getVehicleUser -> vehicles of current user
 export async function getUserVehiclesApi(): Promise<ApiResult<{ success: boolean; data: Vehicle[] }>> {
-  const response = await fetch("/api/vehicle/getVehicleUser", {
+  const response = await fetch(`${BASE_URL}/api/vehicle/getVehicleUser`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -146,7 +150,7 @@ export async function getUserVehiclesApi(): Promise<ApiResult<{ success: boolean
 
 // GET: /api/vehicle/getAllVehicleUser -> all vehicles (admin/staff)
 export async function getAllVehiclesApi(): Promise<ApiResult<{ success: boolean; data: Vehicle[] }>> {
-  const response = await fetch("/api/vehicle/getAllVehicleUser", {
+  const response = await fetch(`${BASE_URL}/api/vehicle/getAllVehicleUser`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -158,7 +162,7 @@ export async function getAllVehiclesApi(): Promise<ApiResult<{ success: boolean;
 
 // DELETE: /api/vehicle/delete/:id
 export async function deleteVehicleApi(vehicleId: string): Promise<ApiResult<{ success: boolean }>> {
-  const response = await fetch(`/api/vehicle/delete/${vehicleId}`, {
+  const response = await fetch(`${BASE_URL}/api/vehicle/delete/${vehicleId}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",

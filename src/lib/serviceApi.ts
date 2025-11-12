@@ -1,3 +1,7 @@
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
+
 export interface ApiResult<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
@@ -54,7 +58,7 @@ export interface UpdateServicePayload {
 export async function getAllServicesApi(): Promise<ApiResult<{ success: boolean; data: ServiceType[] }>> {
   try {
     console.log("Fetching all services");
-    const response = await fetch("/api/service/get", {
+    const response = await fetch(`${BASE_URL}/api/service/get`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -80,7 +84,7 @@ export async function getAllServicesApi(): Promise<ApiResult<{ success: boolean;
 export async function createServiceApi(payload: CreateServicePayload): Promise<ApiResult<{ success: boolean; data: ServiceType }>> {
   try {
     console.log("Creating service with payload:", payload);
-    const response = await fetch("/api/service/create", {
+    const response = await fetch(`${BASE_URL}/api/service/create`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -105,7 +109,7 @@ export async function createServiceApi(payload: CreateServicePayload): Promise<A
 
 // PUT /api/service/update/:id -> update service (requires admin/staff auth)
 export async function updateServiceApi(id: string, payload: UpdateServicePayload): Promise<ApiResult<{ success: boolean; data: ServiceType }>> {
-  const response = await fetch(`/api/service/update/${id}`, {
+  const response = await fetch(`${BASE_URL}/api/service/update/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -118,7 +122,7 @@ export async function updateServiceApi(id: string, payload: UpdateServicePayload
 
 // DELETE /api/service/delete/:id -> delete service (requires admin/staff auth)
 export async function deleteServiceApi(id: string): Promise<ApiResult<{ success: boolean }>> {
-  const response = await fetch(`/api/service/delete/${id}`, {
+  const response = await fetch(`${BASE_URL}/api/service/delete/${id}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",

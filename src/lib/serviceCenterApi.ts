@@ -1,3 +1,7 @@
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
+
 export interface ApiResult<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
@@ -74,7 +78,7 @@ export interface CreateSchedulePayload {
 // GET /api/service-center/get - Lấy danh sách tất cả trung tâm và giờ làm việc
 export async function getServiceCentersApi(): Promise<ApiResult<{ success: boolean; data: ServiceCenter[] }>> {
   try {
-    const response = await fetch("/api/service-center/get", {
+    const response = await fetch(`${BASE_URL}/api/service-center/get`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -91,7 +95,7 @@ export async function getServiceCentersApi(): Promise<ApiResult<{ success: boole
 // POST /api/service-center/create - Tạo trung tâm dịch vụ mới
 export async function createServiceCenterApi(payload: CreateServiceCenterPayload): Promise<ApiResult<{ success: boolean; data: ServiceCenter }>> {
   try {
-    const response = await fetch("/api/service-center/create", {
+    const response = await fetch(`${BASE_URL}/api/service-center/create`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -109,7 +113,7 @@ export async function createServiceCenterApi(payload: CreateServiceCenterPayload
 // POST /api/service-center/schedule/create/:id - Tạo lịch làm việc cho trung tâm
 export async function createServiceCenterScheduleApi(centerId: string, payload: CreateSchedulePayload): Promise<ApiResult<{ success: boolean; data: Record<string, unknown> }>> {
   try {
-    const response = await fetch(`/api/service-center/schedule/create/${centerId}`, {
+    const response = await fetch(`${BASE_URL}/api/service-center/schedule/create/${centerId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -127,7 +131,7 @@ export async function createServiceCenterScheduleApi(centerId: string, payload: 
 // PUT /api/service-center/update/:id - Cập nhật thông tin trung tâm dịch vụ
 export async function updateServiceCenterApi(id: string, payload: UpdateServiceCenterPayload): Promise<ApiResult<{ success: boolean; data: ServiceCenter }>> {
   try {
-    const response = await fetch(`/api/service-center/update/${id}`, {
+    const response = await fetch(`${BASE_URL}/api/service-center/update/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -145,7 +149,7 @@ export async function updateServiceCenterApi(id: string, payload: UpdateServiceC
 // DELETE /api/service-center/delete/:id - Xóa trung tâm dịch vụ
 export async function deleteServiceCenterApi(id: string): Promise<ApiResult<{ success: boolean }>> {
   try {
-    const response = await fetch(`/api/service-center/delete/${id}`, {
+    const response = await fetch(`${BASE_URL}/api/service-center/delete/${id}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -198,8 +202,8 @@ export async function getTechniciansApi(
 ): Promise<ApiResult<GetTechniciansResponse>> {
   try {
     const url = centerId 
-      ? `/api/service-center/technicians?center_id=${centerId}`
-      : `/api/service-center/technicians`;
+      ? `${BASE_URL}/api/service-center/technicians?center_id=${centerId}`
+      : `${BASE_URL}/api/service-center/technicians`;
     
     const response = await fetch(url, {
       method: "GET",
@@ -246,7 +250,7 @@ export async function addTechnicianToServiceCenterApi(
   payload: AddTechnicianPayload
 ): Promise<ApiResult<AddTechnicianResponse>> {
   try {
-    const response = await fetch("/api/service-center/technican/add", {
+    const response = await fetch(`${BASE_URL}/api/service-center/technican/add`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -275,7 +279,7 @@ export async function removeTechnicianFromServiceCenterApi(
   payload: RemoveTechnicianPayload
 ): Promise<ApiResult<{ success: boolean; message: string }>> {
   try {
-    const response = await fetch("/api/service-center/technican/remove", {
+    const response = await fetch(`${BASE_URL}/api/service-center/technican/remove`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

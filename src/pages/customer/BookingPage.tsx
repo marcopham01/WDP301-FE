@@ -23,7 +23,10 @@ import { getServiceCentersApi, ServiceCenter, getTechniciansApi, Technician } fr
 import { getProfileApi } from "@/lib/authApi";
 import { createAppointmentApi, getAppointmentByIdApi, getTechnicianScheduleApi, TechnicianScheduleResponse } from "@/lib/appointmentApi";
 import { createPaymentLinkApi } from "@/lib/paymentApi";
-import { PaymentDialog } from "@/components/customer/PaymentDialog"
+import { PaymentDialog } from "@/components/customer/PaymentDialog";
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
 
 // Stepper steps
 const STEPS = [
@@ -406,7 +409,7 @@ export default function BookingPage() {
     try {
       if (!paymentInfo?.order_code) return;
       // Call cancel payment API
-      const res = await fetch(`/api/payment/cancel/${paymentInfo.order_code}`, {
+      const res = await fetch(`${BASE_URL}/api/payment/cancel/${paymentInfo.order_code}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });

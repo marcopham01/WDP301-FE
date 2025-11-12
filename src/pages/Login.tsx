@@ -19,6 +19,9 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { FcAutomotive } from "react-icons/fc";
 import { toast } from "react-toastify";
 import { loginApi } from "@/lib/authApi";
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
 
 interface LoginFormData {
   username: string;
@@ -45,7 +48,7 @@ const Login = () => {
       const result = await signInWithPopup(auth, provider);
       const googleToken = await result.user.getIdToken();
       // Gọi API và nhận luôn data
-      const response = await fetch("/api/users/loginfirebase", {
+      const response = await fetch(`${BASE_URL}/api/users/loginfirebase`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -57,7 +60,7 @@ const Login = () => {
         const accessToken = data.accessToken;
         localStorage.setItem("accessToken", accessToken);
         // Lấy profile user ngay sau khi login
-        const profileRes = await fetch("/api/users/getprofile", {
+        const profileRes = await fetch(`${BASE_URL}/api/users/getprofile`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (profileRes.ok) {
@@ -104,7 +107,7 @@ const Login = () => {
         const resData = await response.json();
         localStorage.setItem("accessToken", resData.accessToken); // Lưu token vào localStorage
         // Lấy profile user ngay sau khi login
-        const profileRes = await fetch("/api/users/getprofile", {
+        const profileRes = await fetch(`${BASE_URL}/api/users/getprofile`, {
           headers: { Authorization: `Bearer ${resData.accessToken}` },
         });
         if (profileRes.ok) {

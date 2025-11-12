@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { XCircle } from "lucide-react";
 import { updateAppointmentStatusApi, getMyAppointmentsApi } from "@/lib/appointmentApi";
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
 
 interface TransactionData {
   _id?: string;
@@ -37,14 +40,14 @@ const PaymentCancelPage: React.FC = () => {
     const run = async () => {
       try {
         // Update status to 'cancelled'
-        await fetch("/api/payment/update-status", {
+        await fetch(`${BASE_URL}/api/payment/update-status`, {
           method: "POST",
           headers,
           body: JSON.stringify({ order_code: Number(orderCode), status: "cancelled" }),
         });
 
         // Fetch transaction details
-        const res = await fetch(`/api/payment/transaction/${encodeURIComponent(orderCode)}`, {
+        const res = await fetch(`${BASE_URL}/api/payment/transaction/${encodeURIComponent(orderCode)}`, {
           method: "GET",
           headers,
         });
