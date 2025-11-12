@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,55 +7,66 @@ import { Send, X, MessageCircle, Minimize2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext/useAuth";
+import { useChatSocket } from "@/hooks/useChatSocket";
+import axios from "axios";
+import { config } from "@/config/config";
+import { fetchDefaultStaffId } from "@/lib/chatApi";
 
 interface Message {
-  id: number;
+  _id?: string;
   sender: string;
-  message: string;
-  time: string;
-  isSupport: boolean;
+  receiver: string;
+  content: string;
+  createdAt?: string;
+  isSupport?: boolean;
+  message?: string;
+  time?: string;
 }
 
 const ChatWidget = () => {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: "EV Care Support",
-      message: "Xin chào! Chúng tôi có thể giúp gì cho bạn hôm nay?",
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      isSupport: true,
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [staffId, setStaffId] = useState<string>("");
   const [newMessage, setNewMessage] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const userId = user?.id || "default";
-  const storageKey = `chatWidget_${userId}`;
+  // const userId = user?.id || "default";
 
-  // Load messages
+  // Lấy lịch sử chat với staff (ví dụ: staffId = 'admin' hoặc lấy từ context)
+  // Lấy staff mặc định từ API
   useEffect(() => {
-    const savedMessages = localStorage.getItem(storageKey);
-    if (savedMessages) {
-      try {
-        setMessages(JSON.parse(savedMessages));
-      } catch (error) {
-        console.error("Error loading chat messages:", error);
-      }
-    }
-  }, [storageKey]);
+    if (!accessToken) return;
+    fetchDefaultStaffId(accessToken).then((id) => {
+      console.log("💬 ChatWidget - Staff ID:", id);
+      if (id) setStaffId(id);
+    });
+  }, [accessToken]);
 
-  // Save messages
   useEffect(() => {
-    if (messages.length > 1) {
-      localStorage.setItem(storageKey, JSON.stringify(messages));
+    if (user?.id && accessToken && staffId) {
+      axios
+        .get(`${config.API_BASE_URL}/api/chat/history/${staffId}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+        .then((res) => {
+          setMessages(
+            res.data.map((msg: Message) => ({
+              ...msg,
+              isSupport: msg.sender === staffId,
+              message: msg.content,
+              time: msg.createdAt
+                ? new Date(msg.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "",
+            }))
+          );
+        });
     }
-  }, [messages, storageKey]);
+  }, [user?.id, staffId, accessToken]);
 
   // Auto scroll
   useEffect(() => {
@@ -69,41 +80,70 @@ const ChatWidget = () => {
     }
   }, [messages, isOpen]);
 
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      const message: Message = {
-        id: messages.length + 1,
-        sender: user?.fullName || user?.username || "Bạn",
-        message: newMessage,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        isSupport: false,
+  // Gửi tin nhắn
+  const handleSendMessage = useCallback(() => {
+  if (newMessage.trim() && user?.id && accessToken && staffId) {
+      const msgData = {
+        receiver: staffId,
+        content: newMessage,
       };
-      setMessages([...messages, message]);
-      setNewMessage("");
-
-      // Simulate support response
-      setTimeout(() => {
-        const supportMessage: Message = {
-          id: messages.length + 2,
-          sender: "EV Care Support",
-          message:
-            "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm nhất có thể!",
-          time: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          isSupport: true,
-        };
-        setMessages((prev) => [...prev, supportMessage]);
-        if (!isOpen) {
-          setUnreadCount((prev) => prev + 1);
-        }
-      }, 2000);
+      axios
+        .post(`${config.API_BASE_URL}/api/chat/send`, msgData, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+        .then((res) => {
+          // Gửi qua socket để staff nhận realtime
+          import("@/lib/socket").then((socket) => {
+            socket.getSocket()?.emit("chat_message", {
+              sender: user.id,
+              receiver: staffId,
+              content: newMessage,
+            });
+          });
+          setMessages((prev) => [
+            ...prev,
+            {
+              ...res.data,
+              isSupport: false,
+              message: res.data.content,
+              time: res.data.createdAt
+                ? new Date(res.data.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "",
+            },
+          ]);
+          setNewMessage("");
+        });
     }
-  };
+  }, [newMessage, user, staffId, accessToken]);
+
+  // Nhận tin nhắn realtime
+  const handleReceiveMessage = useCallback(
+    (msg: { sender: string; content: string; createdAt?: string; _id?: string; receiver: string }) => {
+      if (msg.sender === staffId) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            ...msg,
+            isSupport: true,
+            message: msg.content,
+            time: msg.createdAt
+              ? new Date(msg.createdAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "",
+          },
+        ]);
+        if (!isOpen) setUnreadCount((prev) => prev + 1);
+      }
+    },
+    [staffId, isOpen]
+  );
+
+  useChatSocket(user?.id || "", handleReceiveMessage);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -223,9 +263,9 @@ const ChatWidget = () => {
             {/* Messages */}
             <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 bg-gray-50">
               <div className="space-y-3">
-                {messages.map((msg) => (
+                {messages.map((msg, idx) => (
                   <div
-                    key={msg.id}
+                    key={msg._id || idx}
                     className={`flex ${
                       msg.isSupport ? "justify-start" : "justify-end"
                     }`}

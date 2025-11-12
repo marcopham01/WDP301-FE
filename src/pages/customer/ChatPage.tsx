@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,14 +7,17 @@ import { Send, Paperclip, Smile } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { useAuth } from "@/context/AuthContext/useAuth";
+import { initializeSocket } from "@/lib/socket";
+import { getChatHistory, sendChatMessage, fetchAllStaff, ChatMessageDTO, StaffInfo } from "@/lib/chatApi";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
-interface Message {
-  id: number;
-  sender: string;
+
+interface MessageUI {
+  id: string;
+  senderLabel: string;
   message: string;
   time: string;
   isSupport: boolean;
@@ -23,51 +26,50 @@ interface Message {
 const ChatPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const userId = user?.id || "default";
-  const storageKey =
-    userId === "default" ? "chatMessages" : `chatMessages_${userId}`;
+  const { accessToken } = useAuth();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: "EV Care Support",
-      message: "Xin chào! Chúng tôi có thể giúp gì cho bạn hôm nay?",
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      isSupport: true,
-    },
-  ]);
+  const [messages, setMessages] = useState<MessageUI[]>([]);
+  const [staffId, setStaffId] = useState<string>("");
   const [newMessage, setNewMessage] = useState("");
+  const [loadingStaff, setLoadingStaff] = useState(true);
+  const [allStaff, setAllStaff] = useState<StaffInfo[]>([]);
 
-  // Load messages from localStorage
-  useEffect(() => {
-    let savedMessages = localStorage.getItem(storageKey);
-    if (!savedMessages && storageKey !== "chatMessages") {
-      savedMessages = localStorage.getItem("chatMessages");
-    }
-    if (savedMessages) {
-      try {
-        const parsed = JSON.parse(savedMessages);
-        setMessages(parsed);
-      } catch (error) {
-        console.error("Error loading chat messages:", error);
-      }
-    }
-  }, [storageKey]);
+  // Helper
+  const fmt = (d: Date) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-  // Save messages to localStorage
+  // Lấy tất cả staff
   useEffect(() => {
-    if (messages.length > 1) {
-      const payload = JSON.stringify(messages);
-      localStorage.setItem(storageKey, payload);
-      if (storageKey !== "chatMessages") {
-        localStorage.setItem("chatMessages", payload);
+    if (!accessToken) return;
+    fetchAllStaff(accessToken).then((staff) => {
+      setAllStaff(staff);
+      if (staff.length > 0) {
+        const defaultId = staff[0]._id || staff[0].id;
+        setStaffId(defaultId || "");
+        console.log("✅ Loaded", staff.length, "staff, default:", defaultId);
       }
-    }
-  }, [messages, storageKey]);
+      setLoadingStaff(false);
+    });
+  }, [accessToken]);
+
+  // Lấy lịch sử khi staffId thay đổi
+  useEffect(() => {
+    if (!accessToken || !user?.id || !staffId) return;
+    console.log("📜 Loading chat history with staff:", staffId);
+    getChatHistory(staffId, accessToken).then((list) => {
+      setMessages(
+        list.map((m: ChatMessageDTO) => ({
+          id: m._id || crypto.randomUUID(),
+          senderLabel: m.sender === staffId ? "EV Care Support" : user?.fullName || user?.username || "Bạn",
+          message: m.content,
+          time: fmt(new Date(m.createdAt || Date.now())),
+          isSupport: m.sender === staffId,
+        }))
+      );
+    }).catch((err) => {
+      console.error("❌ Lỗi load lịch sử chat:", err);
+    });
+  }, [staffId, accessToken, user?.id, user?.fullName, user?.username]);
 
   // Auto scroll to bottom when new message arrives
   useEffect(() => {
@@ -81,38 +83,61 @@ const ChatPage = () => {
     }
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      const message: Message = {
-        id: messages.length + 1,
-        sender: user?.fullName || user?.username || "Bạn",
-        message: newMessage,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        isSupport: false,
-      };
-      setMessages([...messages, message]);
-      setNewMessage("");
-
-      // Simulate support response
-      setTimeout(() => {
-        const supportMessage: Message = {
-          id: messages.length + 2,
-          sender: "EV Care Support",
-          message:
-            "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm nhất có thể!",
-          time: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+  // Socket join và lắng nghe tin nhắn mới từ staff
+  useEffect(() => {
+    if (!user?.id || !staffId) return;
+    const socket = initializeSocket();
+    socket.emit("join", user.id);
+    
+    const handleNewMessage = (msg: ChatMessageDTO) => {
+      console.log("📨 Received message:", msg);
+      if (msg.sender !== staffId) {
+        console.log("⚠️ Message not from current staff, ignoring");
+        return; // chỉ nhận từ staff hiện tại
+      }
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: msg._id || crypto.randomUUID(),
+          senderLabel: allStaff.find(s => (s._id || s.id) === staffId)?.fullName || "EV Care Support",
+          message: msg.content,
+          time: fmt(new Date(msg.createdAt || Date.now())),
           isSupport: true,
-        };
-        setMessages((prev) => [...prev, supportMessage]);
-      }, 2000);
+        },
+      ]);
+    };
+    
+    socket.on("new_message", handleNewMessage);
+    
+    return () => {
+      socket.off("new_message", handleNewMessage);
+    };
+  }, [user?.id, staffId, allStaff]);
+
+  const handleSendMessage = useCallback(() => {
+    console.log("📤 Trying to send:", { newMessage, accessToken: !!accessToken, staffId });
+    if (!newMessage.trim() || !accessToken || !staffId) {
+      console.warn("⚠️ Missing data:", { hasMessage: !!newMessage.trim(), hasToken: !!accessToken, hasStaffId: !!staffId });
+      return;
     }
-  };
+    sendChatMessage(staffId, newMessage, accessToken).then((saved) => {
+      console.log("✅ Message sent:", saved);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: saved._id || crypto.randomUUID(),
+          senderLabel: user?.fullName || user?.username || "Bạn",
+          message: saved.content,
+          time: fmt(new Date(saved.createdAt || Date.now())),
+          isSupport: false,
+        },
+      ]);
+      setNewMessage("");
+    }).catch((err) => {
+      console.error("❌ Send failed:", err);
+      toast.error("Không thể gửi tin nhắn. Vui lòng thử lại!");
+    });
+  }, [newMessage, accessToken, staffId, user?.fullName, user?.username]);
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
@@ -131,47 +156,67 @@ const ChatPage = () => {
     >
       <Header onLogout={handleLogout} />
       <main className="flex-1 py-8">
-        <div className="container max-w-5xl pt-20 px-4">
-          <div className="mb-6">
+        <div className="container max-w-4xl mx-auto pt-20 px-4">
+          <div className="mb-6 text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {" "}
-              {/* Text đen, không gradient */}
               Trung tâm Chat
             </h1>
             <p className="text-gray-600">
               Liên hệ với đội ngũ hỗ trợ của chúng tôi
-            </p>{" "}
-            {/* Text xám */}
+            </p>
+            {loadingStaff && (
+              <p className="text-sm text-yellow-600 mt-2">⏳ Đang tải thông tin staff...</p>
+            )}
+            {!loadingStaff && !staffId && (
+              <p className="text-sm text-red-600 mt-2">
+                ⚠️ Không tìm thấy staff. Vui lòng liên hệ admin.
+              </p>
+            )}
           </div>
 
           {/* Modern Chat Container */}
-          <div className="w-full max-w-4xl mx-auto bg-white rounded-lg shadow-md border border-gray-200 flex flex-col overflow-hidden">
+          <div className="w-full bg-white rounded-lg shadow-md border border-gray-200 flex flex-col overflow-hidden">
             {" "}
             {/* Trắng, border xám, shadow nhẹ */}
             {/* Chat Header - Modern Design */}
-            <div className="bg-ev-green p-6 flex items-center justify-between">
-              {" "}
-              {/* ev-green, không gradient */}
-              <div className="flex items-center gap-4">
+            <div className="bg-ev-green p-4 flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-3 flex-1 min-w-[220px]">
                 <div className="relative">
-                  <Avatar className="h-14 w-14 border-2 border-white shadow-sm">
-                    {" "}
-                    {/* Shadow nhẹ */}
+                  <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
                     <AvatarImage src="/support-avatar.png" />
-                    <AvatarFallback className="bg-white text-ev-green font-bold text-lg">
-                      EV
-                    </AvatarFallback>
+                    <AvatarFallback className="bg-white text-ev-green font-bold text-base">EV</AvatarFallback>
                   </Avatar>
-                  <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></span>
+                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></span>
                 </div>
-                <div className="text-white">
-                  <h3 className="font-semibold text-lg">EV Care Support</h3>
-                  <p className="text-sm text-green-100 flex items-center gap-1">
-                    <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></span>
-                    Đang hoạt động • Phản hồi trong 24h
+                <div className="text-white leading-tight">
+                  <h3 className="font-semibold text-base">
+                    {allStaff.find(s => (s._id || s.id) === staffId)?.fullName || "EV Care Support"}
+                  </h3>
+                  <p className="text-[11px] text-green-100 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-300 rounded-full animate-pulse"></span>
+                    Online • Phản hồi nhanh
                   </p>
                 </div>
               </div>
+              {allStaff.length > 1 && (
+                <div className="ml-auto w-full sm:w-auto">
+                  <label className="text-xs text-white/80 block mb-1">Chọn nhân viên hỗ trợ</label>
+                  <div className="relative">
+                    <select
+                      className="text-sm rounded-md bg-white/90 text-gray-700 px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-ev-green shadow-sm"
+                      value={staffId}
+                      onChange={(e) => setStaffId(e.target.value)}
+                    >
+                      {allStaff.map(st => (
+                        <option key={st._id || st.id} value={st._id || st.id}>
+                          {st.fullName || st.username}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-gray-500">▾</span>
+                  </div>
+                </div>
+              )}
             </div>
             {/* Quick Actions Banner */}
             <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
@@ -243,7 +288,7 @@ const ChatPage = () => {
                     >
                       {msg.isSupport && (
                         <div className="text-xs text-gray-500 mb-1 ml-1">
-                          {msg.sender}
+                          {msg.senderLabel}
                         </div>
                       )}
 
@@ -343,9 +388,10 @@ const ChatPage = () => {
 
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!newMessage.trim()}
+                  disabled={!newMessage.trim() || !staffId || !accessToken}
                   size="icon"
                   className="h-11 w-11 rounded-full bg-ev-green hover:bg-ev-green/90 shadow-md disabled:opacity-50" // ev-green, shadow nhẹ
+                  title={!staffId ? "Đang tải thông tin staff..." : !accessToken ? "Chưa đăng nhập" : "Gửi tin nhắn"}
                 >
                   <Send className="h-5 w-5" />
                 </Button>

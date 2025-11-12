@@ -103,7 +103,6 @@ export default function BookingPage() {
     status?: string;
     description?: string;
   } | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState("online");
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [vehicleModels, setVehicleModels] = useState<VehicleModel[]>([]);
   const [centerTechnicians, setCenterTechnicians] = useState<Technician[]>([]);
@@ -1424,19 +1423,19 @@ export default function BookingPage() {
             {/* Step 4: Date and Details */}
             {currentStep === 4 && (
               <div>
-                <h2 className="text-2xl font-bold mb-4 text-center">
+                <h2 className="text-2xl font-bold mb-2 text-center">
                   Thông tin cuối cùng
                 </h2>
-                <p className="text-center text-muted-foreground mb-6">
+                <p className="text-center text-muted-foreground mb-8">
                   Chọn ngày giờ và cung cấp thông tin bổ sung
                 </p>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid md:grid-cols-2 gap-8">
                   {/* Left: Date and Notes */}
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {/* Technician selection (optional) */}
                     <div>
-                      <Label className="text-sm font-medium mb-2 block">
+                      <Label className="text-sm font-medium mb-3 block">
                         Chọn kỹ thuật viên (tùy chọn)
                       </Label>
                       <Select
@@ -1463,21 +1462,18 @@ export default function BookingPage() {
                         </SelectContent>
                       </Select>
                       {!selectedTechnicianId ? (
-                        <div className="text-xs text-muted-foreground mt-2">
-                          💡 Bạn đang để hệ thống tự động phân công KTV. Chọn
-                          một KTV cụ thể để xem lịch rảnh/bận chi tiết theo giờ.
+                        <div className="text-xs text-muted-foreground mt-2 bg-gray-50 p-2.5 rounded leading-relaxed">
+                          💡 Bạn đang để hệ thống tự động phân công KTV. Chọn một KTV cụ thể để xem lịch rảnh/bận chi tiết theo giờ.
                         </div>
                       ) : (
-                        <div className="text-xs text-ev-green bg-ev-green/10 rounded p-2 mt-2">
-                          {" "}
-                          {/* ev-green nhạt */}✓ Đã chọn KTV cụ thể. Các khung
-                          giờ bận sẽ được đánh dấu màu xám và không thể chọn.
+                        <div className="text-xs text-ev-green bg-ev-green/10 rounded p-2.5 mt-2 leading-relaxed">
+                          ✓ Đã chọn KTV cụ thể. Các khung giờ bận sẽ được đánh dấu màu xám và không thể chọn.
                         </div>
                       )}
                     </div>
 
                     <div>
-                      <Label className="text-sm font-medium mb-2 block">
+                      <Label className="text-sm font-medium mb-3 block">
                         Chọn ngày
                       </Label>
                       <Popover>
@@ -1545,7 +1541,7 @@ export default function BookingPage() {
                     {/* Time Picker - Only show when date is selected */}
                     {bookingDate && (
                       <div>
-                        <Label className="text-sm font-medium mb-2 block">
+                        <Label className="text-sm font-medium mb-3 block">
                           Chọn giờ
                         </Label>
                         <Popover>
@@ -1652,14 +1648,14 @@ export default function BookingPage() {
                           </PopoverContent>
                         </Popover>
                         {selectedTechnicianId && bookingDate && (
-                          <div className="mt-2 text-xs">
+                          <div className="mt-3 text-xs">
                             {loadingTechSchedule ? (
-                              <span className="text-muted-foreground">
+                              <span className="text-muted-foreground bg-gray-50 p-2.5 rounded block">
                                 ⏳ Đang tải lịch của KTV...
                               </span>
                             ) : (
-                              <div className="space-y-1">
-                                <div className="text-muted-foreground">
+                              <div className="space-y-2">
+                                <div className="text-muted-foreground bg-gray-50 p-2.5 rounded leading-relaxed">
                                   📅 Đã đặt trong ngày:{" "}
                                   <span className="font-medium text-foreground">
                                     {techDayBookedCount}/4 slot
@@ -1667,15 +1663,13 @@ export default function BookingPage() {
                                   (tối đa 4 slot/ngày)
                                 </div>
                                 {techScheduleBusyTimes.size > 0 && (
-                                  <div className="text-amber-700 bg-amber-50 rounded px-2 py-1">
-                                    ⚠️ {techScheduleBusyTimes.size} khung giờ
-                                    không khả dụng (màu xám)
+                                  <div className="text-amber-700 bg-amber-50 rounded p-2.5 leading-relaxed">
+                                    ⚠️ {techScheduleBusyTimes.size} khung giờ không khả dụng (màu xám)
                                   </div>
                                 )}
                                 {techDayBookedCount >= 4 && (
-                                  <div className="text-red-700 bg-red-50 rounded px-2 py-1 font-medium">
-                                    🚫 KTV đã đủ 4 slot. Vui lòng chọn ngày khác
-                                    hoặc KTV khác.
+                                  <div className="text-red-700 bg-red-50 rounded p-2.5 font-medium leading-relaxed">
+                                    🚫 KTV đã đủ 4 slot. Vui lòng chọn ngày khác hoặc KTV khác.
                                   </div>
                                 )}
                               </div>
@@ -1686,72 +1680,43 @@ export default function BookingPage() {
                     )}
 
                     <div>
-                      <Label className="text-sm font-medium mb-2 block">
+                      <Label className="text-sm font-medium mb-3 block">
                         Mô tả dịch vụ
                       </Label>
                       <Textarea
                         placeholder="Mô tả vấn đề về xe của bạn hoặc các yêu cầu đặc biệt (nếu có)..."
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        rows={5}
+                        rows={4}
                         maxLength={500}
-                        className="border-gray-300"
+                        className="border-gray-300 resize-none"
                       />
-                      <div className="text-xs text-right text-muted-foreground mt-1">
+                      <div className="text-xs text-right text-muted-foreground mt-2">
                         {notes.length} / 500
                       </div>
                     </div>
 
+                    {/* Payment Method - Simplified to single option */}
                     <div>
                       <Label className="text-sm font-medium mb-3 block">
                         Hình thức thanh toán
                       </Label>
-                      <div className="space-y-2">
-                        <div
-                          className={cn(
-                            "flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all border-gray-200", // Border xám
-                            paymentMethod === "online"
-                              ? "border-ev-green bg-ev-green/5" // ev-green nhạt
-                              : "hover:border-gray-300"
-                          )}
-                          onClick={() => setPaymentMethod("online")}
-                        >
-                          <div
-                            className={cn(
-                              "w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center",
-                              paymentMethod === "online"
-                                ? "border-ev-green"
-                                : "border-gray-300"
-                            )}
-                          >
-                            {paymentMethod === "online" && (
-                              <div className="w-3 h-3 rounded-full bg-ev-green" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">
+                      <div className="flex items-start p-5 rounded-lg border-2 border-ev-green bg-ev-green/5">
+                        <div className="w-5 h-5 rounded-full border-2 border-ev-green mr-3 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <div className="w-3 h-3 rounded-full bg-ev-green" />
+                        </div>
+                        <div className="flex-1 space-y-3">
+                          <div>
+                            <div className="font-semibold text-sm mb-2">
                               Tại trung tâm
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              Thanh toán khi hoàn thành dịch vụ
+                            <div className="text-xs text-muted-foreground leading-relaxed">
+                              Thanh toán trước một phần và thanh toán phần còn lại sau khi hoàn thành
                             </div>
                           </div>
-                        </div>
-                        <div
-                          className={cn(
-                            "flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all border-gray-200",
-                            paymentMethod === "later"
-                              ? "border-ev-green bg-ev-green/5"
-                              : "hover:border-gray-300"
-                          )}
-                          onClick={() => setPaymentMethod("later")}
-                        >
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">
-                              Trực tuyến
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Thanh toán trước qua thẻ hoặc ví điện tử
+                          <div className="pt-3 border-t border-ev-green/20">
+                            <div className="text-xs text-muted-foreground leading-relaxed">
+                              💡 <span className="font-medium">Lưu ý:</span> Bạn cần thanh toán tiền cọc trước để xác nhận đặt lịch
                             </div>
                           </div>
                         </div>
@@ -1764,32 +1729,30 @@ export default function BookingPage() {
                     <Label className="text-sm font-medium mb-3 block">
                       Tóm tắt đặt lịch
                     </Label>
-                    <Card className="border-2 border-gray-200">
-                      {" "}
-                      {/* Border xám */}
-                      <CardContent className="p-4 space-y-3">
+                    <Card className="border-2 border-gray-200 sticky top-4">
+                      <CardContent className="p-5 space-y-4">
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">
+                          <div className="text-xs text-muted-foreground mb-2">
                             Xe:
                           </div>
-                          <div className="font-semibold">
+                          <div className="font-semibold text-base">
                             {selectedVehicleData
                               ? getVehicleLabel(selectedVehicleData)
                               : "—"}
                           </div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-muted-foreground mt-1">
                             {selectedVehicleData?.license_plate || ""}
                           </div>
                         </div>
 
-                        <div className="border-t border-gray-200 pt-3">
-                          <div className="text-xs text-muted-foreground mb-1">
+                        <div className="border-t border-gray-200 pt-4">
+                          <div className="text-xs text-muted-foreground mb-2">
                             Dịch vụ:
                           </div>
-                          <div className="font-semibold">
+                          <div className="font-semibold text-base">
                             {selectedServiceData?.service_name || "—"}
                           </div>
-                          <div className="text-sm text-ev-green font-semibold">
+                          <div className="text-sm text-ev-green font-semibold mt-1">
                             {selectedServiceData?.base_price
                               ? `Giá cơ bản: ${selectedServiceData.base_price.toLocaleString(
                                   "vi-VN"
@@ -1798,11 +1761,11 @@ export default function BookingPage() {
                           </div>
                         </div>
 
-                        <div className="border-t border-gray-200 pt-3">
-                          <div className="text-xs text-muted-foreground mb-1">
+                        <div className="border-t border-gray-200 pt-4">
+                          <div className="text-xs text-muted-foreground mb-2">
                             Ngày giờ:
                           </div>
-                          <div className="font-semibold">
+                          <div className="font-semibold text-base">
                             {bookingDate
                               ? format(bookingDate, "PPP", { locale: vi })
                               : "Chưa chọn ngày"}
@@ -1814,24 +1777,24 @@ export default function BookingPage() {
                           )}
                         </div>
 
-                        <div className="border-t border-gray-200 pt-3">
-                          <div className="text-xs text-muted-foreground mb-1">
+                        <div className="border-t border-gray-200 pt-4">
+                          <div className="text-xs text-muted-foreground mb-2">
                             Trung tâm:
                           </div>
-                          <div className="font-semibold">
+                          <div className="font-semibold text-base">
                             {selectedCenterData?.center_name || "—"}
                           </div>
-                          <div className="text-xs text-muted-foreground mt-1">
+                          <div className="text-xs text-muted-foreground mt-1 leading-relaxed">
                             {selectedCenterData?.address || ""}
                           </div>
                         </div>
 
-                        <div className="border-t border-gray-200 pt-3">
-                          <div className="text-xs text-muted-foreground mb-1">
+                        <div className="border-t border-gray-200 pt-4">
+                          <div className="text-xs text-muted-foreground mb-2">
                             Kỹ thuật viên:
                           </div>
                           {selectedTechnicianId ? (
-                            <div className="text-sm">
+                            <div className="text-sm font-medium">
                               Đã chọn:{" "}
                               {centerTechnicians.find(
                                 (t) => t.user._id === selectedTechnicianId
@@ -1839,11 +1802,9 @@ export default function BookingPage() {
                             </div>
                           ) : (
                             <div className="text-sm">
-                              Sẽ được tự động phân công
+                              <span className="font-medium">Sẽ được tự động phân công</span>
                               {centerTechnicians.length > 0 && (
-                                <span className="text-muted-foreground">
-                                  {" "}
-                                  —{" "}
+                                <span className="text-muted-foreground block mt-1">
                                   {
                                     centerTechnicians.filter(
                                       (t) => t.status === "on"
@@ -1855,7 +1816,7 @@ export default function BookingPage() {
                             </div>
                           )}
                           {assignedTechnician && (
-                            <div className="text-xs text-ev-green mt-1">
+                            <div className="text-xs text-ev-green mt-2 bg-ev-green/5 p-2 rounded">
                               Dự kiến phụ trách: {assignedTechnician.fullName}
                               {assignedTechnician.phone
                                 ? ` - ${assignedTechnician.phone}`
@@ -1864,12 +1825,12 @@ export default function BookingPage() {
                           )}
                         </div>
 
-                        <div className="border-t border-gray-200 pt-3">
+                        <div className="border-t-2 border-gray-300 pt-4 mt-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-sm font-medium text-gray-700">
                               Tiền cọc dịch vụ:
                             </span>
-                            <span className="text-lg font-bold text-ev-green">
+                            <span className="text-xl font-bold text-ev-green">
                               {selectedServiceData?.base_price
                                 ? `${(
                                     selectedServiceData.base_price * 0.1
