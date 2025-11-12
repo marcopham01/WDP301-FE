@@ -7,6 +7,7 @@ export interface ChatMessageDTO {
   receiver: string;
   content: string;
   createdAt?: string;
+  attachments?: AttachmentDTO[];
 }
 
 const BASE = config.API_BASE_URL;
@@ -18,6 +19,13 @@ export interface StaffInfo {
   fullName?: string;
   email?: string;
   role: string;
+}
+
+export interface AttachmentDTO {
+  url: string;
+  type: string; // mime
+  name?: string;
+  size?: number;
 }
 
 export async function fetchAllStaff(token?: string | null): Promise<StaffInfo[]> {
@@ -112,6 +120,24 @@ export async function sendChatMessage(receiver: string, content: string, token: 
   const res = await axios.post(
     `${BASE}/api/chat/send`,
     { receiver, content },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data as ChatMessageDTO;
+}
+
+export async function uploadChatFile(file: File, token: string): Promise<AttachmentDTO> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await axios.post(`${BASE}/api/chat/upload`, form, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data as AttachmentDTO;
+}
+
+export async function sendChatWithAttachments(params: { receiver: string; content?: string; attachments?: AttachmentDTO[] }, token: string) {
+  const res = await axios.post(
+    `${BASE}/api/chat/send`,
+    { receiver: params.receiver, content: params.content ?? '', attachments: params.attachments ?? [] },
     { headers: { Authorization: `Bearer ${token}` } }
   );
   return res.data as ChatMessageDTO;

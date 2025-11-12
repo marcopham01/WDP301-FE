@@ -3,16 +3,19 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Paperclip, Smile } from "lucide-react";
+import { Send, Paperclip, Smile, X, Image as ImageIcon } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { useAuth } from "@/context/AuthContext/useAuth";
 import { initializeSocket } from "@/lib/socket";
-import { getChatHistory, sendChatMessage, fetchAllStaff, ChatMessageDTO, StaffInfo } from "@/lib/chatApi";
+import { getChatHistory, fetchAllStaff, ChatMessageDTO, StaffInfo, uploadChatFile, sendChatWithAttachments, AttachmentDTO } from "@/lib/chatApi";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { config } from "@/config/config";
 
 
 interface MessageUI {
@@ -21,6 +24,7 @@ interface MessageUI {
   message: string;
   time: string;
   isSupport: boolean;
+  attachments?: AttachmentDTO[];
 }
 
 const ChatPage = () => {
@@ -34,6 +38,11 @@ const ChatPage = () => {
   const [newMessage, setNewMessage] = useState("");
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [allStaff, setAllStaff] = useState<StaffInfo[]>([]);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [attachedFile, setAttachedFile] = useState<File | null>(null);
+    const [attachedFilePreview, setAttachedFilePreview] = useState<string>("");
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper
   const fmt = (d: Date) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -64,6 +73,7 @@ const ChatPage = () => {
           message: m.content,
           time: fmt(new Date(m.createdAt || Date.now())),
           isSupport: m.sender === staffId,
+          attachments: m.attachments,
         }))
       );
     }).catch((err) => {
@@ -103,6 +113,7 @@ const ChatPage = () => {
           message: msg.content,
           time: fmt(new Date(msg.createdAt || Date.now())),
           isSupport: true,
+          attachments: (msg as unknown as { attachments?: AttachmentDTO[] }).attachments,
         },
       ]);
     };
@@ -115,12 +126,30 @@ const ChatPage = () => {
   }, [user?.id, staffId, allStaff]);
 
   const handleSendMessage = useCallback(() => {
-    console.log("📤 Trying to send:", { newMessage, accessToken: !!accessToken, staffId });
-    if (!newMessage.trim() || !accessToken || !staffId) {
-      console.warn("⚠️ Missing data:", { hasMessage: !!newMessage.trim(), hasToken: !!accessToken, hasStaffId: !!staffId });
+      const messageText = newMessage.trim();
+      console.log("📤 Trying to send:", { newMessage: messageText, accessToken: !!accessToken, staffId, hasFile: !!attachedFile });
+    
+      if ((!messageText && !attachedFile) || !accessToken || !staffId) {
+        console.warn("⚠️ Missing data:", { hasMessage: !!messageText, hasToken: !!accessToken, hasStaffId: !!staffId });
       return;
     }
-    sendChatMessage(staffId, newMessage, accessToken).then((saved) => {
+    
+      // Tạm thời chỉ gửi text, file sẽ implement sau với upload API
+      const sendFlow = async () => {
+    const attachments: AttachmentDTO[] = [];
+        if (attachedFile) {
+          try {
+            setUploading(true);
+            const uploaded = await uploadChatFile(attachedFile, accessToken);
+            attachments.push(uploaded);
+          } catch (e) {
+            console.error('❌ Upload failed', e);
+            toast.error('Upload file thất bại');
+          } finally {
+            setUploading(false);
+          }
+        }
+        const saved = await sendChatWithAttachments({ receiver: staffId, content: messageText, attachments }, accessToken);
       console.log("✅ Message sent:", saved);
       setMessages((prev) => [
         ...prev,
@@ -130,14 +159,56 @@ const ChatPage = () => {
           message: saved.content,
           time: fmt(new Date(saved.createdAt || Date.now())),
           isSupport: false,
+          attachments: saved.attachments,
         },
       ]);
+        // Nếu có attachments -> append hiển thị đặc biệt (render logic phía dưới)
       setNewMessage("");
-    }).catch((err) => {
-      console.error("❌ Send failed:", err);
-      toast.error("Không thể gửi tin nhắn. Vui lòng thử lại!");
-    });
-  }, [newMessage, accessToken, staffId, user?.fullName, user?.username]);
+      setAttachedFile(null);
+      setAttachedFilePreview("");
+      };
+      sendFlow().catch(err => {
+        console.error('❌ Send flow failed:', err);
+        toast.error('Không thể gửi tin nhắn.');
+      });
+  }, [newMessage, accessToken, staffId, user?.fullName, user?.username, attachedFile]);
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setNewMessage((prev) => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Kiểm tra kích thước file (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File quá lớn! Vui lòng chọn file nhỏ hơn 10MB");
+      return;
+    }
+
+    setAttachedFile(file);
+
+    // Tạo preview nếu là ảnh
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAttachedFilePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setAttachedFilePreview("");
+    }
+
+    toast.success(`Đã đính kèm: ${file.name}`);
+  };
+
+  const handleRemoveFile = () => {
+    setAttachedFile(null);
+    setAttachedFilePreview("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
@@ -292,17 +363,46 @@ const ChatPage = () => {
                         </div>
                       )}
 
-                      <div
-                        className={`px-4 py-2.5 rounded-lg shadow-sm ${
-                          // Bo góc vừa, shadow nhẹ
-                          msg.isSupport
-                            ? "bg-white text-gray-900 rounded-tl-sm border border-gray-200" // Trắng, border xám
-                            : "bg-ev-green text-white rounded-tr-sm" // ev-green
-                        }`}
-                      >
-                        <div className="text-sm leading-relaxed">
-                          {msg.message}
+                      <div className="space-y-1 max-w-full">
+                        <div
+                          className={`px-4 py-2.5 rounded-lg shadow-sm break-words ${
+                            msg.isSupport
+                              ? "bg-white text-gray-900 rounded-tl-sm border border-gray-200"
+                              : "bg-ev-green text-white rounded-tr-sm"
+                          }`}
+                        >
+                          <div className="text-sm leading-relaxed">{msg.message}</div>
                         </div>
+                        {/* Attachments hiển thị nếu có */}
+                        {(msg as unknown as { attachments?: AttachmentDTO[] }).attachments?.length > 0 && (
+                          <div className={`flex flex-col gap-2 ${msg.isSupport ? '' : 'items-end'}`}>
+                            {(msg as unknown as { attachments?: AttachmentDTO[] }).attachments!.map((att: AttachmentDTO, i: number) => {
+                              const href = att.url.startsWith('http') ? att.url : `${config.API_BASE_URL}${att.url}`;
+                              return att.type.startsWith('image/') ? (
+                                <a
+                                  key={i}
+                                  href={href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block rounded-md overflow-hidden border border-gray-200 hover:opacity-90 transition w-48"
+                                >
+                                  <img src={href} alt={att.name} className="w-full h-32 object-cover" />
+                                  <div className="bg-white text-[10px] text-gray-600 px-2 py-1 truncate">{att.name}</div>
+                                </a>
+                              ) : (
+                                <a
+                                  key={i}
+                                  href={href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs px-2 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 inline-flex items-center gap-1"
+                                >
+                                  <Paperclip className="h-3 w-3" /> {att.name || 'Tệp đính kèm'}
+                                </a>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
 
                       <div
@@ -351,13 +451,44 @@ const ChatPage = () => {
             </div>
             {/* Input Area - Modern Design */}
             <div className="p-6 border-t border-gray-200 bg-white">
-              {" "}
-              {/* Border xám, trắng */}
+                {/* File preview */}
+                {attachedFile && (
+                  <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center gap-3">
+                    {attachedFilePreview ? (
+                      <img src={attachedFilePreview} alt="Preview" className="w-16 h-16 object-cover rounded" />
+                    ) : (
+                      <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
+                        <ImageIcon className="h-6 w-6 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-700 truncate">{attachedFile.name}</p>
+                      <p className="text-xs text-gray-500">{(attachedFile.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleRemoveFile}
+                      className="h-8 w-8 text-gray-400 hover:text-red-500"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
               <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                  />
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 rounded-full hover:bg-gray-100 text-gray-500" // Hover xám nhạt
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-10 w-10 rounded-full hover:bg-gray-100 text-gray-500"
                   title="Đính kèm file"
                 >
                   <Paperclip className="h-4 w-4" />
@@ -376,24 +507,35 @@ const ChatPage = () => {
                     }}
                     className="pr-10 rounded-full border-2 border-gray-200 focus:border-ev-green" // Border xám, focus ev-green
                   />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-gray-100 text-gray-500" // Hover xám nhạt
-                    title="Chọn emoji"
-                  >
-                    <Smile className="h-4 w-4" />
-                  </Button>
+                  <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-gray-100 text-gray-500"
+                        title="Chọn emoji"
+                      >
+                        <Smile className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0 border-0" align="end">
+                      <EmojiPicker onEmojiClick={handleEmojiClick} width={320} height={400} />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!newMessage.trim() || !staffId || !accessToken}
+                  disabled={uploading || ((!newMessage.trim() && !attachedFile) || !staffId || !accessToken)}
                   size="icon"
-                  className="h-11 w-11 rounded-full bg-ev-green hover:bg-ev-green/90 shadow-md disabled:opacity-50" // ev-green, shadow nhẹ
-                  title={!staffId ? "Đang tải thông tin staff..." : !accessToken ? "Chưa đăng nhập" : "Gửi tin nhắn"}
+                  className="h-11 w-11 rounded-full bg-ev-green hover:bg-ev-green/90 shadow-md disabled:opacity-50 relative"
+                  title={uploading ? 'Đang upload...' : (!staffId ? "Đang tải thông tin staff..." : !accessToken ? "Chưa đăng nhập" : "Gửi tin nhắn")}
                 >
-                  <Send className="h-5 w-5" />
+                  {uploading ? (
+                    <span className="animate-pulse text-xs">...</span>
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
                 </Button>
               </div>
               <div className="mt-2 text-xs text-center text-gray-400">

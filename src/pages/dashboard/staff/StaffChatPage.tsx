@@ -5,7 +5,8 @@ import { MessageCircle } from "lucide-react";
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext/useAuth";
 import { initializeSocket } from "@/lib/socket";
-import { getChatHistory, sendChatMessage, ChatMessageDTO, getChatPartners } from "@/lib/chatApi";
+import { getChatHistory, sendChatMessage, ChatMessageDTO, getChatPartners, AttachmentDTO } from "@/lib/chatApi";
+import { config } from "@/config/config";
 
 
 // Customer minimal shape for sidebar
@@ -16,6 +17,7 @@ interface ChatMessageUI {
   text: string;
   at: string; // HH:mm DD/MM/YYYY
   sender: "staff" | "customer";
+  attachments?: AttachmentDTO[];
 }
 
 export default function StaffChatPage() {
@@ -85,7 +87,8 @@ export default function StaffChatPage() {
         id: msg._id || crypto.randomUUID(),
         text: msg.content,
         at: formatAt(new Date(msg.createdAt || Date.now())),
-        sender: "customer"
+        sender: "customer",
+        attachments: msg.attachments,
       }]);
       requestAnimationFrame(() => endRef.current?.scrollIntoView({ behavior: "smooth" }));
     });
@@ -102,7 +105,8 @@ export default function StaffChatPage() {
         id: m._id || crypto.randomUUID(),
         text: m.content,
         at: formatAt(new Date(m.createdAt || Date.now())),
-        sender: m.sender === user.id ? "staff" : "customer"
+        sender: m.sender === user.id ? "staff" : "customer",
+        attachments: m.attachments,
       }));
       setMessages(mapped);
       requestAnimationFrame(() => endRef.current?.scrollIntoView({ behavior: "smooth" }));
@@ -183,6 +187,20 @@ export default function StaffChatPage() {
                     }`}
                   >
                     {m.text}
+                    {m.attachments?.length ? (
+                      <div className="mt-2 flex flex-col gap-2">
+                        {m.attachments.map((att, i) => {
+                          const href = att.url.startsWith('http') ? att.url : `${config.API_BASE_URL}${att.url}`;
+                          return att.type.startsWith('image/') ? (
+                            <a key={i} href={href} target="_blank" rel="noopener noreferrer" className="block rounded overflow-hidden border w-40">
+                              <img src={href} alt={att.name} className="w-full h-28 object-cover" />
+                            </a>
+                          ) : (
+                            <a key={i} href={href} target="_blank" rel="noopener noreferrer" className="underline text-xs">{att.name || 'Tệp đính kèm'}</a>
+                          )
+                        })}
+                      </div>
+                    ) : null}
                     <div className={`mt-1 text-[10px] ${m.sender === "staff" ? "text-white/80" : "text-muted-foreground"}`}>
                       {m.at}
                     </div>
