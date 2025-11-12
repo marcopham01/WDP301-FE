@@ -33,6 +33,8 @@ import PartManagement from "./pages/dashboard/admin/PartManagement";
 import InventoryManagement from "./pages/dashboard/admin/InventoryManagement";
 import IssueTypeManagement from "./pages/dashboard/admin/IssueTypeManagement";
 import CustomerManagement from "./pages/dashboard/admin/CustomerManagement";
+import AdminAppointmentManagement from "./pages/dashboard/admin/AppointmentManagement";
+import RevenueManagement from "./pages/dashboard/admin/RevenueManagement";
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 import { TechnicianOverview } from "./pages/dashboard/tech/TechnicianOverview";
 import { TaskDetail } from "./pages/dashboard/tech/TaskDetail";
@@ -92,6 +94,8 @@ const AppRoutes = () => {
         <Route path="parts" element={<PartManagement />} />
         <Route path="inventory" element={<InventoryManagement />} />
         <Route path="issue-types" element={<IssueTypeManagement />} />
+        <Route path="appointments" element={<AdminAppointmentManagement />} />
+        <Route path="reports/revenue" element={<RevenueManagement />} />
         <Route
           path="/dashboard/admin/service-center/:centerId/working-hours"
           element={<WorkingHoursManagement />}
