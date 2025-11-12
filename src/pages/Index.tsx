@@ -16,7 +16,7 @@ const Index = () => {
   const feedbackRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
   const navigate = useNavigate();
 
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -33,7 +33,7 @@ const Index = () => {
         <div ref={heroRef}>
           <HeroSection />
         </div>
-        <ChatWidget />
+        {user && <ChatWidget />}
         <div ref={featuresRef} id="features-section">
           <FeaturesSection />
         </div>
