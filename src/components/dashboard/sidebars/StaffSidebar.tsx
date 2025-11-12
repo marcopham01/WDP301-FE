@@ -1,4 +1,12 @@
-import { Calendar, ClipboardList, Users, Wrench, LucideIcon, MessageCircle, Clock } from "lucide-react";
+import {
+  Calendar,
+  ClipboardList,
+  Users,
+  Wrench,
+  LucideIcon,
+  MessageCircle,
+  Clock,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +34,7 @@ const items: Array<{ title: string; icon: LucideIcon; href: string }> = [
   {
     title: "Điều phối KTV",
     icon: Wrench,
-    href: "/dashboard/staff/technician-schedule",
+    href: "/dashboard/staff/maintenance",
   },
   {
     title: "Hàng chờ",
@@ -45,7 +53,9 @@ export default function StaffSidebar() {
   const location = useLocation();
 
   return (
-    <Sidebar className="w-64 border-r bg-white dark:bg-gray-950" collapsible="icon">
+    <Sidebar
+      className="w-64 border-r bg-white dark:bg-gray-950"
+      collapsible="icon">
       <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
         <div className="mb-6">
           <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">

@@ -15,22 +15,63 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext/useAuth";
 import {
-  getTechnicianScheduleApi,
-  TechnicianScheduleParams,
-  ScheduleItem,
   updateAppointmentStatusApi,
+  getAppointmentByIdApi,
+  Appointment,
+  getAppointmentsApi,
 } from "@/lib/appointmentApi";
+import {
+  getIssueTypesApi,
+  getPartsApi,
+  createChecklistApi,
+  IssueType,
+  PartItem,
+  getInventoryApi,
+  InventoryItem,
+  getChecklistsApi,
+  Checklist,
+  getIssueTypeByIdApi,
+  getPartByIdApi,
+} from "@/lib/checklistApi";
+
+function formatDate(date?: string) {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
 
 export const TaskDetail = () => {
   const { appointmentId } = useParams<{ appointmentId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [schedule, setSchedule] = useState<ScheduleItem | null>(null);
+  const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [showChecklistForm, setShowChecklistForm] = useState(false);
+  const [checklistCreated, setChecklistCreated] = useState(false);
+  const [checklistMessage, setChecklistMessage] = useState<string | null>(null);
+  const [issueTypes, setIssueTypes] = useState<IssueType[]>([]);
+  const [parts, setParts] = useState<PartItem[]>([]);
+  const [partInventoryInfo, setPartInventoryInfo] = useState<
+    Record<number, { available: number; unitCost?: number }>
+  >({});
+  const [checklistForm, setChecklistForm] = useState({
+    issue_type_id: "",
+    issue_description: "",
+    solution_applied: "",
+    parts: [] as Array<{ part_id: string; quantity: number }>,
+  });
+  const [checklist, setChecklist] = useState<Checklist | null>(null);
+  const [checklistIssueType, setChecklistIssueType] = useState<IssueType | null>(null);
+  const [checklistParts, setChecklistParts] = useState<Array<{ part: PartItem; quantity: number; cost: number }>>([]);
 
-  // Lấy thông tin chi tiết appointment
+  // Lấy thông tin chi tiết appointment trực tiếp theo ID
   useEffect(() => {
     const fetchAppointmentDetail = async () => {
       if (!user?.id || !appointmentId) return;
@@ -39,41 +80,35 @@ export const TaskDetail = () => {
         setLoading(true);
         setError(null);
 
-        // Lấy schedule trong 30 ngày gần đây để tìm appointment
-        const today = new Date();
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(today.getDate() + 30);
-
-        const params: TechnicianScheduleParams = {
-          technician_id: user.id,
-          date_from: today.toISOString().split("T")[0],
-          date_to: thirtyDaysFromNow.toISOString().split("T")[0],
-        };
-
-        const result = await getTechnicianScheduleApi(params);
-
+        const result = await getAppointmentByIdApi(appointmentId);
         if (result.ok && result.data?.success) {
-          const scheduleData = result.data.data;
-          const dataWithSchedules = scheduleData as unknown as {
-            schedules?: ScheduleItem[];
-          };
-
-          let schedules: ScheduleItem[] = [];
-          if (
-            dataWithSchedules.schedules &&
-            Array.isArray(dataWithSchedules.schedules)
-          ) {
-            schedules = dataWithSchedules.schedules;
-          } else if (scheduleData.items && scheduleData.items.length > 0) {
-            schedules = scheduleData.items[0].schedules;
-          }
-
-          // Tìm appointment theo ID
-          const foundSchedule = schedules.find((s) => s._id === appointmentId);
-          if (foundSchedule) {
-            setSchedule(foundSchedule);
+          setAppointment(result.data.data);
+        } else if (result.status === 403) {
+          // Fallback: bị chặn quyền -> lấy từ danh sách của technician rồi chọn theo ID
+          const listResult = await getAppointmentsApi({
+            technicianId: user.id,
+            limit: 200,
+          });
+          if (listResult.ok && listResult.data?.success) {
+            const data = listResult.data.data as {
+              items?: Appointment[];
+              appointments?: Appointment[];
+            };
+            const items = (data.items ||
+              data.appointments ||
+              []) as Appointment[];
+            const found = items.find((a) => a._id === appointmentId);
+            if (found) {
+              setAppointment(found);
+            } else {
+              setError(
+                "Không tìm thấy thông tin appointment trong danh sách của bạn"
+              );
+            }
           } else {
-            setError("Không tìm thấy thông tin appointment");
+            setError(
+              listResult.message || "Không thể tải danh sách appointments"
+            );
           }
         } else {
           setError(result.message || "Không thể tải dữ liệu appointment");
@@ -89,30 +124,169 @@ export const TaskDetail = () => {
     fetchAppointmentDetail();
   }, [user?.id, appointmentId]);
 
+  // Fetch checklist nếu appointment đã có checklist
+  useEffect(() => {
+    const fetchChecklist = async () => {
+      if (!appointmentId || !appointment) return;
+      // Chỉ fetch nếu appointment đã có checklist (status check_in, in_progress, hoặc completed)
+      if (
+        appointment.status === "check_in" ||
+        appointment.status === "in_progress" ||
+        appointment.status === "working" ||
+        appointment.status === "completed" ||
+        appointment.status === "done" ||
+        appointment.status === "repaired"
+      ) {
+        try {
+          const res = await getChecklistsApi({ limit: 200 });
+          if (res.ok && res.data?.success) {
+            const payload = res.data.data as
+              | { items?: Checklist[]; checklists?: Checklist[] }
+              | Checklist[];
+            const normalized = Array.isArray(payload)
+              ? payload
+              : Array.isArray(payload?.items)
+              ? payload?.items
+              : Array.isArray((payload as { checklists?: Checklist[] })?.checklists)
+              ? (payload as { checklists?: Checklist[] }).checklists
+              : [];
+            const foundChecklist = (normalized as Checklist[]).find(
+              (c) =>
+                (typeof c.appointment_id === "string"
+                  ? c.appointment_id
+                  : (c.appointment_id as { _id?: string })?._id) === appointmentId
+            );
+            if (foundChecklist) {
+              setChecklist(foundChecklist);
+              // Fetch issue type
+              const issueTypeId =
+                typeof foundChecklist.issue_type_id === "string"
+                  ? foundChecklist.issue_type_id
+                  : (foundChecklist.issue_type_id as { _id?: string })?._id;
+              if (issueTypeId) {
+                const issueRes = await getIssueTypeByIdApi(issueTypeId);
+                if (issueRes.ok && issueRes.data?.success) {
+                  setChecklistIssueType(issueRes.data.data);
+                }
+              }
+              // Fetch parts và inventory costs
+              const partsWithCosts = await Promise.all(
+                foundChecklist.parts.map(async (p) => {
+                  const partId =
+                    typeof p.part_id === "string"
+                      ? p.part_id
+                      : (p.part_id as { _id?: string })?._id;
+                  if (!partId) return null;
+                  const partRes = await getPartByIdApi(partId);
+                  if (!partRes.ok || !partRes.data?.success) return null;
+                  const part = partRes.data.data;
+                  // Get inventory cost
+                  const centerId = appointment.center_id?._id;
+                  const partName = part.part_name;
+                  let cost = 0;
+                  if (centerId && partName) {
+                    const invRes = await getInventoryApi({
+                      center_id: centerId,
+                      part_name: partName,
+                      limit: 50,
+                    });
+                    if (invRes.ok && invRes.data?.success) {
+                      const items = (invRes.data.data.items || []) as InventoryItem[];
+                      const matched =
+                        items.find(
+                          (it) =>
+                            (it.part_id as unknown as { _id?: string })?._id === partId
+                        ) || items[0];
+                      if (matched) {
+                        const matchedWithTypo = matched as InventoryItem & {
+                          quantity_avaiable?: number;
+                        };
+                        cost = matchedWithTypo.cost_per_unit || 0;
+                      }
+                    }
+                  }
+                  return {
+                    part,
+                    quantity: p.quantity,
+                    cost: cost * p.quantity,
+                  };
+                })
+              );
+              setChecklistParts(
+                partsWithCosts.filter((p): p is { part: PartItem; quantity: number; cost: number } => p !== null)
+              );
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching checklist:", err);
+        }
+      }
+    };
+    fetchChecklist();
+  }, [appointmentId, appointment]);
+
   // Function để bắt đầu công việc (đổi status thành in_progress)
   const handleStartWork = async () => {
     if (!appointmentId) return;
 
     try {
-      setUpdating(true);
-      const result = await updateAppointmentStatusApi({
-        appointment_id: appointmentId,
-        status: "in_progress",
-      });
-
-      if (result.ok && result.data?.success) {
-        // Cập nhật local state
-        if (schedule) {
-          setSchedule({ ...schedule, status: "in_progress" });
-        }
-        // Có thể thêm toast notification ở đây
-        console.log("Đã bắt đầu công việc thành công");
-      } else {
-        setError(result.message || "Không thể bắt đầu công việc");
+      // Mở form checklist và nạp dữ liệu hỗ trợ
+      setShowChecklistForm(true);
+      const [issueRes, partsRes] = await Promise.all([
+        getIssueTypesApi(),
+        getPartsApi({ limit: 50 }),
+      ]);
+      if (issueRes.ok && issueRes.data?.success) {
+        setIssueTypes(issueRes.data.data.items || []);
+      }
+      if (partsRes.ok && partsRes.data?.success) {
+        setParts(partsRes.data.data.items || []);
       }
     } catch (err) {
       setError("Có lỗi xảy ra khi bắt đầu công việc");
       console.error("Error starting work:", err);
+    }
+  };
+
+  const submitChecklist = async () => {
+    if (!appointmentId) return;
+    try {
+      setUpdating(true);
+      const payload = {
+        appointment_id: appointmentId,
+        issue_type_id: checklistForm.issue_type_id,
+        issue_description: checklistForm.issue_description,
+        solution_applied: checklistForm.solution_applied,
+        parts: checklistForm.parts,
+      };
+      const res = await createChecklistApi(payload);
+      if (!res.ok || !res.data?.success) {
+        setError(res.message || "Tạo checklist thất bại");
+        setUpdating(false);
+        return;
+      }
+      // Sau khi tạo checklist, cập nhật trạng thái appointment -> check_in
+      const statusRes = await updateAppointmentStatusApi({
+        appointment_id: appointmentId,
+        status: "check_in",
+      });
+      if (statusRes.ok && statusRes.data?.success) {
+        if (appointment) setAppointment({ ...appointment, status: "check_in" });
+      }
+      setChecklistCreated(true);
+      setChecklistMessage(
+        "Checklist đã gửi thành công. Trạng thái đã chuyển sang 'check_in'. Vui lòng chờ staff duyệt."
+      );
+      setShowChecklistForm(false);
+      setChecklistForm({
+        issue_type_id: "",
+        issue_description: "",
+        solution_applied: "",
+        parts: [],
+      });
+    } catch (err) {
+      setError("Có lỗi khi gửi checklist");
+      console.error(err);
     } finally {
       setUpdating(false);
     }
@@ -130,9 +304,8 @@ export const TaskDetail = () => {
       });
 
       if (result.ok && result.data?.success) {
-        // Cập nhật local state
-        if (schedule) {
-          setSchedule({ ...schedule, status: "completed" });
+        if (appointment) {
+          setAppointment({ ...appointment, status: "completed" });
         }
         console.log("Đã hoàn thành công việc thành công");
       } else {
@@ -151,12 +324,18 @@ export const TaskDetail = () => {
       case "assigned":
       case "pending":
         return "bg-warning";
+      case "check_in":
       case "in_progress":
       case "working":
         return "bg-primary";
+      case "repaired":
       case "completed":
       case "done":
         return "bg-success";
+      case "delay":
+        return "bg-orange-500";
+      case "canceled":
+        return "bg-destructive";
       default:
         return "bg-muted";
     }
@@ -168,12 +347,20 @@ export const TaskDetail = () => {
         return "Đã giao";
       case "pending":
         return "Chờ xử lý";
+      case "check_in":
+        return "Đã nhận xe";
       case "in_progress":
       case "working":
         return "Đang thực hiện";
+      case "repaired":
+        return "Đã sửa xong";
       case "completed":
       case "done":
         return "Hoàn thành";
+      case "delay":
+        return "Trì hoãn";
+      case "canceled":
+        return "Đã hủy";
       default:
         return status;
     }
@@ -204,7 +391,7 @@ export const TaskDetail = () => {
   }
 
   // Error state
-  if (error || !schedule) {
+  if (error || !appointment) {
     return (
       <main className="flex-1 p-6 bg-background">
         <div className="flex items-center gap-4 mb-6">
@@ -247,20 +434,220 @@ export const TaskDetail = () => {
           <p className="text-muted-foreground">
             Thông tin chi tiết về appointment được giao
           </p>
+          {checklistMessage && (
+            <p className="text-sm text-blue-600 mt-1">{checklistMessage}</p>
+          )}
         </div>
       </div>
 
       {/* Thông tin chính */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Checklist form */}
+        {showChecklistForm && (
+          <div className="lg:col-span-3">
+            <Card className="bg-gradient-card border border-border shadow-soft">
+              <CardContent className="p-6 space-y-4">
+                <h3 className="text-lg font-semibold">
+                  Tạo checklist khi bắt đầu
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Loại vấn đề
+                    </p>
+                    <select
+                      className="w-full border rounded px-3 py-2 bg-background"
+                      value={checklistForm.issue_type_id}
+                      onChange={(e) =>
+                        setChecklistForm((s) => ({
+                          ...s,
+                          issue_type_id: e.target.value,
+                        }))
+                      }>
+                      <option value="">-- Chọn --</option>
+                      {issueTypes.map((it) => (
+                        <option key={it._id} value={it._id}>
+                          {it.category} - {it.severity}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Giải pháp áp dụng
+                    </p>
+                    <input
+                      className="w-full border rounded px-3 py-2 bg-background"
+                      value={checklistForm.solution_applied}
+                      onChange={(e) =>
+                        setChecklistForm((s) => ({
+                          ...s,
+                          solution_applied: e.target.value,
+                        }))
+                      }
+                      placeholder="Ví dụ: Thay phanh, cân chỉnh..."
+                    />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Mô tả vấn đề
+                  </p>
+                  <textarea
+                    className="w-full border rounded px-3 py-2 bg-background"
+                    rows={3}
+                    value={checklistForm.issue_description}
+                    onChange={(e) =>
+                      setChecklistForm((s) => ({
+                        ...s,
+                        issue_description: e.target.value,
+                      }))
+                    }
+                    placeholder="Mô tả chi tiết vấn đề khách gặp phải"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">Phụ tùng sử dụng</p>
+                    <button
+                      className="text-sm underline"
+                      onClick={() =>
+                        setChecklistForm((s) => ({
+                          ...s,
+                          parts: [...s.parts, { part_id: "", quantity: 1 }],
+                        }))
+                      }>
+                      + Thêm phụ tùng
+                    </button>
+                  </div>
+                  {checklistForm.parts.map((p, idx) => (
+                    <div
+                      key={idx}
+                      className="grid grid-cols-1 md:grid-cols-6 gap-2">
+                      <select
+                        className="md:col-span-4 border rounded px-3 py-2 bg-background"
+                        value={p.part_id}
+                        onChange={(e) => {
+                          const part_id = e.target.value;
+                          // Fetch inventory info for selected part (by part_name)
+                          const selected = parts.find(
+                            (pt) => pt._id === part_id
+                          );
+                          if (selected?.part_name) {
+                            const centerId = (
+                              appointment?.center_id as { _id?: string }
+                            )?._id;
+                            getInventoryApi({
+                              part_name: selected.part_name,
+                              ...(centerId ? { center_id: centerId } : {}),
+                              limit: 50,
+                            }).then((inv) => {
+                              if (inv.ok && inv.data?.success) {
+                                const items = inv.data.data.items || [];
+                                const totalAvailable = items.reduce(
+                                  (sum: number, it: InventoryItem) =>
+                                    sum + (it.quantity_available || 0),
+                                  0
+                                );
+                                const unitCost = items[0]?.cost_per_unit;
+                                setPartInventoryInfo((prev) => ({
+                                  ...prev,
+                                  [idx]: {
+                                    available: totalAvailable,
+                                    unitCost,
+                                  },
+                                }));
+                              } else {
+                                setPartInventoryInfo((prev) => ({
+                                  ...prev,
+                                  [idx]: { available: 0 },
+                                }));
+                              }
+                            });
+                          }
+                          setChecklistForm((s) => {
+                            const partsArr = [...s.parts];
+                            partsArr[idx] = { ...partsArr[idx], part_id };
+                            return { ...s, parts: partsArr };
+                          });
+                        }}>
+                        <option value="">-- Chọn phụ tùng --</option>
+                        {parts.map((pt) => (
+                          <option key={pt._id} value={pt._id}>
+                            {pt.part_name || pt.part_number || pt._id}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min={1}
+                        className="md:col-span-1 border rounded px-3 py-2 bg-background"
+                        value={p.quantity}
+                        onChange={(e) => {
+                          const quantity = Math.max(
+                            1,
+                            Number(e.target.value) || 1
+                          );
+                          setChecklistForm((s) => {
+                            const partsArr = [...s.parts];
+                            partsArr[idx] = { ...partsArr[idx], quantity };
+                            return { ...s, parts: partsArr };
+                          });
+                        }}
+                      />
+                      <div className="md:col-span-6 text-xs text-muted-foreground">
+                        {partInventoryInfo[idx] && (
+                          <span>
+                            Tồn khả dụng:{" "}
+                            {partInventoryInfo[idx].available ?? 0}
+                            {partInventoryInfo[idx].unitCost !== undefined &&
+                              ` • Giá đơn vị: ${partInventoryInfo[
+                                idx
+                              ].unitCost?.toLocaleString("vi-VN")} VNĐ`}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        className="md:col-span-1 text-sm text-destructive underline"
+                        onClick={() =>
+                          setChecklistForm((s) => ({
+                            ...s,
+                            parts: s.parts.filter((_, i) => i !== idx),
+                          }))
+                        }>
+                        Xóa
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    className="bg-primary text-primary-foreground"
+                    disabled={updating || !checklistForm.issue_type_id}
+                    onClick={submitChecklist}>
+                    {updating ? "Đang gửi..." : "Gửi checklist & bắt đầu"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowChecklistForm(false)}>
+                    Hủy
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
         {/* Thông tin appointment */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Thông tin Appointment</h3>
                 <Badge
-                  className={`${getStatusColor(schedule.status)} text-white`}>
-                  {getStatusText(schedule.status)}
+                  className={`${getStatusColor(
+                    appointment.status
+                  )} text-white`}>
+                  {getStatusText(appointment.status)}
                 </Badge>
               </div>
 
@@ -269,7 +656,9 @@ export const TaskDetail = () => {
                   <Calendar className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Ngày hẹn</p>
-                    <p className="font-medium">{schedule.appoinment_date}</p>
+                    <p className="font-medium">
+                      {formatDate(appointment.appoinment_date)}
+                    </p>
                   </div>
                 </div>
 
@@ -277,7 +666,7 @@ export const TaskDetail = () => {
                   <Clock className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Giờ hẹn</p>
-                    <p className="font-medium">{schedule.appoinment_time}</p>
+                    <p className="font-medium">{appointment.appoinment_time}</p>
                   </div>
                 </div>
 
@@ -285,136 +674,280 @@ export const TaskDetail = () => {
                   <DollarSign className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Chi phí dự kiến
+                      Chi phí dịch vụ
                     </p>
                     <p className="font-medium">
-                      {schedule.estimated_cost?.toLocaleString("vi-VN")} VNĐ
+                      {appointment.service_type_id?.base_price?.toLocaleString(
+                        "vi-VN"
+                      )}{" "}
+                      VNĐ
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Wrench className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Thời gian dự kiến
-                    </p>
-                    <p className="font-medium">
-                      {schedule.service_type_id.estimated_duration} giờ
-                    </p>
+                {appointment.service_type_id?.estimated_duration && (
+                  <div className="flex items-center gap-3">
+                    <Wrench className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Thời gian dự kiến
+                      </p>
+                      <p className="font-medium">
+                        {appointment.service_type_id.estimated_duration} giờ
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
-              {schedule.notes && (
+              {appointment.notes && (
                 <div className="mt-4">
                   <p className="text-sm text-muted-foreground mb-2">Ghi chú</p>
                   <p className="text-sm bg-muted/50 p-3 rounded-lg">
-                    {schedule.notes}
+                    {appointment.notes}
                   </p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Thông tin khách hàng */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          {/* Thông tin khách hàng + xe */}
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Thông tin khách hàng
-              </h3>
-              <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">{schedule.user_id.fullName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {schedule.user_id.phone}
-                  </p>
+              <h3 className="text-lg font-semibold mb-4">Thông tin khách hàng</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <User className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">
+                      {appointment.user_id?.fullName ||
+                        appointment.user_id?.username}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {appointment.user_id?.email}
+                    </p>
+                    {appointment.user_id?.phone && (
+                      <p className="text-sm text-muted-foreground">
+                        {appointment.user_id?.phone}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Car className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">
+                      {(appointment.vehicle_id as { brand?: string })?.brand || ""}{" "}
+                      {(appointment.vehicle_id as { model?: string })?.model || ""}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Biển số: {appointment.vehicle_id?.license_plate}
+                    </p>
+                    {(appointment.vehicle_id as { vin?: string })?.vin && (
+                      <p className="text-sm text-muted-foreground">
+                        VIN: {(appointment.vehicle_id as { vin?: string }).vin}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Thông tin xe */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          {/* Thông tin dịch vụ + trung tâm */}
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Thông tin xe</h3>
-              <div className="flex items-center gap-3">
-                <Car className="h-5 w-5 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-4">Thông tin dịch vụ</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="font-medium">
-                    {schedule.vehicle_id.brand} {schedule.vehicle_id.model}
+                  <p className="font-medium mb-2">
+                    {appointment.service_type_id?.service_name}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Biển số: {schedule.vehicle_id.license_plate}
-                  </p>
-                  {(schedule.vehicle_id as { vin?: string })?.vin && (
+                  {(appointment.service_type_id as { description?: string })
+                    ?.description && (
                     <p className="text-sm text-muted-foreground">
-                      VIN: {(schedule.vehicle_id as { vin?: string }).vin}
+                      {
+                        (appointment.service_type_id as { description?: string })
+                          .description
+                      }
                     </p>
                   )}
                 </div>
+                <div className="flex items-start gap-3 md:justify-end">
+                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="text-right md:text-left">
+                    <p className="font-medium">
+                      {appointment.center_id?.center_name ||
+                        appointment.center_id?.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {appointment.center_id?.address}
+                    </p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Thông tin dịch vụ */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Thông tin dịch vụ</h3>
-              <div>
-                <p className="font-medium mb-2">
-                  {schedule.service_type_id.service_name}
-                </p>
-                {(schedule.service_type_id as { description?: string })
-                  ?.description && (
-                  <p className="text-sm text-muted-foreground">
-                    {
-                      (schedule.service_type_id as { description?: string })
-                        .description
-                    }
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Thông tin checklist */}
+          {checklist && (
+            <Card className="bg-gradient-card border border-border shadow-soft">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Thông tin checklist</h3>
+                <div className="space-y-4">
+                  {/* Issue Type */}
+                  {checklistIssueType && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Loại vấn đề
+                      </p>
+                      <p className="font-medium">
+                        {checklistIssueType.category && checklistIssueType.severity
+                          ? `${checklistIssueType.category} • ${checklistIssueType.severity}`
+                          : checklistIssueType.category || checklistIssueType.severity || "Không xác định"}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Issue Description */}
+                  {checklist.issue_description && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Mô tả vấn đề
+                      </p>
+                      <p className="font-medium">{checklist.issue_description}</p>
+                    </div>
+                  )}
+
+                  {/* Solution Applied */}
+                  {checklist.solution_applied && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Giải pháp áp dụng
+                      </p>
+                      <p className="font-medium">{checklist.solution_applied}</p>
+                    </div>
+                  )}
+
+                  {/* Parts Used */}
+                  {checklistParts.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Phụ tùng sử dụng
+                      </p>
+                      <div className="space-y-2">
+                        {checklistParts.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="rounded-md border border-border p-3 bg-background/60">
+                            <div className="flex items-center justify-between">
+                              <div className="font-medium">
+                                {item.part.part_name || item.part.part_number || `Phụ tùng ${idx + 1}`}
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm">
+                                  Số lượng: {item.quantity}
+                                </div>
+                                {item.cost > 0 && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Thành tiền: {item.cost.toLocaleString("vi-VN")} VNĐ
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {item.part.description && (
+                              <p className="text-xs text-muted-foreground mt-2">
+                                {item.part.description}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                        <div className="text-right text-sm font-medium mt-2">
+                          Tổng chi phí phụ tùng:{" "}
+                          {checklistParts
+                            .reduce((sum, item) => sum + item.cost, 0)
+                            .toLocaleString("vi-VN")} {" "}
+                          VNĐ
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tổng chi phí */}
+          {checklist && checklistParts.length > 0 && (
+            <Card className="bg-gradient-card border border-primary/20 shadow-soft">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Tổng chi phí</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Chi phí dịch vụ:</span>
+                    <span className="font-medium">
+                      {appointment.service_type_id?.base_price?.toLocaleString("vi-VN") || "0"} {" "}
+                      VNĐ
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Chi phí phụ tùng:</span>
+                    <span className="font-medium">
+                      {checklistParts
+                        .reduce((sum, item) => sum + item.cost, 0)
+                        .toLocaleString("vi-VN")} {" "}
+                      VNĐ
+                    </span>
+                  </div>
+                  <div className="border-t pt-2 mt-2 flex justify-between">
+                    <span className="font-semibold text-lg">Tổng cộng:</span>
+                    <span className="font-bold text-lg text-primary">
+                      {(
+                        (appointment.service_type_id?.base_price || 0) +
+                        checklistParts.reduce((sum, item) => sum + item.cost, 0)
+                      ).toLocaleString("vi-VN")} {" "}
+                      VNĐ
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar với actions */}
         <div className="space-y-6">
-          {/* Thông tin trung tâm */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Trung tâm dịch vụ</h3>
-              <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="font-medium">
-                    {schedule.center_id.center_name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {schedule.center_id.address}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Actions */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold mb-4">Hành động</h3>
               <div className="space-y-3">
-                {schedule.status === "assigned" ||
-                schedule.status === "pending" ? (
-                  <Button
-                    className="w-full bg-primary text-primary-foreground"
-                    onClick={handleStartWork}
-                    disabled={updating}>
-                    {updating ? "Đang cập nhật..." : "Bắt đầu công việc"}
-                  </Button>
-                ) : schedule.status === "in_progress" ||
-                  schedule.status === "working" ? (
+                {checklistCreated || appointment.status === "check_in" ? (
+                  <div className="text-center">
+                    <Badge className="bg-primary text-white">
+                      Đã gửi checklist
+                    </Badge>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Vui lòng chờ staff duyệt
+                    </p>
+                  </div>
+                ) : appointment.status === "assigned" ||
+                  appointment.status === "pending" ? (
+                  showChecklistForm ? (
+                    <Button className="w-full" variant="outline" disabled>
+                      Đang tạo checklist - vui lòng gửi biểu mẫu bên trên
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full bg-primary text-primary-foreground"
+                      onClick={handleStartWork}
+                      disabled={updating}>
+                      Bắt đầu công việc
+                    </Button>
+                  )
+                ) : appointment.status === "in_progress" ||
+                  appointment.status === "working" ? (
                   <Button
                     className="w-full bg-success text-success-foreground"
                     onClick={handleCompleteWork}

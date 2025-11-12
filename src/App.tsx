@@ -45,6 +45,8 @@ import TechnicianSchedulePage from "./pages/dashboard/staff/TechnicianSchedulePa
 import QueuePage from "./pages/dashboard/staff/QueuePage";
 import StaffChatPage from "./pages/dashboard/staff/StaffChatPage";
 import SocketTestPage from "./pages/customer/SocketTestPage";
+import ChecklistManagement from "./pages/dashboard/staff/maintenance/ChecklistManagement";
+import ChecklistDetail from "./pages/dashboard/staff/maintenance/ChecklistDetail";
 import ContactPage from "./pages/ContactPage";
 import AboutPage from "./pages/AboutPage";
 
@@ -109,9 +111,10 @@ const AppRoutes = () => {
         <Route path="appointments" element={<AppointmentManagement />} />
         <Route path="appointments/:id" element={<AppointmentDetail />} />
         <Route path="customers" element={<CustomersPage />} />
-        <Route path="technician-schedule" element={<TechnicianSchedulePage />} />
         <Route path="queue" element={<QueuePage />} />
         <Route path="chat" element={<StaffChatPage />} />
+        <Route path="maintenance" element={<ChecklistManagement />} />
+        <Route path="maintenance/:checklistId" element={<ChecklistDetail />} />
       </Route>
       {/* Các route con của admin đã được lồng bên trong /dashboard/admin */}
 
