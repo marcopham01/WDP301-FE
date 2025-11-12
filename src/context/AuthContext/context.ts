@@ -6,6 +6,7 @@ export interface AppUser {
   email?: string;
   fullName?: string;
   role?: string;
+  avatar?: string;
 }
 
 export const AuthContext = createContext<{

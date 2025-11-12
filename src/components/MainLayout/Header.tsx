@@ -4,9 +4,12 @@ import { Car, Zap, Menu, X, User, LogOut, Bell, Calendar, CreditCard, MessageCir
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { NotificationDropdown } from "@/components/ui/notification-dropdown";
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
 
 interface NavItem {
   label: string;
@@ -27,6 +30,18 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+
+  // Debug log
+  useEffect(() => {
+    if (user) {
+      console.log('🎨 [Header] User updated:', { 
+        id: user.id, 
+        fullName: user.fullName, 
+        avatar: user.avatar,
+        hasAvatar: !!user.avatar 
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -124,6 +139,9 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
+                        {user.avatar && (
+                          <AvatarImage src={`${BASE_URL}${user.avatar}`} alt={user.fullName || user.username || ""} />
+                        )}
                         <AvatarFallback>
                           {(user.fullName || user.username || user.email || "").charAt(0).toUpperCase()}
                         </AvatarFallback>
@@ -248,6 +266,9 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
+                        {user.avatar && (
+                          <AvatarImage src={`${BASE_URL}${user.avatar}`} alt={user.fullName || user.username || ""} />
+                        )}
                         <AvatarFallback>
                           {(user.fullName || user.username || user.email || "").charAt(0).toUpperCase()}
                         </AvatarFallback>

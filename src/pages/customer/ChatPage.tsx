@@ -416,6 +416,9 @@ const ChatPage = () => {
 
                     {!msg.isSupport && (
                       <Avatar className="h-8 w-8 ml-2 mt-1">
+                        {user?.avatar && (
+                          <AvatarImage src={`${config.API_BASE_URL}${user.avatar}`} alt={user?.fullName || user?.username || ""} />
+                        )}
                         <AvatarFallback className="bg-gray-200 text-gray-700 text-xs">
                           {(user?.fullName || user?.username || "U")
                             .charAt(0)
