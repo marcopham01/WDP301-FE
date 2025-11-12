@@ -8,6 +8,7 @@ import { useScrollReveal } from "../lib/useScrollReveal";
 import { useAuth } from "../context/AuthContext/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import ChatWidget from "@/components/ChatWidget";
 
 const Index = () => {
   const heroRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
@@ -32,6 +33,7 @@ const Index = () => {
         <div ref={heroRef}>
           <HeroSection />
         </div>
+        <ChatWidget />
         <div ref={featuresRef} id="features-section">
           <FeaturesSection />
         </div>
