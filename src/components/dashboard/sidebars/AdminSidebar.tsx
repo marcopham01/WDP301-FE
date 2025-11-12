@@ -1,64 +1,122 @@
-import {
-  BarChart3,
-  Users,
-  Car,
-  Settings,
-  FileText,
-  DollarSign,
-  Home,
-  MapPin,
-  Package,
-  AlertTriangle,
-} from "lucide-react";
-
+import { Car, ChevronRight, LogOut, Search } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
-import { NavLink } from "react-router-dom";
-
-const adminMenuItems = [
-  { title: "Tổng quan", icon: Home, href: "/dashboard/admin" },
-  {
-    title: "Quản lý trung tâm",
-    icon: MapPin,
-    href: "/dashboard/admin/service-centers",
-  },
-  {
-    title: "Quản lý dịch vụ",
-    icon: Settings,
-    href: "/dashboard/admin/services",
-  },
-  { title: "Quản lý khách hàng", icon: Users, href: "/dashboard/admin/customers" },
-  { title: "Quản lý phương tiện", icon: Car, href: "/dashboard/admin/vehicle-models" },
-  { title: "Quản lý lịch hẹn", icon: FileText },
-  { title: "Quản lý kỹ thuật viên", icon: Users },
-  { title: "Quản lý phụ tùng", icon: Settings, href: "/dashboard/admin/parts" },
-  { title: "Quản lý Inventory", icon: Package, href: "/dashboard/admin/inventory" },
-  { title: "Quản lý Issue Types", icon: AlertTriangle, href: "/dashboard/admin/issue-types" },
-  { title: "Báo cáo & Thống kê", icon: BarChart3 },
-  { title: "Quản lý tài chính", icon: DollarSign },
-];
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@radix-ui/react-collapsible";
+import { Button } from "@/components/ui/button";
+import { adminMenuItems } from "@/constants/adminMenuList";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export function AdminSidebar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("role");
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
+  };
+
+  const handleConfirmLogout = () => {
+    setIsDialogOpen(false);
+    handleLogout();
+  };
+
+  const highlightText = (text: string, query: string) => {
+    if (!query) return text;
+    const regex = new RegExp(`(${query})`, "gi");
+    const parts = text.split(regex);
+    return parts.map((part, index) =>
+      regex.test(part) ? (
+        <span key={index} className="bg-yellow-300 text-green-600 px-1 rounded">
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  };
+
+  const filteredMenuItems = adminMenuItems
+    .filter((item) => {
+      const matchesTitle = item.title
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesSubItems = item.items?.some((subItem) =>
+        subItem.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      return matchesTitle || matchesSubItems;
+    })
+    .map((item) => ({
+      ...item,
+      items: item.items?.filter((subItem) =>
+        subItem.title.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    }));
+
   return (
-    <Sidebar className="w-64 border-r bg-card" collapsible="icon">
-      <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
-        <div className="mb-6">
-          <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
-            <div className="p-2 rounded-lg bg-primary text-primary-foreground">
-              <Car className="h-6 w-6" />
-            </div>
-            <div className="group-data-[collapsible=icon]:hidden">
-              <h2 className="font-semibold text-lg">EV Service</h2>
-              <p className="text-sm text-muted-foreground">Management System</p>
-            </div>
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild>
+              <a href="/dashboard/admin">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <Car className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">EV Service</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    Management System
+                  </span>
+                </div>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <div className="px-4 py-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Tìm kiếm menu..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
 
@@ -66,35 +124,122 @@ export function AdminSidebar() {
           <SidebarGroupLabel>Bảng điều khiển Quản trị viên</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {adminMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
-                    {item.href ? (
-                      <NavLink
-                        to={item.href}
-                        className={({ isActive }) =>
-                          `w-full flex items-center gap-3 p-2 text-left rounded-md ${
-                            isActive
-                              ? "bg-primary text-primary-foreground"
-                              : "hover:bg-accent"
-                          }`
-                        }>
-                        <item.icon className="h-4 w-4" />
-                        <span className="text-sm">{item.title}</span>
-                      </NavLink>
-                    ) : (
-                      <button className="w-full flex items-center gap-3 p-2 text-left hover:bg-accent rounded-md">
-                        <item.icon className="h-4 w-4" />
-                        <span className="text-sm">{item.title}</span>
-                      </button>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {filteredMenuItems.map((item) => {
+                const isItemActive = item.href === location.pathname;
+
+                return (
+                  <Collapsible
+                    key={item.title}
+                    asChild
+                    {...(searchQuery && item.items && item.items.length > 0
+                      ? { open: true }
+                      : {})}
+                    className="group/collapsible"
+                  >
+                    <SidebarMenuItem>
+                      {item.items && item.items.length > 0 ? (
+                        <>
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton
+                              tooltip={item.title}
+                              className="hover:bg-ev-green hover:text-white transition-colors duration-200 py-3 px-4 text-base"
+                            >
+                              {item.icon && <item.icon className="h-5 w-5" />}
+                              <span>
+                                {highlightText(item.title, searchQuery)}
+                              </span>
+                              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub>
+                              {item.items.map((subItem) => {
+                                const isSubActive =
+                                  subItem.href === location.pathname;
+
+                                return (
+                                  <SidebarMenuSubItem key={subItem.title}>
+                                    <SidebarMenuSubButton asChild>
+                                      <NavLink
+                                        to={subItem.href}
+                                        className={`hover:bg-ev-green/20 hover:text-ev-green transition-colors duration-200 py-2 px-4 ${
+                                          isSubActive
+                                            ? "bg-ev-green text-white"
+                                            : ""
+                                        }`}
+                                      >
+                                        <span>
+                                          {highlightText(
+                                            subItem.title,
+                                            searchQuery
+                                          )}
+                                        </span>
+                                      </NavLink>
+                                    </SidebarMenuSubButton>
+                                  </SidebarMenuSubItem>
+                                );
+                              })}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </>
+                      ) : (
+                        <SidebarMenuButton asChild>
+                          <NavLink
+                            to={item.href!}
+                            className={`hover:bg-ev-green hover:text-white transition-colors duration-200 py-3 px-4 text-base flex items-center ${
+                              isItemActive ? "bg-ev-green text-white" : ""
+                            }`}
+                          >
+                            {item.icon && (
+                              <item.icon className="h-5 w-5 mr-2" />
+                            )}
+                            <span>
+                              {highlightText(item.title, searchQuery)}
+                            </span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      )}
+                    </SidebarMenuItem>
+                  </Collapsible>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="w-full" variant="outline">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Đăng xuất
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Xác nhận đăng xuất</DialogTitle>
+                  <DialogDescription>
+                    Bạn có chắc chắn muốn đăng xuất khỏi hệ thống không? Hành
+                    động này sẽ kết thúc phiên làm việc hiện tại.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Hủy
+                  </Button>
+                  <Button onClick={handleConfirmLogout}>Xác nhận</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }

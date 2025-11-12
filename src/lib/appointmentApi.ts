@@ -295,6 +295,13 @@ export interface GetAppointmentsParams {
   page?: number;
   limit?: number;
   status?: string;
+  technicianId?: string;
+  service_center_id?: string;
+  customer_id?: string;
+  is_working_now?: boolean;
+  date?: string;
+  date_from?: string;
+  date_to?: string;
 }
 
 export async function getAppointmentsApi(
@@ -306,6 +313,13 @@ export async function getAppointmentsApi(
   if (params.status) query.set("status", params.status);
   // Add cache-busting parameter
   query.set("_t", String(Date.now()));
+  if (params.technicianId) query.set("technician_id", params.technicianId);
+  if (params.service_center_id) query.set("service_center_id", params.service_center_id);
+  if (params.customer_id) query.set("customer_id", params.customer_id);
+  if (params.is_working_now !== undefined) query.set("is_working_now", String(params.is_working_now));
+  if (params.date) query.set("date", params.date);
+  if (params.date_from) query.set("date_from", params.date_from);
+  if (params.date_to) query.set("date_to", params.date_to);
   const qs = query.toString();
   const url = `${BASE_URL}/api/appointment/list?${qs}`;
   const response = await fetch(url, {

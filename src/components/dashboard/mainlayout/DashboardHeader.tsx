@@ -1,7 +1,17 @@
 import { Button } from "@/components/ui/button";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+// import { SidebarTrigger } from "@/components/ui/sidebar";
 // import { MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react"; // Thêm import useState
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"; // Thêm import Dialog components
 // Chat bubble moved to a global floating widget for staff; no header trigger
 
 interface DashboardHeaderProps {
@@ -16,6 +26,8 @@ export function DashboardHeader({
   subtitle,
 }: DashboardHeaderProps) {
   const navigate = useNavigate();
+  const [isDialogOpen, setIsDialogOpen] = useState(false); // State cho dialog
+
   const handleLogout = () => {
     onLogout();
     localStorage.removeItem("accessToken");
@@ -24,33 +36,67 @@ export function DashboardHeader({
       navigate("/login");
     }, 1000);
   };
+
+  const handleConfirmLogout = () => {
+    setIsDialogOpen(false); // Đóng dialog
+    handleLogout(); // Thực hiện logout
+  };
+
   return (
-    <header className="relative px-6 py-5 border-b border-transparent bg-gradient-to-r from-ev-green to-teal-500 text-white shadow-sm">
-      <div className="absolute inset-0 opacity-10 pointer-events-none select-none [background:radial-gradient(600px_200px_at_20%_-20%,white,transparent)]" />
+    <header className="relative px-8 py-6 border-b border-ev-green/20 bg-gradient-to-r bg-ev-green text-white shadow-md">
+      <div className="absolute inset-0 opacity-15 pointer-events-none select-none [background:radial-gradient(600px_200px_at_20%_-20%,white,transparent)]" />
       <div className="relative flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <SidebarTrigger className="text-white hover:bg-white/10" />
+        <div className="flex items-center gap-4">
+          {/* SidebarTrigger removed */}
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Chào mừng trở lại, {user.name}</h1>
-            <p className="text-sm text-green-50/90">{subtitle || "Staff Panel"}</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-white">
+              Chào mừng trở lại, {user.name}!
+            </h1>
+            <p className="text-sm text-ev-green-50/90">
+              {subtitle || "Staff Panel"}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-white/15 ring-2 ring-white/30 text-white flex items-center justify-center text-sm font-semibold shadow-sm">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-white/20 ring-2 ring-white/40 text-white flex items-center justify-center text-sm font-semibold shadow-sm">
               {user.name.charAt(0)}
             </div>
             <div className="text-right">
-              <p className="font-medium leading-none">{user.name}</p>
-              <p className="text-xs text-green-50/80 capitalize">{user.role}</p>
+              <p className="font-medium leading-none text-white">{user.name}</p>
+              <p className="text-xs text-ev-green-50/80 capitalize">
+                {user.role}
+              </p>
             </div>
           </div>
-          <Button
-            onClick={handleLogout}
-            className="bg-white/10 hover:bg-white/20 text-white border-white/20"
-            variant="outline">
-            Đăng xuất
-          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                className="bg-white/15 hover:bg-white/25 text-white border-white/30 rounded-full px-4 py-2 transition-all duration-200"
+                variant="outline"
+              >
+                Đăng xuất
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Xác nhận đăng xuất</DialogTitle>
+                <DialogDescription>
+                  Bạn có chắc chắn muốn đăng xuất khỏi hệ thống không? Hành động
+                  này sẽ kết thúc phiên làm việc hiện tại.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
+                  Hủy
+                </Button>
+                <Button onClick={handleConfirmLogout}>Xác nhận</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </header>

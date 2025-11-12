@@ -2,234 +2,172 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { Wrench, Clock, CheckCircle, Battery, FileText } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext/useAuth";
 import { useNavigate } from "react-router-dom";
 import {
-  getTechnicianScheduleApi,
-  TechnicianScheduleParams,
-  ScheduleItem,
-  updateAppointmentStatusApi,
+  getAppointmentsApi,
+  GetAppointmentsParams,
+  Appointment,
 } from "@/lib/appointmentApi";
+
+function formatDate(date?: string) {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
 
 export const TechnicianOverview = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [updating, setUpdating] = useState(false);
 
-  // Lấy dữ liệu schedule của technician
+  // Lấy dữ liệu appointments của technician khi đăng nhập
   useEffect(() => {
-    const fetchTechnicianSchedule = async () => {
+    const fetchTechnicianAppointments = async () => {
       if (!user?.id) return;
 
       try {
         setLoading(true);
         setError(null);
 
-        // Lấy schedule trong 30 ngày gần đây
-        const today = new Date();
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(today.getDate() + 30);
-
-        const params: TechnicianScheduleParams = {
-          technician_id: user.id,
-          date_from: today.toISOString().split("T")[0],
-          date_to: thirtyDaysFromNow.toISOString().split("T")[0],
+        const params: GetAppointmentsParams = {
+          technicianId: user.id,
+          page: 1,
+          limit: 100, // Lấy nhiều appointments để hiển thị
         };
 
-        const result = await getTechnicianScheduleApi(params);
+        const result = await getAppointmentsApi(params);
 
-        console.log("Technician Schedule API Response:", result);
+        console.log("Technician Appointments API Response:", result);
         console.log("Technician ID:", user.id);
-        console.log("Date range:", params.date_from, "to", params.date_to);
 
         if (result.ok && result.data?.success) {
-          // Lấy schedules từ response - technician chỉ lấy schedule của chính mình
-          const scheduleData = result.data.data;
-          console.log("Schedule Data Structure:", scheduleData);
-
-          // Kiểm tra cấu trúc response và lấy schedules
-          const dataWithSchedules = scheduleData as unknown as {
-            schedules?: ScheduleItem[];
+          // Backend trả về items hoặc appointments
+          const data = result.data.data as {
+            items?: Appointment[];
+            appointments?: Appointment[];
           };
-          if (
-            dataWithSchedules.schedules &&
-            Array.isArray(dataWithSchedules.schedules)
-          ) {
-            // Trường hợp response có schedules trực tiếp (TechnicianScheduleResponse)
-            setSchedules(dataWithSchedules.schedules);
-          } else if (scheduleData.items && scheduleData.items.length > 0) {
-            // Trường hợp response có items array (TechnicianScheduleListResponse)
-            setSchedules(scheduleData.items[0].schedules);
-          } else {
-            setSchedules([]);
-          }
+          const appointmentsData = (data.items ||
+            data.appointments ||
+            []) as Appointment[];
+          setAppointments(appointmentsData);
+          console.log("Appointments loaded:", appointmentsData.length);
+          console.log("Appointments data:", appointmentsData);
         } else {
-          setError(result.message || "Không thể tải dữ liệu lịch làm việc");
+          setError(result.message || "Không thể tải danh sách appointments");
         }
       } catch (err) {
         setError("Có lỗi xảy ra khi tải dữ liệu");
-        console.error("Error fetching technician schedule:", err);
+        console.error("Error fetching technician appointments:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTechnicianSchedule();
+    fetchTechnicianAppointments();
   }, [user?.id]);
 
-  // Debug logging để kiểm tra schedules
-  useEffect(() => {
-    console.log("Schedules state updated:", schedules);
-    console.log("Schedules length:", schedules.length);
-  }, [schedules]);
-
   // Phân loại tasks theo status
-  console.log("All schedules for filtering:", schedules);
-  console.log(
-    "Schedule statuses:",
-    schedules.map((s) => s.status)
-  );
-
-  const assignedTasks = schedules
+  const assignedTasks = appointments
     .filter(
-      (schedule) =>
-        schedule.status === "assigned" || schedule.status === "pending"
+      (appointment) =>
+        appointment.status === "assigned" || appointment.status === "pending"
     )
-    .map((schedule) => ({
-      id: schedule._id,
-      vehicle: `${schedule.vehicle_id.brand} ${schedule.vehicle_id.model} - ${schedule.vehicle_id.license_plate}`,
-      customer: schedule.user_id.fullName,
-      service: schedule.service_type_id.service_name,
-      priority: "medium", // Có thể thêm logic để xác định priority
-      assignedDate: schedule.appoinment_date,
+    .map((appointment) => ({
+      id: appointment._id,
+      vehicle: `${appointment.vehicle_id?.brand || ""} ${
+        appointment.vehicle_id?.model || ""
+      } - ${appointment.vehicle_id?.license_plate || ""}`,
+      licensePlate: appointment.vehicle_id?.license_plate || "",
+      customer: appointment.user_id?.fullName || "N/A",
+      service: appointment.service_type_id?.service_name || "N/A",
+      serviceDescription:
+        appointment.service_type_id?.description || "Không có mô tả",
+      assignedDate: formatDate(appointment.appoinment_date) || "",
       estimatedHours:
-        parseInt(schedule.service_type_id.estimated_duration) || 2,
-      description: schedule.notes || "Không có mô tả chi tiết",
-      estimatedCost: schedule.estimated_cost,
-      centerName: schedule.center_id.center_name,
-      centerAddress: schedule.center_id.address,
-      customerPhone: schedule.user_id.phone,
-      vehicleVin: (schedule.vehicle_id as { vin?: string })?.vin || "N/A",
-      serviceDescription:
-        (schedule.service_type_id as { description?: string })?.description ||
-        "Không có mô tả",
+        parseInt(appointment.service_type_id?.estimated_duration || "2") || 2,
+      description: appointment.notes || "Không có mô tả chi tiết",
+      estimatedCost: appointment.service_type_id?.base_price,
+      centerName:
+        appointment.center_id?.center_name ||
+        appointment.center_id?.name ||
+        "N/A",
+      centerAddress: appointment.center_id?.address || "N/A",
+      customerEmail: appointment.user_id?.email || "N/A",
+      vehicleVin: appointment.vehicle_id?.vin || "N/A",
     }));
 
-  console.log("Assigned tasks:", assignedTasks);
-
-  const inProgressTasks = schedules
+  const inProgressTasks = appointments
     .filter(
-      (schedule) =>
-        schedule.status === "in_progress" || schedule.status === "working"
+      (appointment) =>
+        appointment.status === "in_progress" ||
+        appointment.status === "check_in"
     )
-    .map((schedule) => ({
-      id: schedule._id,
-      vehicle: `${schedule.vehicle_id.brand} ${schedule.vehicle_id.model} - ${schedule.vehicle_id.license_plate}`,
-      customer: schedule.user_id.fullName,
-      service: schedule.service_type_id.service_name,
-      progress: 50, // Có thể thêm logic để tính progress thực tế
-      startTime: schedule.appoinment_time,
-      estimatedCompletion: schedule.estimated_end_time || "16:00",
-      description: schedule.notes || "Không có mô tả chi tiết",
-      estimatedCost: schedule.estimated_cost,
-      centerName: schedule.center_id.center_name,
-      centerAddress: schedule.center_id.address,
-      customerPhone: schedule.user_id.phone,
-      vehicleVin: (schedule.vehicle_id as { vin?: string })?.vin || "N/A",
+    .map((appointment) => ({
+      id: appointment._id,
+      vehicle: `${appointment.vehicle_id?.brand || ""} ${
+        appointment.vehicle_id?.model || ""
+      } - ${appointment.vehicle_id?.license_plate || ""}`,
+      licensePlate: appointment.vehicle_id?.license_plate || "",
+      customer: appointment.user_id?.fullName || "N/A",
+      service: appointment.service_type_id?.service_name || "N/A",
       serviceDescription:
-        (schedule.service_type_id as { description?: string })?.description ||
-        "Không có mô tả",
+        appointment.service_type_id?.description || "Không có mô tả",
+      progress: 50,
+      startTime: appointment.appoinment_time || "",
+      estimatedCompletion: appointment.estimated_end_time || "16:00",
+      description: appointment.notes || "Không có mô tả chi tiết",
+      estimatedCost: appointment.service_type_id?.base_price,
+      centerName:
+        appointment.center_id?.center_name ||
+        appointment.center_id?.name ||
+        "N/A",
+      centerAddress: appointment.center_id?.address || "N/A",
+      customerEmail: appointment.user_id?.email || "N/A",
+      vehicleVin: appointment.vehicle_id?.vin || "N/A",
     }));
 
-  const completedTasks = schedules
+  const completedTasks = appointments
     .filter(
-      (schedule) =>
-        schedule.status === "completed" || schedule.status === "done"
+      (appointment) =>
+        appointment.status === "completed" || appointment.status === "repaired"
     )
-    .map((schedule) => ({
-      id: schedule._id,
-      vehicle: `${schedule.vehicle_id.brand} ${schedule.vehicle_id.model} - ${schedule.vehicle_id.license_plate}`,
-      customer: schedule.user_id.fullName,
-      service: schedule.service_type_id.service_name,
-      completedDate: schedule.appoinment_date,
-      completedTime: schedule.appoinment_time,
-      rating: 5, // Có thể thêm logic để lấy rating thực tế
-      feedback: "Công việc hoàn thành tốt", // Có thể thêm logic để lấy feedback thực tế
-      estimatedCost: schedule.estimated_cost,
-      centerName: schedule.center_id.center_name,
-      centerAddress: schedule.center_id.address,
-      customerPhone: schedule.user_id.phone,
-      vehicleVin: (schedule.vehicle_id as { vin?: string })?.vin || "N/A",
+    .map((appointment) => ({
+      id: appointment._id,
+      vehicle: `${appointment.vehicle_id?.brand || ""} ${
+        appointment.vehicle_id?.model || ""
+      } - ${appointment.vehicle_id?.license_plate || ""}`,
+      licensePlate: appointment.vehicle_id?.license_plate || "",
+      customer: appointment.user_id?.fullName || "N/A",
+      service: appointment.service_type_id?.service_name || "N/A",
       serviceDescription:
-        (schedule.service_type_id as { description?: string })?.description ||
-        "Không có mô tả",
+        appointment.service_type_id?.description || "Không có mô tả",
+      completedDate: formatDate(appointment.appoinment_date) || "",
+      completedTime: appointment.appoinment_time || "",
+      rating: 5,
+      feedback: "Công việc hoàn thành tốt",
+      estimatedCost: appointment.service_type_id?.base_price,
+      centerName:
+        appointment.center_id?.center_name ||
+        appointment.center_id?.name ||
+        "N/A",
+      centerAddress: appointment.center_id?.address || "N/A",
+      customerEmail: appointment.user_id?.email || "N/A",
+      vehicleVin: appointment.vehicle_id?.vin || "N/A",
     }));
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-destructive";
-      case "medium":
-        return "bg-warning";
-      case "low":
-        return "bg-success";
-      default:
-        return "bg-muted";
-    }
-  };
-
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "Cao";
-      case "medium":
-        return "Trung bình";
-      case "low":
-        return "Thấp";
-      default:
-        return priority;
-    }
-  };
 
   // Function để navigate đến trang task detail
   const handleViewDetails = (appointmentId: string) => {
     navigate(`/dashboard/technician/task/${appointmentId}`);
-  };
-
-  // Function để bắt đầu công việc (đổi status thành in_progress)
-  const handleStartWork = async (appointmentId: string) => {
-    try {
-      setUpdating(true);
-      const result = await updateAppointmentStatusApi({
-        appointment_id: appointmentId,
-        status: "in_progress",
-      });
-
-      if (result.ok && result.data?.success) {
-        // Cập nhật local state
-        setSchedules((prevSchedules) =>
-          prevSchedules.map((schedule) =>
-            schedule._id === appointmentId
-              ? { ...schedule, status: "in_progress" }
-              : schedule
-          )
-        );
-        console.log("Đã bắt đầu công việc thành công");
-      } else {
-        setError(result.message || "Không thể bắt đầu công việc");
-      }
-    } catch (err) {
-      setError("Có lỗi xảy ra khi bắt đầu công việc");
-      console.error("Error starting work:", err);
-    } finally {
-      setUpdating(false);
-    }
   };
 
   // Loading state
@@ -388,24 +326,26 @@ export const TechnicianOverview = () => {
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="font-semibold">{task.vehicle}</h4>
-                        <Badge
-                          className={`${getPriorityColor(
-                            task.priority
-                          )} text-white`}>
-                          Ưu tiên {getPriorityText(task.priority)}
-                        </Badge>
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div>
+                          <h4 className="font-semibold text-lg">
+                            {task.service}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {task.serviceDescription}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Khách hàng: {task.customer}
+
+                      <p className="text-sm font-medium mt-3">
+                        Phương tiện: {task.vehicle}
                       </p>
-                      <p className="text-sm font-medium mb-3">{task.service}</p>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {task.description}
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Khách hàng: {task.customer} • Liên hệ:{" "}
+                        {task.customerEmail}
                       </p>
 
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-sm mt-3">
                         <div>
                           <p className="text-muted-foreground">Ngày giao</p>
                           <p className="font-medium">{task.assignedDate}</p>
@@ -436,12 +376,6 @@ export const TechnicianOverview = () => {
 
                   <div className="flex gap-2">
                     <Button
-                      className="bg-primary text-primary-foreground"
-                      onClick={() => handleStartWork(task.id)}
-                      disabled={updating}>
-                      {updating ? "Đang cập nhật..." : "Bắt đầu công việc"}
-                    </Button>
-                    <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleViewDetails(task.id)}>
@@ -470,13 +404,17 @@ export const TechnicianOverview = () => {
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <h4 className="font-semibold mb-1">{task.vehicle}</h4>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Khách hàng: {task.customer}
+                      <h4 className="font-semibold text-lg">{task.service}</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {task.serviceDescription}
                       </p>
-                      <p className="text-sm font-medium mb-3">{task.service}</p>
+
+                      <p className="text-sm font-medium">
+                        Phương tiện: {task.vehicle}
+                      </p>
                       <p className="text-sm text-muted-foreground mb-4">
-                        {task.description}
+                        Khách hàng: {task.customer} • Liên hệ:{" "}
+                        {task.customerEmail}
                       </p>
 
                       <div className="grid grid-cols-2 gap-4 text-sm mb-4">
@@ -506,22 +444,16 @@ export const TechnicianOverview = () => {
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Tiến độ</span>
-                          <span>{task.progress}%</span>
-                        </div>
-                        <Progress value={task.progress} className="h-2" />
-                      </div>
+                      {/* Removed progress section per request */}
                     </div>
                   </div>
 
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      Cập nhật tiến độ
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Gửi báo cáo
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewDetails(task.id)}>
+                      Xem chi tiết
                     </Button>
                     <Button
                       className="bg-success text-success-foreground"
@@ -550,23 +482,21 @@ export const TechnicianOverview = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h4 className="font-semibold">{task.vehicle}</h4>
+                        <h4 className="font-semibold text-lg">
+                          {task.service}
+                        </h4>
                         <Badge className="bg-success text-white">
                           Hoàn thành
                         </Badge>
-                        <div className="flex items-center gap-1">
-                          {[...Array(task.rating)].map((_, i) => (
-                            <CheckCircle
-                              key={i}
-                              className="h-4 w-4 text-warning fill-current"
-                            />
-                          ))}
-                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Khách hàng: {task.customer}
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {task.serviceDescription}
                       </p>
-                      <p className="text-sm font-medium mb-3">{task.service}</p>
+
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Khách hàng: {task.customer} • Liên hệ:{" "}
+                        {task.customerEmail}
+                      </p>
 
                       <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                         <div>

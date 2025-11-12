@@ -8,6 +8,7 @@ import { useScrollReveal } from "../lib/useScrollReveal";
 import { useAuth } from "../context/AuthContext/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import ChatWidget from "@/components/ChatWidget";
 
 const Index = () => {
   const heroRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
@@ -15,7 +16,7 @@ const Index = () => {
   const feedbackRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
   const navigate = useNavigate();
 
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -32,6 +33,7 @@ const Index = () => {
         <div ref={heroRef}>
           <HeroSection />
         </div>
+        {user && <ChatWidget />}
         <div ref={featuresRef} id="features-section">
           <FeaturesSection />
         </div>
