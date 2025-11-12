@@ -7,6 +7,8 @@ import {
   DollarSign,
   Home,
   MapPin,
+  Package,
+  AlertTriangle,
 } from "lucide-react";
 
 import {
@@ -33,25 +35,27 @@ const adminMenuItems = [
     icon: Settings,
     href: "/dashboard/admin/services",
   },
-  { title: "Quản lý khách hàng", icon: Users },
+  { title: "Quản lý khách hàng", icon: Users, href: "/dashboard/admin/customers" },
   { title: "Quản lý phương tiện", icon: Car, href: "/dashboard/admin/vehicle-models" },
   { title: "Quản lý lịch hẹn", icon: FileText },
   { title: "Quản lý kỹ thuật viên", icon: Users },
-  { title: "Quản lý phụ tùng", icon: Settings },
+  { title: "Quản lý phụ tùng", icon: Settings, href: "/dashboard/admin/parts" },
+  { title: "Quản lý Inventory", icon: Package, href: "/dashboard/admin/inventory" },
+  { title: "Quản lý Issue Types", icon: AlertTriangle, href: "/dashboard/admin/issue-types" },
   { title: "Báo cáo & Thống kê", icon: BarChart3 },
   { title: "Quản lý tài chính", icon: DollarSign },
 ];
 
 export function AdminSidebar() {
   return (
-    <Sidebar className="w-64 border-r bg-card">
-      <SidebarContent className="p-4">
+    <Sidebar className="w-64 border-r bg-card" collapsible="icon">
+      <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
         <div className="mb-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
             <div className="p-2 rounded-lg bg-primary text-primary-foreground">
               <Car className="h-6 w-6" />
             </div>
-            <div>
+            <div className="group-data-[collapsible=icon]:hidden">
               <h2 className="font-semibold text-lg">EV Service</h2>
               <p className="text-sm text-muted-foreground">Management System</p>
             </div>
@@ -64,7 +68,7 @@ export function AdminSidebar() {
             <SidebarMenu>
               {adminMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={item.title}>
                     {item.href ? (
                       <NavLink
                         to={item.href}

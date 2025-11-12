@@ -33,6 +33,8 @@ export interface CreateAppointmentPayload {
   vehicle_id: string; // ID xe cần bảo dưỡng
   center_id: string; // ID trung tâm bảo dưỡng
   service_type_id: string; // ID loại dịch vụ bảo dưỡng (REQUIRED)
+  // Optional: nếu người dùng chọn KTV cụ thể
+  technician_id?: string;
 }
 
 export interface CreateAppointmentResponse {
@@ -305,6 +307,8 @@ export async function getAppointmentsApi(
   if (params.page) query.set("page", String(params.page));
   if (params.limit) query.set("limit", String(params.limit));
   if (params.status) query.set("status", params.status);
+  // Add cache-busting parameter
+  query.set("_t", String(Date.now()));
   if (params.technicianId) query.set("technician_id", params.technicianId);
   if (params.service_center_id) query.set("service_center_id", params.service_center_id);
   if (params.customer_id) query.set("customer_id", params.customer_id);
@@ -313,11 +317,14 @@ export async function getAppointmentsApi(
   if (params.date_from) query.set("date_from", params.date_from);
   if (params.date_to) query.set("date_to", params.date_to);
   const qs = query.toString();
-  const url = qs ? `/api/appointment/list?${qs}` : `/api/appointment/list`;
+  const url = `/api/appointment/list?${qs}`;
   const response = await fetch(url, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
       ...getAuthHeader(),
     },
   });
@@ -393,7 +400,9 @@ export async function deleteAppointmentApi(appointmentId: string): Promise<ApiRe
 }
 
 // API lấy lịch làm việc của Technician
-export async function getTechnicianScheduleApi(params: TechnicianScheduleParams): Promise<ApiResult<{ success: boolean; data: TechnicianScheduleListResponse }>> {
+export async function getTechnicianScheduleApi(
+  params: TechnicianScheduleParams
+): Promise<ApiResult<{ success: boolean; data: TechnicianScheduleListResponse | TechnicianScheduleResponse }>> {
   const query = new URLSearchParams();
   if (params.technician_id) query.set("technician_id", params.technician_id);
   query.set("date_from", params.date_from);

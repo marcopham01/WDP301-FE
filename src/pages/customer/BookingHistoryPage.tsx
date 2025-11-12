@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Clock, MapPin, Eye, Trash2, RefreshCw, CheckCircle2, XCircle, PlayCircle, ListChecks } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Eye, Trash2, RefreshCw, CheckCircle2, XCircle, PlayCircle } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,19 +12,21 @@ import { getMyAppointmentsApi, deleteAppointmentApi, Appointment } from "@/lib/a
 import { toast } from "react-toastify";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+// Use relative path to avoid any alias resolution edge cases in this file
+import { PaymentDialog } from "../../components/customer/PaymentDialog";
 
 // Type guard and helpers
 // (removed unused toVNDate helper)
 
 function statusLabel(s?: string) {
   switch (s) {
-    case "pending": return { text: "Chờ xác nhận", variant: "secondary" as const };
-    case "accepted": return { text: "Đã xác nhận", variant: "default" as const };
-    case "assigned": return { text: "Đã phân công", variant: "outline" as const };
-    case "deposited": return { text: "Đã đặt cọc", variant: "outline" as const };
-    case "in_progress": return { text: "Đang thực hiện", variant: "default" as const };
-    case "completed": return { text: "Hoàn thành", variant: "default" as const };
-    case "paid": return { text: "Đã thanh toán", variant: "default" as const };
+    case "pending": return { text: "Đợi ứng tiền", variant: "secondary" as const };
+    case "assigned": return { text: "Đã sắp nhân viên", variant: "default" as const };
+    case "check_in": return { text: "Chờ báo giá", variant: "outline" as const };
+    case "in_progress": return { text: "Đang sửa chữa", variant: "default" as const };
+    case "repaired": return { text: "Đã sửa xong", variant: "default" as const };
+    case "completed": return { text: "Đơn hoàn thành", variant: "default" as const };
+    case "delay": return { text: "Trì hoãn", variant: "secondary" as const };
     case "canceled":
     case "cancelled": return { text: "Đã hủy", variant: "destructive" as const };
     default: return { text: s || "—", variant: "secondary" as const };
@@ -63,6 +65,18 @@ export default function BookingHistoryPage() {
   // Dialog state
   const [selectedAppointment, setSelectedAppointment] = useState<MyAppointment | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  
+  // Payment dialog state
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState<{
+    amount?: number;
+    checkout_url?: string;
+    qr_code?: string;
+    order_code?: number;
+    timeoutAt?: string;
+    status?: string;
+    description?: string;
+  } | null>(null);
 
   // Fetch data
   async function fetchData(opts?: { resetPage?: boolean; soft?: boolean }) {
@@ -109,11 +123,14 @@ export default function BookingHistoryPage() {
   // Derived counters (from current page data)
   const counters = useMemo(() => {
     const all = items.length;
-    const accepted = items.filter(i => i.status === "accepted").length;
+    const pending = items.filter(i => i.status === "pending").length;
+    const assigned = items.filter(i => i.status === "assigned").length;
+    const checkIn = items.filter(i => i.status === "check_in").length;
     const inProgress = items.filter(i => i.status === "in_progress").length;
-    const completed = items.filter(i => i.status === "completed" || i.status === "paid").length;
+    const repaired = items.filter(i => i.status === "repaired").length;
+    const completed = items.filter(i => i.status === "completed").length;
     const canceled = items.filter(i => i.status === "canceled" || i.status === "cancelled").length;
-    return { all, accepted, inProgress, completed, canceled };
+    return { all, pending, assigned, checkIn, inProgress, repaired, completed, canceled };
   }, [items]);
 
   // Client-side filters: date range + sorting
@@ -172,18 +189,44 @@ export default function BookingHistoryPage() {
     setIsDetailDialogOpen(true);
   };
 
+
+
+  const handleCancelPayment = async () => {
+    try {
+      if (!paymentInfo?.order_code) return;
+      const res = await fetch(`/api/payment/cancel/${paymentInfo.order_code}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success("Đã hủy giao dịch thanh toán");
+        setPaymentInfo((prev) => (prev ? { ...prev, status: "CANCELLED" } : prev));
+        fetchData({ soft: true });
+      } else {
+        toast.error(json?.message || "Không thể hủy thanh toán");
+      }
+    } catch (e) {
+      console.error("Cancel payment error", e);
+      toast.error("Lỗi hủy thanh toán");
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col bg-gradient-to-br from-ev-green-light via-green-50/30 to-teal-50/20"
     >
       <Header onLogout={handleLogout} />
       <main className="flex-1 py-8">
         <div className="container max-w-[1200px] pt-20 space-y-6">
           {/* Hero / Header */}
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl p-6 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-ev-green to-teal-500 text-white rounded-xl p-6 flex items-center justify-between">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
                 <Clock className="w-6 h-6" /> Lịch sử đặt lịch
@@ -198,9 +241,9 @@ export default function BookingHistoryPage() {
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card><CardContent className="p-4"><div className="text-sm text-muted-foreground">Tổng số lịch</div><div className="mt-1 font-bold text-xl flex items-center gap-2"><CalendarIcon className="w-5 h-5 text-primary" />{counters.all}</div></CardContent></Card>
-            <Card><CardContent className="p-4"><div className="text-sm text-muted-foreground">Đã xác nhận</div><div className="mt-1 font-bold text-xl flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-green-600" />{counters.accepted}</div></CardContent></Card>
-            <Card><CardContent className="p-4"><div className="text-sm text-muted-foreground">Đang thực hiện</div><div className="mt-1 font-bold text-xl flex items-center gap-2"><PlayCircle className="w-5 h-5 text-yellow-600" />{counters.inProgress}</div></CardContent></Card>
-            <Card><CardContent className="p-4"><div className="text-sm text-muted-foreground">Hoàn thành</div><div className="mt-1 font-bold text-xl flex items-center gap-2"><ListChecks className="w-5 h-5 text-emerald-600" />{counters.completed}</div></CardContent></Card>
+            <Card><CardContent className="p-4"><div className="text-sm text-muted-foreground">Đợi ứng tiền</div><div className="mt-1 font-bold text-xl flex items-center gap-2"><Clock className="w-5 h-5 text-yellow-600" />{counters.pending}</div></CardContent></Card>
+            <Card><CardContent className="p-4"><div className="text-sm text-muted-foreground">Đang sửa chữa</div><div className="mt-1 font-bold text-xl flex items-center gap-2"><PlayCircle className="w-5 h-5 text-blue-600" />{counters.inProgress}</div></CardContent></Card>
+            <Card><CardContent className="p-4"><div className="text-sm text-muted-foreground">Hoàn thành</div><div className="mt-1 font-bold text-xl flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-emerald-600" />{counters.completed}</div></CardContent></Card>
             <Card><CardContent className="p-4"><div className="text-sm text-muted-foreground">Đã hủy</div><div className="mt-1 font-bold text-xl flex items-center gap-2"><XCircle className="w-5 h-5 text-rose-600" />{counters.canceled}</div></CardContent></Card>
           </div>
 
@@ -214,13 +257,12 @@ export default function BookingHistoryPage() {
                     <SelectTrigger className="w-full"><SelectValue placeholder="Tất cả" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Tất cả</SelectItem>
-                      <SelectItem value="pending">Chờ xác nhận</SelectItem>
-                      <SelectItem value="accepted">Đã xác nhận</SelectItem>
-                      <SelectItem value="deposited">Đã đặt cọc</SelectItem>
-                      <SelectItem value="assigned">Đã phân công</SelectItem>
-                      <SelectItem value="in_progress">Đang thực hiện</SelectItem>
-                      <SelectItem value="completed">Hoàn thành</SelectItem>
-                      <SelectItem value="paid">Đã thanh toán</SelectItem>
+                      <SelectItem value="pending">Đợi ứng tiền</SelectItem>
+                      <SelectItem value="assigned">Đã sắp nhân viên</SelectItem>
+                      <SelectItem value="check_in">Chờ báo giá</SelectItem>
+                      <SelectItem value="in_progress">Đang sửa chữa</SelectItem>
+                      <SelectItem value="repaired">Đã sửa xong</SelectItem>
+                      <SelectItem value="completed">Đơn hoàn thành</SelectItem>
                       <SelectItem value="canceled">Đã hủy</SelectItem>
                     </SelectContent>
                   </Select>
@@ -311,6 +353,9 @@ export default function BookingHistoryPage() {
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <Button size="sm" variant="ghost" className="h-8 px-2" title="Xem chi tiết" onClick={() => handleViewDetail(item)}><Eye className="w-4 h-4" /></Button>
+                                {(item.status === "pending" || item.status === "assigned") && (
+                                  <></>
+                                )}
                                 {item.status === "pending" && (
                                   <Button size="sm" variant="ghost" className="h-8 px-2 text-red-600" title="Xóa" onClick={()=> handleDelete(item._id)}>
                                     <Trash2 className="w-4 h-4" />
@@ -446,6 +491,24 @@ export default function BookingHistoryPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        paymentInfo={paymentInfo}
+        technician={
+          selectedAppointment
+            ? ((selectedAppointment as unknown as { technician_id?: { fullName?: string; phone?: string; email?: string } }).technician_id ||
+               (selectedAppointment as unknown as { assigned?: { fullName?: string; phone?: string; email?: string } }).assigned)
+            : null
+        }
+        onCancel={handleCancelPayment}
+        onViewHistory={() => {
+          setPaymentDialogOpen(false);
+          fetchData({ soft: true });
+        }}
+      />
     </motion.div>
   );
 }

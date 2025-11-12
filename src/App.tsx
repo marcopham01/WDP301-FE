@@ -29,6 +29,10 @@ import ServiceCenterManagement from "./pages/dashboard/admin/ServiceCenterManage
 import AdminOverview from "./pages/dashboard/admin/AdminOverview";
 import WorkingHoursManagement from "./pages/dashboard/admin/WorkingHoursManagement";
 import VehicleModelManagement from "./pages/dashboard/admin/VehicleModelManagement";
+import PartManagement from "./pages/dashboard/admin/PartManagement";
+import InventoryManagement from "./pages/dashboard/admin/InventoryManagement";
+import IssueTypeManagement from "./pages/dashboard/admin/IssueTypeManagement";
+import CustomerManagement from "./pages/dashboard/admin/CustomerManagement";
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 import { TechnicianOverview } from "./pages/dashboard/tech/TechnicianOverview";
 import { TaskDetail } from "./pages/dashboard/tech/TaskDetail";
@@ -36,9 +40,15 @@ import PaymentSuccessPage from "@/pages/customer/PaymentSuccessPage";
 import PaymentCancelPage from "@/pages/customer/PaymentCancelPage";
 import AppointmentManagement from "./pages/dashboard/staff/appointments/AppointmentManagement";
 import AppointmentDetail from "./pages/dashboard/staff/appointments/AppointmentDetail";
+import CustomersPage from "./pages/dashboard/staff/customers/CustomersPage";
+import TechnicianSchedulePage from "./pages/dashboard/staff/TechnicianSchedulePage";
+import QueuePage from "./pages/dashboard/staff/QueuePage";
+import StaffChatPage from "./pages/dashboard/staff/StaffChatPage";
 import SocketTestPage from "./pages/customer/SocketTestPage";
 import ChecklistManagement from "./pages/dashboard/staff/maintenance/ChecklistManagement";
 import ChecklistDetail from "./pages/dashboard/staff/maintenance/ChecklistDetail";
+import ContactPage from "./pages/ContactPage";
+import AboutPage from "./pages/AboutPage";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +70,8 @@ const AppRoutes = () => {
       <Route path="*" element={<NotFound />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+  <Route path="/about" element={<AboutPage />} />
+      <Route path="/contact" element={<ContactPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route
@@ -75,7 +87,11 @@ const AppRoutes = () => {
         <Route index element={<AdminOverview />} />
         <Route path="services" element={<ServiceManagement />} />
         <Route path="service-centers" element={<ServiceCenterManagement />} />
+        <Route path="customers" element={<CustomerManagement />} />
         <Route path="vehicle-models" element={<VehicleModelManagement />} />
+        <Route path="parts" element={<PartManagement />} />
+        <Route path="inventory" element={<InventoryManagement />} />
+        <Route path="issue-types" element={<IssueTypeManagement />} />
         <Route
           path="/dashboard/admin/service-center/:centerId/working-hours"
           element={<WorkingHoursManagement />}
@@ -94,6 +110,10 @@ const AppRoutes = () => {
         <Route index element={<StaffOverview />} />
         <Route path="appointments" element={<AppointmentManagement />} />
         <Route path="appointments/:id" element={<AppointmentDetail />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="technician-schedule" element={<TechnicianSchedulePage />} />
+        <Route path="queue" element={<QueuePage />} />
+        <Route path="chat" element={<StaffChatPage />} />
         <Route path="maintenance" element={<ChecklistManagement />} />
         <Route path="maintenance/:checklistId" element={<ChecklistDetail />} />
       </Route>

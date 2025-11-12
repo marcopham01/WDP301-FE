@@ -158,3 +158,134 @@ export async function deleteServiceCenterApi(id: string): Promise<ApiResult<{ su
     return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
   }
 }
+
+// ============================================================================
+// TECHNICIAN MANAGEMENT APIs
+// ============================================================================
+
+export interface TechnicianUser {
+  _id: string;
+  username: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+}
+
+export interface Technician {
+  _id: string;
+  user: TechnicianUser;
+  center_id: string;
+  status: 'on' | 'off';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetTechniciansResponse {
+  success: boolean;
+  message: string;
+  data: Technician[];
+}
+
+/**
+ * GET /api/service-center/technicians?center_id=xxx
+ * Lấy danh sách kỹ thuật viên
+ * - Nếu có center_id: lấy technicians của trung tâm đó
+ * - Nếu không: lấy tất cả technicians đang active (status=on)
+ */
+export async function getTechniciansApi(
+  centerId?: string
+): Promise<ApiResult<GetTechniciansResponse>> {
+  try {
+    const url = centerId 
+      ? `/api/service-center/technicians?center_id=${centerId}`
+      : `/api/service-center/technicians`;
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeader(),
+      },
+    });
+    return parseResponse(response);
+  } catch (err: unknown) {
+    console.error("[serviceCenterApi] Network error", err);
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
+  }
+}
+
+export interface AddTechnicianPayload {
+  user_id: string;      // ID của user có role "technician"
+  center_id: string;    // ID của Service Center
+  maxSlotsPerDay?: number; // Optional: số slot/ngày cho mỗi technician (swagger ví dụ là 4)
+  status?: 'on' | 'off';   // Optional: trạng thái của technician trong trung tâm
+}
+
+export interface AddTechnicianResponse {
+  success: boolean;
+  message: string;
+  data: {
+    _id: string;
+    user_id: string;
+    center_id: string;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+/**
+ * POST /api/service-center/technican/add
+ * Thêm kỹ thuật viên vào trung tâm dịch vụ
+ * - Mỗi technician chỉ được thuộc 1 trung tâm
+ * - Sau khi thêm, availableSlots trong ServiceCenterHours sẽ tự động cập nhật = 4
+ * - Mỗi technician có thể nhận tối đa 4 appointments/ngày
+ */
+export async function addTechnicianToServiceCenterApi(
+  payload: AddTechnicianPayload
+): Promise<ApiResult<AddTechnicianResponse>> {
+  try {
+    const response = await fetch("/api/service-center/technican/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return parseResponse(response);
+  } catch (err: unknown) {
+    console.error("[serviceCenterApi] Network error", err);
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
+  }
+}
+
+export interface RemoveTechnicianPayload {
+  user_id: string;
+  center_id: string;
+}
+
+/**
+ * POST /api/service-center/technican/remove
+ * Xóa kỹ thuật viên khỏi trung tâm
+ * - Sẽ cập nhật lại availableSlots của ServiceCenterHours
+ */
+export async function removeTechnicianFromServiceCenterApi(
+  payload: RemoveTechnicianPayload
+): Promise<ApiResult<{ success: boolean; message: string }>> {
+  try {
+    const response = await fetch("/api/service-center/technican/remove", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify(payload),
+    });
+    return parseResponse(response);
+  } catch (err: unknown) {
+    console.error("[serviceCenterApi] Network error", err);
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
+  }
+}

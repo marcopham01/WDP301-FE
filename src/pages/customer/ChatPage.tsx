@@ -1,32 +1,83 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Send } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Send, Paperclip, Smile } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { useAuth } from "@/context/AuthContext/useAuth";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+
+interface Message {
+  id: number;
+  sender: string;
+  message: string;
+  time: string;
+  isSupport: boolean;
+}
 
 const ChatPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState([
+  const userId = user?.id || "default";
+  const storageKey = userId === "default" ? "chatMessages" : `chatMessages_${userId}`;
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
       sender: "EV Care Support",
       message: "Xin chào! Chúng tôi có thể giúp gì cho bạn hôm nay?",
-      time: "10:00 AM",
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isSupport: true
     }
   ]);
   const [newMessage, setNewMessage] = useState("");
 
+  // Load messages from localStorage
+  useEffect(() => {
+    let savedMessages = localStorage.getItem(storageKey);
+    if (!savedMessages && storageKey !== "chatMessages") {
+      savedMessages = localStorage.getItem("chatMessages");
+    }
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages);
+        setMessages(parsed);
+      } catch (error) {
+        console.error("Error loading chat messages:", error);
+      }
+    }
+  }, [storageKey]);
+
+  // Save messages to localStorage
+  useEffect(() => {
+    if (messages.length > 1) {
+      const payload = JSON.stringify(messages);
+      localStorage.setItem(storageKey, payload);
+      if (storageKey !== "chatMessages") {
+        localStorage.setItem("chatMessages", payload);
+      }
+    }
+  }, [messages, storageKey]);
+
+  // Auto scroll to bottom when new message arrives
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
+  }, [messages]);
+
   const handleSendMessage = () => {
     if (newMessage.trim()) {
-      const message = {
+      const message: Message = {
         id: messages.length + 1,
         sender: user?.fullName || user?.username || "Bạn",
         message: newMessage,
@@ -35,6 +86,18 @@ const ChatPage = () => {
       };
       setMessages([...messages, message]);
       setNewMessage("");
+
+      // Simulate support response
+      setTimeout(() => {
+        const supportMessage: Message = {
+          id: messages.length + 2,
+          sender: "EV Care Support",
+          message: "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm nhất có thể!",
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isSupport: true
+        };
+        setMessages(prev => [...prev, supportMessage]);
+      }, 2000);
     }
   };
 
@@ -51,63 +114,196 @@ const ChatPage = () => {
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950"
     >
       <Header onLogout={handleLogout} />
       <main className="flex-1 py-8">
-        <div className="container max-w-4xl pt-20">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Trung tâm Chat</h1>
+        <div className="container max-w-5xl pt-20 px-4">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-ev-green to-teal-500 bg-clip-text text-transparent mb-2">
+              Trung tâm Chat
+            </h1>
             <p className="text-muted-foreground">Liên hệ với đội ngũ hỗ trợ của chúng tôi</p>
           </div>
 
-          <Card className="h-[600px] flex flex-col">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" />
-                Hỗ trợ khách hàng EV Care
-              </CardTitle>
-              <CardDescription>
-                Chúng tôi thường phản hồi trong vòng 24 giờ
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col">
-              <div className="flex-1 overflow-y-auto mb-4 space-y-4">
-                {messages.map((msg) => (
-                  <div
+          {/* Modern Chat Container */}
+          <div className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden">
+            
+            {/* Chat Header - Modern Design */}
+            <div className="bg-gradient-to-r from-ev-green to-teal-500 p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Avatar className="h-14 w-14 border-2 border-white shadow-lg">
+                    <AvatarImage src="/support-avatar.png" />
+                    <AvatarFallback className="bg-white text-ev-green font-bold text-lg">
+                      EV
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></span>
+                </div>
+                <div className="text-white">
+                  <h3 className="font-semibold text-lg">EV Care Support</h3>
+                  <p className="text-sm text-green-100 flex items-center gap-1">
+                    <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></span>
+                    Đang hoạt động • Phản hồi trong 24h
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions Banner */}
+            <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 px-6 py-3 border-b">
+              <div className="flex gap-2 overflow-x-auto">
+                <Badge 
+                  variant="secondary" 
+                  className="cursor-pointer hover:bg-ev-green hover:text-white transition-colors whitespace-nowrap"
+                  onClick={() => setNewMessage("Tôi muốn đặt lịch bảo dưỡng xe")}
+                >
+                  📅 Đặt lịch
+                </Badge>
+                <Badge 
+                  variant="secondary" 
+                  className="cursor-pointer hover:bg-ev-green hover:text-white transition-colors whitespace-nowrap"
+                  onClick={() => setNewMessage("Tôi cần hỗ trợ thanh toán")}
+                >
+                  💰 Thanh toán
+                </Badge>
+                <Badge 
+                  variant="secondary" 
+                  className="cursor-pointer hover:bg-ev-green hover:text-white transition-colors whitespace-nowrap"
+                  onClick={() => setNewMessage("Tôi có câu hỏi về dịch vụ")}
+                >
+                  ❓ Hỏi đáp
+                </Badge>
+                <Badge 
+                  variant="secondary" 
+                  className="cursor-pointer hover:bg-ev-green hover:text-white transition-colors whitespace-nowrap"
+                  onClick={() => setNewMessage("Tôi cần kiểm tra lịch sử xe")}
+                >
+                  🚗 Lịch sử xe
+                </Badge>
+              </div>
+            </div>
+
+            {/* Messages Area */}
+            <ScrollArea ref={scrollAreaRef} className="flex-1 p-6 bg-gray-50 dark:bg-gray-950 h-[500px]">
+              <div className="space-y-4">
+                {messages.map((msg, index) => (
+                  <motion.div
                     key={msg.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
                     className={`flex ${msg.isSupport ? 'justify-start' : 'justify-end'}`}
                   >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        msg.isSupport
-                          ? 'bg-muted text-muted-foreground'
-                          : 'bg-primary text-primary-foreground'
-                      }`}
-                    >
-                      <div className="text-sm font-medium mb-1">{msg.sender}</div>
-                      <div className="text-sm">{msg.message}</div>
-                      <div className={`text-xs mt-1 ${msg.isSupport ? 'text-muted-foreground' : 'text-primary-foreground/70'}`}>
+                    {msg.isSupport && (
+                      <Avatar className="h-8 w-8 mr-2 mt-1">
+                        <AvatarFallback className="bg-ev-green text-white text-xs">
+                          EV
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                    
+                    <div className={`max-w-[75%] ${msg.isSupport ? '' : 'flex flex-col items-end'}`}>
+                      {msg.isSupport && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-1">
+                          {msg.sender}
+                        </div>
+                      )}
+                      
+                      <div
+                        className={`px-4 py-2.5 rounded-2xl shadow-sm ${
+                          msg.isSupport
+                            ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-sm'
+                            : 'bg-gradient-to-r from-ev-green to-teal-500 text-white rounded-tr-sm'
+                        }`}
+                      >
+                        <div className="text-sm leading-relaxed">{msg.message}</div>
+                      </div>
+                      
+                      <div className={`text-xs mt-1 px-1 ${
+                        msg.isSupport 
+                          ? 'text-gray-400 dark:text-gray-500' 
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}>
                         {msg.time}
                       </div>
                     </div>
-                  </div>
+
+                    {!msg.isSupport && (
+                      <Avatar className="h-8 w-8 ml-2 mt-1">
+                        <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs">
+                          {(user?.fullName || user?.username || "U").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                  </motion.div>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Nhập tin nhắn của bạn..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="flex-1"
-                />
-                <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                  <Send className="h-4 w-4" />
+            </ScrollArea>
+
+            {/* Typing Indicator */}
+            <div className="px-6 py-2 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                </div>
+                <span className="opacity-0">Support đang nhập...</span>
+              </div>
+            </div>
+
+            {/* Input Area - Modern Design */}
+            <div className="p-6 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
+                  title="Đính kèm file"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                
+                <div className="flex-1 relative">
+                  <Input
+                    placeholder="Nhập tin nhắn..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    className="pr-10 rounded-full border-2 border-gray-200 dark:border-gray-700 focus:border-ev-green"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
+                    title="Chọn emoji"
+                  >
+                    <Smile className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <Button 
+                  onClick={handleSendMessage} 
+                  disabled={!newMessage.trim()}
+                  size="icon"
+                  className="h-11 w-11 rounded-full bg-gradient-to-r from-ev-green to-teal-500 hover:from-green-700 hover:to-teal-600 shadow-lg disabled:opacity-50"
+                >
+                  <Send className="h-5 w-5" />
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+              
+              <div className="mt-2 text-xs text-center text-gray-400">
+                Nhấn Enter để gửi, Shift + Enter để xuống dòng
+              </div>
+            </div>
+          </div>
         </div>
       </main>
       <Footer />

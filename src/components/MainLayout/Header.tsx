@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import SwipeButton from "@/components/ui/swipe-button";
-import { Car, Zap, Menu, X, User, LogOut, Bell, Calendar, CreditCard } from "lucide-react";
+import { Car, Zap, Menu, X, User, LogOut, Bell, Calendar, CreditCard, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext/useAuth";
@@ -106,13 +105,21 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <>
-                {location.pathname.startsWith('/customer') && (
-                  <NotificationDropdown>
-                    <Button variant="ghost" size="icon" className="relative cursor-pointer">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="relative"
+                  onClick={() => navigate('/customer/chat')}
+                >
+                  <MessageCircle className="h-5 w-5" />
+                </Button>
+                <NotificationDropdown>
+                  <div className="relative cursor-pointer">
+                    <Button variant="ghost" size="icon" className="relative">
                       <Bell className="h-5 w-5" />
                     </Button>
-                  </NotificationDropdown>
-                )}
+                  </div>
+                </NotificationDropdown>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -139,10 +146,6 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                     <User className="mr-2 h-4 w-4" />
                     <span>Hồ sơ</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/customer/chat")}>
-                    <Bell className="mr-2 h-4 w-4" />
-                    <span>Trung tâm chat</span>
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/customer/vehicles")}>
                     <Car className="mr-2 h-4 w-4" />
                     <span>Quản lý xe</span>
@@ -164,19 +167,21 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
               </DropdownMenu>
               </>
             ) : (
-              <SwipeButton
-                firstText="Đăng nhập"
-                secondText="Đăng ký"
-                firstClass="bg-ev-green text-white"
-                secondClass="bg-black text-white"
-                onClick={e => {
-                  if (e.currentTarget.matches(':hover')) {
-                    navigate('/register');
-                  } else {
-                    navigate('/login');
-                  }
-                }}
-              />
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/login')}
+                  className="h-10 px-5 min-w-[120px] text-sm font-medium rounded-md border border-ev-green/40 bg-ev-green/5 text-ev-green hover:bg-ev-green/10 hover:text-ev-green"
+                >
+                  Đăng nhập
+                </Button>
+                <Button
+                  onClick={() => navigate('/register')}
+                  className="h-10 px-5 min-w-[120px] text-sm font-medium rounded-md bg-ev-green text-white hover:bg-ev-green/90"
+                >
+                  Đăng ký
+                </Button>
+              </div>
             )}
           </div>
 
@@ -219,7 +224,27 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
             ))}
             <div className="flex flex-col space-y-2 px-4 pt-2">
               {user ? (
-                <DropdownMenu>
+                <>
+                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="relative flex-1 justify-start"
+                      onClick={() => { setIsMenuOpen(false); navigate('/customer/chat'); }}
+                    >
+                      <MessageCircle className="h-5 w-5 mr-2" />
+                      <span className="text-sm">Chat</span>
+                    </Button>
+                    <NotificationDropdown>
+                      <div className="relative cursor-pointer flex-1">
+                        <Button variant="ghost" size="sm" className="relative w-full justify-start">
+                          <Bell className="h-5 w-5 mr-2" />
+                          <span className="text-sm">Thông báo</span>
+                        </Button>
+                      </div>
+                    </NotificationDropdown>
+                  </div>
+                  <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
@@ -245,10 +270,6 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                       <User className="mr-2 h-4 w-4" />
                       <span>Hồ sơ</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/chat"); }}>
-                      <Bell className="mr-2 h-4 w-4" />
-                      <span>Trung tâm chat</span>
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/vehicles"); }}>
                       <Car className="mr-2 h-4 w-4" />
                       <span>Quản lý xe</span>
@@ -268,22 +289,23 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </>
               ) : (
-                <SwipeButton
-                  firstText="Đăng nhập"
-                  secondText="Đăng ký"
-                  firstClass="bg-ev-green text-white"
-                  secondClass="bg-black text-white"
-                  className="justify-start"
-                  onClick={e => {
-                    setIsMenuOpen(false);
-                    if (e.currentTarget.matches(':hover')) {
-                      navigate('/register');
-                    } else {
-                      navigate('/login');
-                    }
-                  }}
-                />
+                <div className="flex flex-col gap-3">
+                  <Button
+                    variant="outline"
+                    className="h-11 px-5 w-full text-sm font-medium rounded-md border border-ev-green/40 bg-ev-green/5 text-ev-green hover:bg-ev-green/10 hover:text-ev-green"
+                    onClick={() => { setIsMenuOpen(false); navigate('/login'); }}
+                  >
+                    Đăng nhập
+                  </Button>
+                  <Button
+                    className="h-11 px-5 w-full text-sm font-medium rounded-md bg-ev-green text-white hover:bg-ev-green/90"
+                    onClick={() => { setIsMenuOpen(false); navigate('/register'); }}
+                  >
+                    Đăng ký
+                  </Button>
+                </div>
               )}
             </div>
           </nav>

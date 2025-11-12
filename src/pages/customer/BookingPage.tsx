@@ -19,10 +19,11 @@ import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { getUserVehiclesApi, Vehicle, VehicleModel, getVehicleModelsApi, createVehicleApi } from "@/lib/vehicleApi";
 import { getAllServicesApi, ServiceType } from "@/lib/serviceApi";
-import { getServiceCentersApi, ServiceCenter } from "@/lib/serviceCenterApi";
+import { getServiceCentersApi, ServiceCenter, getTechniciansApi, Technician } from "@/lib/serviceCenterApi";
 import { getProfileApi } from "@/lib/authApi";
-import { createAppointmentApi, getAppointmentByIdApi } from "@/lib/appointmentApi";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { createAppointmentApi, getAppointmentByIdApi, getTechnicianScheduleApi, TechnicianScheduleResponse } from "@/lib/appointmentApi";
+import { createPaymentLinkApi } from "@/lib/paymentApi";
+import { PaymentDialog } from "@/components/customer/PaymentDialog"
 
 // Stepper steps
 const STEPS = [
@@ -49,10 +50,17 @@ export default function BookingPage() {
   const [notes, setNotes] = useState("");
   const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [paymentInfo, setPaymentInfo] = useState<{ amount?: number; checkout_url?: string; qr_code?: string; order_code?: number } | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<{ amount?: number; checkout_url?: string; qr_code?: string; order_code?: number; timeoutAt?: string; status?: string; description?: string } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState("online");
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [vehicleModels, setVehicleModels] = useState<VehicleModel[]>([]);
+  const [centerTechnicians, setCenterTechnicians] = useState<Technician[]>([]);
+  const [loadingTechnicians, setLoadingTechnicians] = useState(false);
+  const [assignedTechnician, setAssignedTechnician] = useState<{ fullName?: string; phone?: string; email?: string } | null>(null);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string>(""); // user_id of technician; "" means auto
+  const [techScheduleBusyTimes, setTechScheduleBusyTimes] = useState<Set<string>>(new Set());
+  const [techDayBookedCount, setTechDayBookedCount] = useState<number>(0);
+  const [loadingTechSchedule, setLoadingTechSchedule] = useState<boolean>(false);
   
   // Form states for adding vehicle
   const [newVehicle, setNewVehicle] = useState({
@@ -115,6 +123,113 @@ export default function BookingPage() {
     load();
   }, []);
 
+  // Load technicians whenever user selects a service center
+  useEffect(() => {
+    const loadTechs = async () => {
+      if (!selectedCenter) {
+        setCenterTechnicians([]);
+        setSelectedTechnicianId("");
+        return;
+      }
+      setLoadingTechnicians(true);
+      try {
+        const res = await getTechniciansApi(selectedCenter);
+        if (res.ok && res.data?.data) {
+          setCenterTechnicians(res.data.data);
+        } else {
+          setCenterTechnicians([]);
+        }
+      } catch (e) {
+        console.error("loadTechnicians error", e);
+        setCenterTechnicians([]);
+      } finally {
+        setLoadingTechnicians(false);
+      }
+    };
+    loadTechs();
+  }, [selectedCenter]);
+
+  // Load technician availability for the selected date when a technician is chosen
+  useEffect(() => {
+    const fetchTechSchedule = async () => {
+      if (!selectedTechnicianId || !bookingDate) {
+        setTechScheduleBusyTimes(new Set());
+        setTechDayBookedCount(0);
+        return;
+      }
+      setLoadingTechSchedule(true);
+      try {
+        const dayStr = format(bookingDate, "yyyy-MM-dd");
+        const res = await getTechnicianScheduleApi({
+          technician_id: selectedTechnicianId,
+          date_from: dayStr,
+          date_to: dayStr,
+        });
+        if (res.ok && res.data && res.data.data) {
+          const dataUnion = res.data.data as TechnicianScheduleResponse | { items: unknown[] };
+          if (!('technician' in dataUnion)) {
+            // Unexpected shape for this call with technician_id; reset
+            setTechScheduleBusyTimes(new Set());
+            setTechDayBookedCount(0);
+            setLoadingTechSchedule(false);
+            return;
+          }
+          const payload = dataUnion as TechnicianScheduleResponse;
+          const schedules = payload.schedules || [];
+          // Build a set of busy time slots considering estimated durations
+          const busy = new Set<string>();
+          // Active statuses that block the slot
+          const blockStatuses = new Set(["pending", "assigned", "check_in", "in_progress", "repaired"]);
+          // Determine service duration (minutes) from selected service or fallback 60
+          const serviceDurationMin = Number(
+            (selectedServiceType && (serviceTypes.find(s => s._id === selectedServiceType)?.estimated_duration)) || 60
+          );
+
+          // Helper to convert HH:mm to minutes since 00:00
+          const toMin = (t: string) => {
+            const [h, m] = t.split(":").map(Number);
+            return h * 60 + m;
+          };
+
+          // For each existing appointment on that day, mark overlapping start times as busy
+          schedules
+            .filter((s) => s.appoinment_date?.startsWith(dayStr) && blockStatuses.has(s.status))
+            .forEach((s) => {
+              const existStart = toMin(s.appoinment_time);
+              const existEnd = s.estimated_end_time && /^\d{2}:\d{2}$/.test(s.estimated_end_time)
+                ? toMin(s.estimated_end_time)
+                : existStart + Number(s.service_type_id?.estimated_duration ?? 60);
+
+              timeSlots.forEach((slot) => {
+                const slotStart = toMin(slot);
+                const slotEnd = slotStart + serviceDurationMin;
+                const overlap = (slotStart >= existStart && slotStart < existEnd)
+                  || (slotEnd > existStart && slotEnd <= existEnd)
+                  || (slotStart <= existStart && slotEnd >= existEnd);
+                if (overlap) busy.add(slot);
+              });
+            });
+
+          setTechScheduleBusyTimes(busy);
+          setTechDayBookedCount(
+            schedules.filter((s) => s.appoinment_date?.startsWith(dayStr) && blockStatuses.has(s.status)).length
+          );
+        } else {
+          setTechScheduleBusyTimes(new Set());
+          setTechDayBookedCount(0);
+        }
+      } catch (e) {
+        console.error("getTechnicianScheduleApi error", e);
+        setTechScheduleBusyTimes(new Set());
+        setTechDayBookedCount(0);
+      } finally {
+        setLoadingTechSchedule(false);
+      }
+    };
+    fetchTechSchedule();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTechnicianId, bookingDate, selectedServiceType]);
+
   const handleSubmit = async () => {
     if (!selectedVehicle || !selectedServiceType || !selectedCenter || !bookingDate || !bookingTime) {
       toast.error("Thiếu thông tin. Vui lòng điền đầy đủ thông tin đặt lịch (bao gồm ngày và giờ)");
@@ -136,28 +251,144 @@ export default function BookingPage() {
         vehicle_id: selectedVehicle,
         center_id: selectedCenter,
         service_type_id: selectedServiceType,
+        ...(selectedTechnicianId ? { technician_id: selectedTechnicianId } : {}),
       };
 
       const res = await createAppointmentApi(payload);
       
-      if (res.ok && res.data?.success) {
-        toast.success("Đặt lịch thành công! " + (res.data.message || "Lịch hẹn của bạn đã được tạo."));
+  if (res.ok && res.data?.success) {
+        // ✨ Hiển thị thông báo thành công
+        toast.success("🎉 Đặt lịch thành công! " + (res.data.message || "Lịch hẹn của bạn đã được tạo."));
+
+        // ✨ Kiểm tra và hiển thị Technician đã được tự động gán
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        const appointmentAny: any = res.data.data as unknown;
+        if ((appointmentAny as any)?.technician_id) {
+          const technicianInfo = (appointmentAny as any).technician_id as { fullName?: string; phone?: string; email?: string };
+          const techName = technicianInfo.fullName || "N/A";
+          const techPhone = technicianInfo.phone || "";
+          setAssignedTechnician(technicianInfo);
+          
+          // Hiển thị thông báo về technician
+          setTimeout(() => {
+            toast.info(
+              `🔧 Kỹ thuật viên phụ trách: ${techName}${techPhone ? ` - ${techPhone}` : ""}`,
+              { autoClose: 8000 }
+            );
+          }, 1000);
+        } else {
+          // Nếu không có technician_id, có thể là do không có technician rảnh
+          console.warn("⚠️ Appointment được tạo nhưng chưa có technician_id");
+        }
+        /* eslint-enable @typescript-eslint/no-explicit-any */
+
+        // 1) Try to use payment returned directly from create API (if available)
+        const created = res.data.data as Record<string, unknown> | undefined;
+        const createdPayment = (created?.payment_id || (created && (created as Record<string, unknown>).payment)) as {
+          amount?: number;
+          checkoutUrl?: string; checkout_url?: string;
+          qrCode?: string; qr_code?: string;
+          orderCode?: number; order_code?: number;
+          timeoutAt?: string; timeout_at?: string;
+          status?: string;
+        } | undefined;
+        if (createdPayment && (createdPayment.checkoutUrl || createdPayment.checkout_url || createdPayment.qrCode || createdPayment.qr_code)) {
+          setPaymentInfo({
+            amount: createdPayment.amount,
+            checkout_url: createdPayment.checkoutUrl || createdPayment.checkout_url,
+            qr_code: createdPayment.qrCode || createdPayment.qr_code,
+            order_code: (createdPayment.orderCode || createdPayment.order_code) as number,
+            timeoutAt: createdPayment.timeoutAt || createdPayment.timeout_at,
+            status: createdPayment.status || "PENDING",
+            description: `Thanh toán booking #${(created?._id as string || '').slice(-6)} - Thay dầu hộp số xe điện`,
+          });
+          setPaymentDialogOpen(true);
+          setLoading(false);
+          return; // Stop here; dialog already opened
+        }
 
         const appointmentId = res.data.data?._id;
         if (appointmentId) {
           const detail = await getAppointmentByIdApi(appointmentId);
           const appt = detail.data?.data as Record<string, unknown>;
-          const pay = appt?.payment_id as Record<string, unknown>;
-          if (detail.ok && pay) {
+          // Try multiple shapes to extract payment
+          type RawPayment = {
+            _id?: string;
+            amount?: number;
+            checkoutUrl?: string; checkout_url?: string;
+            qrCode?: string; qr_code?: string;
+            orderCode?: number; order_code?: number;
+            timeoutAt?: string; timeout_at?: string;
+            status?: string;
+          } | undefined;
+          const apptAny = appt as Record<string, unknown> | undefined;
+          const createRespAny = res.data?.data as Record<string, unknown> | undefined;
+          const payCandidates: RawPayment[] = [
+            apptAny?.payment_id as RawPayment,
+            apptAny?.payment as RawPayment,
+            createRespAny?.payment_id as RawPayment,
+            createRespAny?.payment as RawPayment,
+          ];
+
+          let paymentFound: Record<string, unknown> | null = null;
+          for (const cand of payCandidates) {
+            if (!cand) continue;
+            if (cand._id) { paymentFound = cand as Record<string, unknown>; break; }
+            if (cand.checkoutUrl || cand.checkout_url || cand.qrCode || cand.qr_code) { paymentFound = cand as Record<string, unknown>; break; }
+          }
+
+          if (!paymentFound) {
+            // Direct fallback: create payment link (history endpoint not available)
+            console.warn("[BookingPage] Không tìm thấy payment trong appointment. Tạo link thanh toán mới (direct fallback).");
+            const service = selectedServiceData;
+            const basePrice = service?.base_price || 0;
+            const depositAmount = Math.round(basePrice * 0.10);
+            if (depositAmount > 0) {
+              try {
+                const createPayRes = await createPaymentLinkApi({
+                  amount: depositAmount,
+                  description: service?.service_name ? `Đặt cọc ${service.service_name}`.slice(0,25) : "Dat coc dich vu",
+                  customer: currentUser ? { username: currentUser.username, fullName: currentUser.username, email: "", } : undefined,
+                  // Set timeoutSeconds = 60s to match backend PAYMENT_EXPIRED_TIME constant
+                  timeoutSeconds: 60,
+                });
+                if (createPayRes.ok && createPayRes.data?.data) {
+                  const d = createPayRes.data.data;
+                  console.log('📦 Backend Payment Response:', d);
+                  setPaymentInfo({
+                    amount: d.amount,
+                    checkout_url: d.checkoutUrl,
+                    qr_code: d.qrCode,
+                    order_code: d.orderCode,
+                    timeoutAt: d.timeoutAt,
+                    status: "PENDING",
+                    description: service?.service_name ? `Đặt cọc ${service.service_name}` : "Đặt cọc dịch vụ",
+                  });
+                  setPaymentDialogOpen(true);
+                  toast.info("Đã tạo link thanh toán đặt cọc");
+                } else {
+                  console.error("[BookingPage] Fallback create payment thất bại", createPayRes.message);
+                  toast.error("Không thể tạo link thanh toán. Vui lòng thử lại hoặc liên hệ hỗ trợ.");
+                }
+              } catch (e) {
+                console.error("[BookingPage] Lỗi tạo payment fallback", e);
+                toast.error("Lỗi tạo link thanh toán. Vui lòng thử lại sau.");
+              }
+            } else {
+              console.warn("[BookingPage] base_price không hợp lệ, bỏ qua tạo payment fallback.");
+            }
+          } else {
+            const p = paymentFound as RawPayment & Record<string, unknown>;
             setPaymentInfo({
-              amount: pay.amount as number,
-              checkout_url: pay.checkout_url as string,
-              qr_code: pay.qr_code as string,
-              order_code: pay.order_code as number,
+              amount: p.amount as number,
+              checkout_url: (p.checkoutUrl || p.checkout_url) as string,
+              qr_code: (p.qrCode || p.qr_code) as string,
+              order_code: (p.orderCode || p.order_code) as number,
+              timeoutAt: (p.timeoutAt || p.timeout_at) as string | undefined,
+              status: (p.status as string) || "PENDING",
+              description: (p.description as string) || `Thanh toán booking #${appointmentId?.slice(-6)}`,
             });
             setPaymentDialogOpen(true);
-          } else if ((pay as Record<string, unknown>)?.checkout_url as string) {
-            window.open((pay as Record<string, unknown>)?.checkout_url as string, "_blank");
           }
         }
       } else {
@@ -170,6 +401,28 @@ export default function BookingPage() {
       setLoading(false);
     }
   };
+
+  const handleCancelPayment = async () => {
+    try {
+      if (!paymentInfo?.order_code) return;
+      // Call cancel payment API
+      const res = await fetch(`/api/payment/cancel/${paymentInfo.order_code}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success("Đã hủy giao dịch thanh toán");
+        setPaymentInfo((prev) => prev ? { ...prev, status: "CANCELLED" } : prev);
+      } else {
+        toast.error(json?.message || "Không thể hủy thanh toán");
+      }
+    } catch (e) {
+      console.error("Cancel payment error", e);
+      toast.error("Lỗi hủy thanh toán");
+    }
+  };
+
 
   const handleNext = () => {
     if (currentStep === 1 && !selectedVehicle) {
@@ -287,7 +540,7 @@ export default function BookingPage() {
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="min-h-screen flex flex-col bg-gray-50"
+      className="min-h-screen flex flex-col bg-gradient-to-br from-ev-green-light via-green-50/30 to-teal-50/20"
     >
       <Header onLogout={handleLogout} />
       <main className="flex-1 py-8">
@@ -308,40 +561,62 @@ export default function BookingPage() {
 
           {/* Stepper */}
           <div className="mb-8">
-            <div className="flex items-center justify-between max-w-3xl mx-auto">
-              {STEPS.map((step, index) => (
-                <div key={step.id} className="flex items-center flex-1">
-                  <div className="flex flex-col items-center flex-1">
-                    <div
-                      className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-colors",
-                        currentStep === step.id
-                          ? "bg-blue-600 text-white"
-                          : currentStep > step.id
-                          ? "bg-green-500 text-white"
-                          : "bg-gray-200 text-gray-500"
-                      )}
-                    >
-                      {currentStep > step.id ? <Check className="h-5 w-5" /> : step.id}
-                    </div>
-                    <div className="mt-2 text-center">
-                      <div className={cn(
-                        "text-sm font-medium",
-                        currentStep === step.id ? "text-blue-600" : "text-gray-500"
-                      )}>
-                        {step.title}
+            <div className="relative max-w-4xl mx-auto px-4">
+              {/* Track line (background) */}
+              <div className="absolute left-4 right-4 top-5 h-1 bg-gray-200 rounded-full" />
+              {/* Progress line (animated) */}
+              <motion.div
+                className="absolute left-4 top-5 h-1 bg-gradient-to-r from-ev-green to-teal-500 rounded-full"
+                animate={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
+              />
+
+              {/* Markers */}
+              <div className="grid grid-cols-4 gap-0">
+                {STEPS.map((step) => {
+                  const isDone = currentStep > step.id;
+                  const isActive = currentStep === step.id;
+                  return (
+                    <div key={step.id} className="relative flex flex-col items-center">
+                      <div className="relative z-10">
+                        {isActive && (
+                          <motion.span
+                            className="absolute -inset-2 rounded-full bg-ev-green/15"
+                            animate={{ scale: [1, 1.15, 1] }}
+                            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                          />
+                        )}
+                        <motion.div
+                          className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm shadow-sm transition-colors",
+                            isActive
+                              ? "bg-ev-green text-white"
+                              : isDone
+                              ? "bg-teal-500 text-white"
+                              : "bg-gray-200 text-gray-600"
+                          )}
+                          animate={{ scale: isActive ? 1.05 : 1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                          aria-current={isActive ? 'step' : undefined}
+                        >
+                          {isDone ? <Check className="h-5 w-5" /> : step.id}
+                        </motion.div>
                       </div>
-                      <div className="text-xs text-gray-400 hidden sm:block">{step.subtitle}</div>
+                      <div className="mt-2 text-center min-h-[40px]">
+                        <div
+                          className={cn(
+                            "text-sm font-medium",
+                            isActive ? "text-ev-green" : "text-gray-600"
+                          )}
+                        >
+                          {step.title}
+                        </div>
+                        <div className="text-xs text-gray-400 hidden sm:block">{step.subtitle}</div>
+                      </div>
                     </div>
-                  </div>
-                  {index < STEPS.length - 1 && (
-                    <div className={cn(
-                      "h-0.5 flex-1 mx-2 transition-colors",
-                      currentStep > step.id ? "bg-green-500" : "bg-gray-200"
-                    )} />
-                  )}
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -352,7 +627,7 @@ export default function BookingPage() {
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 max-w-md mx-auto">
               <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-ev-green to-teal-500 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
               />
             </div>
@@ -386,7 +661,7 @@ export default function BookingPage() {
                           className={cn(
                             "cursor-pointer transition-all hover:shadow-md",
                             selectedVehicle === vehicle._id
-                              ? "border-blue-500 border-2 bg-blue-50"
+                              ? "border-ev-green border-2 bg-green-50"
                               : "border-gray-200"
                           )}
                           onClick={() => setSelectedVehicle(vehicle._id)}
@@ -395,11 +670,11 @@ export default function BookingPage() {
                             <div className="flex items-start gap-3">
                               <div className={cn(
                                 "p-3 rounded-lg",
-                                selectedVehicle === vehicle._id ? "bg-blue-100" : "bg-gray-100"
+                                selectedVehicle === vehicle._id ? "bg-green-100" : "bg-gray-100"
                               )}>
                                 <Car className={cn(
                                   "h-6 w-6",
-                                  selectedVehicle === vehicle._id ? "text-blue-600" : "text-gray-600"
+                                  selectedVehicle === vehicle._id ? "text-ev-green" : "text-gray-600"
                                 )} />
                               </div>
                               <div className="flex-1">
@@ -410,7 +685,7 @@ export default function BookingPage() {
                                 </p>
                               </div>
                               {selectedVehicle === vehicle._id && (
-                                <Check className="h-5 w-5 text-blue-600" />
+                                <Check className="h-5 w-5 text-ev-green" />
                               )}
                             </div>
                           </CardContent>
@@ -422,7 +697,7 @@ export default function BookingPage() {
                     {!showAddVehicleForm && (
                       <button
                         onClick={handleShowAddForm}
-                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-500 hover:border-blue-500 hover:text-blue-500 transition-colors flex items-center justify-center gap-2"
+                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-500 hover:border-ev-green hover:text-ev-green transition-colors flex items-center justify-center gap-2"
                       >
                         <Plus className="h-5 w-5" />
                         Thêm xe
@@ -431,7 +706,7 @@ export default function BookingPage() {
 
                     {/* Inline Add Vehicle Form */}
                     {showAddVehicleForm && (
-                      <Card className="border-2 border-blue-200 bg-blue-50">
+                      <Card className="border-2 border-green-200 bg-green-50">
                         <CardContent className="p-6">
                           <h3 className="text-lg font-semibold mb-4">Thông tin xe mới</h3>
                           <div className="space-y-4">
@@ -540,7 +815,7 @@ export default function BookingPage() {
                             </div>
 
                             {/* Info Box */}
-                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-4 rounded-xl">
+                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 p-4 rounded-xl">
                               <h4 className="font-semibold text-gray-900 mb-2">💡 Lưu ý:</h4>
                               <ul className="text-sm text-gray-700 space-y-1">
                                 <li>• Biển số, model và màu xe là bắt buộc</li>
@@ -591,7 +866,7 @@ export default function BookingPage() {
                       className={cn(
                         "cursor-pointer transition-all hover:shadow-md",
                         selectedCenter === center._id
-                          ? "border-blue-500 border-2 bg-blue-50"
+                          ? "border-ev-green border-2 bg-green-50"
                           : "border-gray-200"
                       )}
                       onClick={() => setSelectedCenter(center._id)}
@@ -621,7 +896,7 @@ export default function BookingPage() {
                             )}
                           </div>
                           {selectedCenter === center._id && (
-                            <Check className="h-5 w-5 text-blue-600 ml-2" />
+                            <Check className="h-5 w-5 text-ev-green ml-2" />
                           )}
                         </div>
                       </CardContent>
@@ -633,6 +908,43 @@ export default function BookingPage() {
                   <div className="text-center py-12">
                     <MapPin className="h-16 w-16 mx-auto text-gray-300 mb-4" />
                     <p className="text-muted-foreground">Không tìm thấy trung tâm nào</p>
+                  </div>
+                )}
+
+                {/* Technicians of selected center */}
+                {selectedCenter && (
+                  <div className="mt-6">
+                    <div className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <Wrench className="h-4 w-4" />
+                      Kỹ thuật viên của trung tâm đã chọn
+                    </div>
+                    <div className="rounded-lg border p-4 bg-gray-50">
+                      {loadingTechnicians ? (
+                        <div className="text-sm text-muted-foreground">Đang tải kỹ thuật viên...</div>
+                      ) : centerTechnicians.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">Trung tâm này chưa có kỹ thuật viên.</div>
+                      ) : (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {centerTechnicians.map((t) => (
+                            <div key={t._id} className="flex items-start justify-between rounded-md bg-white p-3 border">
+                              <div>
+                                <div className="font-medium">{t.user.fullName}</div>
+                                <div className="text-xs text-muted-foreground">{t.user.email}</div>
+                                {t.user.phone && (
+                                  <div className="text-xs text-muted-foreground">{t.user.phone}</div>
+                                )}
+                              </div>
+                              <Badge className={t.status === 'on' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}>
+                                {t.status === 'on' ? 'Hoạt động' : 'Không hoạt động'}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground mt-3">
+                        Hệ thống sẽ tự động phân công kỹ thuật viên khi bạn hoàn tất đặt lịch.
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -658,7 +970,7 @@ export default function BookingPage() {
                         className={cn(
                           "cursor-pointer transition-all hover:shadow-md",
                           selectedServiceType === service._id
-                            ? "border-blue-500 border-2 bg-blue-50"
+                            ? "border-ev-green border-2 bg-green-50"
                             : "border-gray-200"
                         )}
                         onClick={() => setSelectedServiceType(service._id)}
@@ -669,7 +981,7 @@ export default function BookingPage() {
                               <div className="flex items-center gap-2 mb-2">
                                 <Wrench className={cn(
                                   "h-5 w-5",
-                                  selectedServiceType === service._id ? "text-blue-600" : "text-gray-600"
+                                  selectedServiceType === service._id ? "text-ev-green" : "text-gray-600"
                                 )} />
                                 <h3 className="font-semibold text-lg">{service.service_name}</h3>
                                 {service.base_price && (
@@ -684,7 +996,7 @@ export default function BookingPage() {
                               {service.base_price && (
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm text-muted-foreground">Giá cơ bản:</span>
-                                  <span className="text-lg font-bold text-blue-600">
+                                  <span className="text-lg font-bold text-ev-green">
                                     {service.base_price.toLocaleString("vi-VN")} đ
                                   </span>
                                 </div>
@@ -696,7 +1008,7 @@ export default function BookingPage() {
                               )}
                             </div>
                             {selectedServiceType === service._id && (
-                              <Check className="h-5 w-5 text-blue-600 ml-2" />
+                              <Check className="h-5 w-5 text-ev-green ml-2" />
                             )}
                           </div>
                         </CardContent>
@@ -725,6 +1037,38 @@ export default function BookingPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Left: Date and Notes */}
                   <div className="space-y-4">
+                          {/* Technician selection (optional) */}
+                          <div>
+                            <Label className="text-sm font-medium mb-2 block">Chọn kỹ thuật viên (tùy chọn)</Label>
+                            <Select
+                              value={selectedTechnicianId || "auto"}
+                              onValueChange={(v) => setSelectedTechnicianId(v === "auto" ? "" : v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Tự động (hệ thống phân công)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="auto">Tự động (hệ thống phân công)</SelectItem>
+                                {centerTechnicians
+                                  .filter(t => t.status === 'on')
+                                  .map((t) => (
+                                    <SelectItem key={t._id} value={t.user._id}>
+                                      {t.user.fullName}{t.user.phone ? ` — ${t.user.phone}` : ''}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            {!selectedTechnicianId ? (
+                              <div className="text-xs text-muted-foreground mt-2">
+                                💡 Bạn đang để hệ thống tự động phân công KTV. Chọn một KTV cụ thể để xem lịch rảnh/bận chi tiết theo giờ.
+                              </div>
+                            ) : (
+                              <div className="text-xs text-green-700 bg-green-50 rounded p-2 mt-2">
+                                ✓ Đã chọn KTV cụ thể. Các khung giờ bận sẽ được đánh dấu màu xám và không thể chọn.
+                              </div>
+                            )}
+                          </div>
+
                     <div>
                       <Label className="text-sm font-medium mb-2 block">Chọn ngày</Label>
                       <Popover>
@@ -781,20 +1125,51 @@ export default function BookingPage() {
                             </div>
                             <div className="max-h-64 overflow-y-auto p-2">
                               <div className="space-y-1">
-                                {timeSlots.map((time) => (
-                                  <button
-                                    key={time}
-                                    onClick={() => setBookingTime(time)}
-                                    className={cn(
-                                      "w-full text-left px-3 py-2 rounded-md transition-colors hover:bg-gray-100",
-                                      bookingTime === time 
-                                        ? "bg-blue-100 text-blue-700 font-medium" 
-                                        : "text-gray-700"
-                                    )}
-                                  >
-                                    {time}
-                                  </button>
-                                ))}
+                                {timeSlots.map((time) => {
+                                  const isBusy = selectedTechnicianId ? techScheduleBusyTimes.has(time) : false;
+                                  return (
+                                    <button
+                                      key={time}
+                                      onClick={() => {
+                                        if (isBusy) {
+                                          toast.warn("⏰ Khung giờ này KTV đã có lịch. Vui lòng chọn giờ khác hoặc để hệ thống tự động phân công.", {
+                                            autoClose: 3000,
+                                          });
+                                          return;
+                                        }
+                                        setBookingTime(time);
+                                      }}
+                                      disabled={!!selectedTechnicianId && isBusy}
+                                      title={
+                                        selectedTechnicianId
+                                          ? isBusy
+                                            ? `${time} - Khung giờ này KTV đã có lịch hẹn. Không thể chọn.`
+                                            : `${time} - Khung giờ này KTV đang rảnh. Click để chọn.`
+                                          : `${time} - Click để chọn giờ hẹn.`
+                                      }
+                                      className={cn(
+                                        "w-full text-left px-3 py-2 rounded-md transition-colors",
+                                        bookingTime === time
+                                          ? "bg-green-100 text-ev-green font-medium border-2 border-green-400"
+                                          : isBusy
+                                          ? "text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
+                                          : "text-gray-700 hover:bg-gray-100 hover:border hover:border-gray-300"
+                                      )}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span className={bookingTime === time ? "font-semibold" : ""}>{time}</span>
+                                        {selectedTechnicianId && (
+                                          <Badge className={cn(
+                                            "text-xs",
+                                            isBusy ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+                                          )}>
+                                            {isBusy ? "🚫 Bận" : "✓ Rảnh"}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
                               </div>
                               <div className="mt-2 pt-2 border-t">
                                 <button
@@ -807,6 +1182,29 @@ export default function BookingPage() {
                             </div>
                           </PopoverContent>
                         </Popover>
+                        {selectedTechnicianId && bookingDate && (
+                          <div className="mt-2 text-xs">
+                            {loadingTechSchedule ? (
+                              <span className="text-muted-foreground">⏳ Đang tải lịch của KTV...</span>
+                            ) : (
+                              <div className="space-y-1">
+                                <div className="text-muted-foreground">
+                                  📅 Đã đặt trong ngày: <span className="font-medium text-foreground">{techDayBookedCount}/4 slot</span> (tối đa 4 slot/ngày)
+                                </div>
+                                {techScheduleBusyTimes.size > 0 && (
+                                  <div className="text-amber-700 bg-amber-50 rounded px-2 py-1">
+                                    ⚠️ {techScheduleBusyTimes.size} khung giờ không khả dụng (màu xám)
+                                  </div>
+                                )}
+                                {techDayBookedCount >= 4 && (
+                                  <div className="text-red-700 bg-red-50 rounded px-2 py-1 font-medium">
+                                    🚫 KTV đã đủ 4 slot. Vui lòng chọn ngày khác hoặc KTV khác.
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -831,17 +1229,17 @@ export default function BookingPage() {
                           className={cn(
                             "flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all",
                             paymentMethod === "online"
-                              ? "border-blue-500 bg-blue-50"
+                              ? "border-ev-green bg-green-50"
                               : "border-gray-200 hover:border-gray-300"
                           )}
                           onClick={() => setPaymentMethod("online")}
                         >
                           <div className={cn(
                             "w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center",
-                            paymentMethod === "online" ? "border-blue-500" : "border-gray-300"
+                            paymentMethod === "online" ? "border-ev-green" : "border-gray-300"
                           )}>
                             {paymentMethod === "online" && (
-                              <div className="w-3 h-3 rounded-full bg-blue-500" />
+                              <div className="w-3 h-3 rounded-full bg-ev-green" />
                             )}
                           </div>
                           <div className="flex-1">
@@ -855,17 +1253,17 @@ export default function BookingPage() {
                           className={cn(
                             "flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all",
                             paymentMethod === "later"
-                              ? "border-blue-500 bg-blue-50"
+                              ? "border-ev-green bg-green-50"
                               : "border-gray-200 hover:border-gray-300"
                           )}
                           onClick={() => setPaymentMethod("later")}
                         >
                           <div className={cn(
                             "w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center",
-                            paymentMethod === "later" ? "border-blue-500" : "border-gray-300"
+                            paymentMethod === "later" ? "border-ev-green" : "border-gray-300"
                           )}>
                             {paymentMethod === "later" && (
-                              <div className="w-3 h-3 rounded-full bg-blue-500" />
+                              <div className="w-3 h-3 rounded-full bg-ev-green" />
                             )}
                           </div>
                           <div className="flex-1">
@@ -929,9 +1327,31 @@ export default function BookingPage() {
                         </div>
 
                         <div className="border-t pt-3">
+                          <div className="text-xs text-muted-foreground mb-1">Kỹ thuật viên:</div>
+                          {selectedTechnicianId ? (
+                            <div className="text-sm">
+                              Đã chọn: {centerTechnicians.find(t => t.user._id === selectedTechnicianId)?.user.fullName || "KTV"}
+                            </div>
+                          ) : (
+                            <div className="text-sm">
+                              Sẽ được tự động phân công
+                              {centerTechnicians.length > 0 && (
+                                <span className="text-muted-foreground"> — {centerTechnicians.filter(t=>t.status==='on').length}/{centerTechnicians.length} đang hoạt động</span>
+                              )}
+                            </div>
+                          )}
+                          {assignedTechnician && (
+                            <div className="text-xs text-blue-700 mt-1">
+                              Dự kiến phụ trách: {assignedTechnician.fullName}
+                              {assignedTechnician.phone ? ` - ${assignedTechnician.phone}` : ''}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="border-t pt-3">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-muted-foreground">Tiền cọc dịch vụ:</span>
-                            <span className="text-lg font-bold text-blue-600">
+                            <span className="text-lg font-bold text-ev-green">
                               {selectedServiceData?.base_price
                                 ? `${(selectedServiceData.base_price * 0.1).toLocaleString("vi-VN")} đ`
                                 : "—"}
@@ -981,80 +1401,24 @@ export default function BookingPage() {
           {/* Help text */}
           <div className="mt-8 text-center">
             <p className="text-sm text-muted-foreground">
-              Cần hỗ trợ? Liên hệ hotline: <a href="tel:1900 1234" className="text-blue-600 hover:underline">1900 1234</a>
+              Cần hỗ trợ? Liên hệ hotline: <a href="tel:1900 1234" className="text-ev-green hover:underline">1900 1234</a>
             </p>
           </div>
         </div>
       </main>
 
       {/* Payment Dialog */}
-      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[640px]">
-          <DialogHeader>
-            <DialogTitle>Thanh toán đặt lịch</DialogTitle>
-            <DialogDescription>
-              Vui lòng thanh toán tiền đặt cọc để xác nhận lịch hẹn
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="rounded-md bg-muted p-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">Số tiền</div>
-                <div className="text-xl font-bold text-primary">
-                  {paymentInfo?.amount ? paymentInfo.amount.toLocaleString("vi-VN") + " VND" : "—"}
-                </div>
-              </div>
-            </div>
-
-            {paymentInfo?.qr_code && (
-              <div className="flex flex-col items-center gap-2">
-                <img
-                  src={paymentInfo.qr_code}
-                  alt="QR thanh toán"
-                  className="w-56 h-56 object-contain rounded-md border"
-                />
-                <div className="text-xs text-muted-foreground">Quét mã để thanh toán</div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Thanh toán online</div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => paymentInfo?.checkout_url && window.open(paymentInfo.checkout_url, "_blank")}
-                >
-                  Mở trang thanh toán
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    if (paymentInfo?.checkout_url) {
-                      await navigator.clipboard.writeText(paymentInfo.checkout_url);
-                      toast.success("Đã sao chép link thanh toán");
-                    }
-                  }}
-                >
-                  Sao chép link
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setPaymentDialogOpen(false);
-              navigate("/customer/booking-history");
-            }}>
-              Xem lịch đặt
-            </Button>
-            <Button variant="destructive" onClick={() => setPaymentDialogOpen(false)}>
-              Đóng
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        paymentInfo={paymentInfo}
+        technician={assignedTechnician}
+        onCancel={handleCancelPayment}
+        onViewHistory={() => {
+          setPaymentDialogOpen(false);
+          navigate("/customer/booking-history");
+        }}
+      />
 
       <Footer />
     </motion.div>

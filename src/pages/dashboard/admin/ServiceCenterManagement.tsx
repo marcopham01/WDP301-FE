@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Pencil, Plus, Trash2, Clock } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2, Clock, Users, UserPlus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,18 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from "@/components/ui/dialog";
+// Select UI bị gỡ vì hiện chưa có API list users theo role
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "react-toastify";
 import {
   ServiceCenter,
@@ -29,8 +40,14 @@ import {
   deleteServiceCenterApi,
   CreateServiceCenterPayload,
   UpdateServiceCenterPayload,
+  getTechniciansApi,
+  addTechnicianToServiceCenterApi,
+  removeTechnicianFromServiceCenterApi,
+  Technician,
 } from "@/lib/serviceCenterApi";
 import { useNavigate } from "react-router-dom";
+import { getAllProfilesApi, UserProfileItem } from "@/lib/authApi";
+// Gỡ gọi API không tồn tại ở backend
 
 const ServiceCenterManagement = () => {
   const [serviceCenters, setServiceCenters] = useState<ServiceCenter[]>([]);
@@ -48,7 +65,17 @@ const ServiceCenterManagement = () => {
   const [email, setEmail] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  // Đã chuyển sang dùng toast của sonner
+  // ✨ Technician Management States
+  const [isTechnicianDialogOpen, setIsTechnicianDialogOpen] = useState(false);
+  const [isAddTechnicianDialogOpen, setIsAddTechnicianDialogOpen] = useState(false);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [allUsers, setAllUsers] = useState<{ _id: string; fullName: string; email: string; phone?: string }[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [loadingTechnicians, setLoadingTechnicians] = useState(false);
+  const [addingTechnician, setAddingTechnician] = useState(false);
+  const [removingTechnicianId, setRemovingTechnicianId] = useState<string | null>(null);
+  // remove manual user id path as per request
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -185,6 +212,155 @@ const ServiceCenterManagement = () => {
     );
   };
 
+  // ✨ Technician Management Functions
+  const handleOpenTechnicianDialog = async (serviceCenter: ServiceCenter) => {
+    setCurrentServiceCenter(serviceCenter);
+    setIsTechnicianDialogOpen(true);
+    await loadTechnicians(serviceCenter._id);
+  };
+
+  const loadTechnicians = async (centerId: string) => {
+    setLoadingTechnicians(true);
+    try {
+      const response = await getTechniciansApi(centerId);
+      if (response.ok && response.data?.data) {
+        setTechnicians(response.data.data);
+      } else {
+        toast.error("Không thể tải danh sách kỹ thuật viên");
+      }
+    } catch (error) {
+      console.error("Error loading technicians:", error);
+      toast.error("Đã xảy ra lỗi khi tải danh sách kỹ thuật viên");
+    } finally {
+      setLoadingTechnicians(false);
+    }
+  };
+
+  // Lấy tất cả user rồi lọc role = technician
+  const loadAllUsers = async () => {
+    try {
+      const pageSize = 50;
+      let page = 1;
+      const acc: UserProfileItem[] = [];
+
+      while (true) {
+        const res = await getAllProfilesApi({ page, limit: pageSize, role: "technician" });
+        if (!res.ok) {
+          toast.error(res.message || "Không thể tải danh sách người dùng");
+          break;
+        }
+        type Paged = { items?: UserProfileItem[]; users?: UserProfileItem[]; pagination?: { total_pages?: number; current_page?: number } };
+  const raw = res.data as { success?: boolean; data?: Paged } | null | undefined;
+        const container: Paged | undefined = raw?.data ?? (raw as unknown as Paged);
+        const items = (container?.items ?? container?.users ?? (Array.isArray(container) ? (container as unknown as UserProfileItem[]) : undefined)) as UserProfileItem[] | undefined;
+        const pagination = container?.pagination as { total_pages?: number; current_page?: number } | undefined;
+
+        if (Array.isArray(items)) acc.push(...items);
+
+        const totalPages = pagination?.total_pages ?? 1;
+        const currentPage = pagination?.current_page ?? page;
+        if (currentPage >= totalPages) break;
+        page += 1;
+        if (page > 20) break; // safety cap
+      }
+
+      const techniciansOnly = acc.filter((u) => (u.role || "").toLowerCase() === "technician");
+      const mapped = techniciansOnly.map((u) => ({
+        _id: u._id,
+        fullName: u.fullName,
+        email: u.email,
+        phone: u.phoneNumber,
+      }));
+      setAllUsers(mapped);
+
+      if (mapped.length === 0) {
+        toast.info("Không tìm thấy user có role 'technician' trong danh sách trả về");
+      }
+    } catch (error) {
+      console.error("Error loadAllUsers:", error);
+      toast.error("Không thể tải danh sách người dùng");
+    }
+  };
+
+  // Đã gỡ gọi API lấy users theo role vì backend chưa có
+
+  const handleOpenAddTechnicianDialog = async () => {
+    setIsAddTechnicianDialogOpen(true);
+    setSelectedUserId("");
+    if (allUsers.length === 0) {
+      await loadAllUsers();
+    }
+  };
+
+  const handleAddTechnician = async () => {
+    if (!selectedUserId) {
+      toast.error("Vui lòng chọn kỹ thuật viên");
+      return;
+    }
+    if (!currentServiceCenter) return;
+
+    const objectIdToUse = selectedUserId;
+    const isValidObjectId = /^[a-fA-F0-9]{24}$/.test(objectIdToUse);
+    if (!isValidObjectId) {
+      toast.error("user_id không hợp lệ. Vui lòng nhập ObjectId 24 ký tự hex.");
+      return;
+    }
+
+    setAddingTechnician(true);
+    try {
+      const response = await addTechnicianToServiceCenterApi({
+        user_id: objectIdToUse,
+        center_id: currentServiceCenter._id,
+        maxSlotsPerDay: 4,
+        status: "on",
+      });
+
+      if (response.ok) {
+        toast.success("✅ Thêm kỹ thuật viên thành công!");
+        toast.info("🔄 Hệ thống đã cập nhật availableSlots = 4");
+        setIsAddTechnicianDialogOpen(false);
+        setSelectedUserId("");
+        await loadTechnicians(currentServiceCenter._id);
+        await loadServiceCenters(); // Refresh service centers
+      } else {
+        toast.error(response.message || "Không thể thêm kỹ thuật viên");
+      }
+    } catch (error) {
+      console.error("Error adding technician:", error);
+      toast.error("Đã xảy ra lỗi khi thêm kỹ thuật viên");
+    } finally {
+      setAddingTechnician(false);
+    }
+  };
+
+  const handleRemoveTechnician = async (userId: string) => {
+    if (!currentServiceCenter) return;
+    if (!confirm("Bạn có chắc chắn muốn xóa kỹ thuật viên này khỏi trung tâm?")) {
+      return;
+    }
+
+    setRemovingTechnicianId(userId);
+    try {
+      const response = await removeTechnicianFromServiceCenterApi({
+        user_id: userId,
+        center_id: currentServiceCenter._id,
+      });
+
+      if (response.ok) {
+        toast.success("Đã xóa kỹ thuật viên thành công");
+        await loadTechnicians(currentServiceCenter._id);
+        await loadServiceCenters(); // Refresh service centers
+      } else {
+        toast.error(response.message || "Không thể xóa kỹ thuật viên");
+      }
+    } catch (error) {
+      console.error("Error removing technician:", error);
+      toast.error("Đã xảy ra lỗi khi xóa kỹ thuật viên");
+    } finally {
+      setRemovingTechnicianId(null);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -249,6 +425,14 @@ const ServiceCenterManagement = () => {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenTechnicianDialog(center)}
+                          title="Quản lý kỹ thuật viên"
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                          <Users className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -427,6 +611,164 @@ const ServiceCenterManagement = () => {
             </DialogClose>
             <Button variant="destructive" onClick={handleDeleteServiceCenter}>
               Xóa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ✨ Technician Management Dialog */}
+      <Dialog open={isTechnicianDialogOpen} onOpenChange={setIsTechnicianDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Quản lý Kỹ thuật viên</DialogTitle>
+            <DialogDescription>
+              Trung tâm: {currentServiceCenter?.center_name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-medium">
+                Danh sách kỹ thuật viên ({technicians.length})
+              </h3>
+              <Button 
+                size="sm" 
+                onClick={handleOpenAddTechnicianDialog}
+                className="flex items-center gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                Thêm kỹ thuật viên
+              </Button>
+            </div>
+
+            {loadingTechnicians ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Đang tải...
+              </div>
+            ) : technicians.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Chưa có kỹ thuật viên nào
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {technicians.map((tech) => (
+                  <Card key={tech._id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={tech.user.avatar} />
+                          <AvatarFallback>
+                            {tech.user.fullName.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{tech.user.fullName}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {tech.user.email}
+                          </div>
+                          {tech.user.phone && (
+                            <div className="text-xs text-muted-foreground">
+                              {tech.user.phone}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={tech.status === "on" ? "default" : "secondary"}
+                          className={
+                            tech.status === "on"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-700"
+                          }
+                        >
+                          {tech.status === "on" ? "Đang hoạt động" : "Không hoạt động"}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveTechnician(tech.user._id)}
+                          disabled={removingTechnicianId === tech.user._id}
+                          title="Xóa khỏi trung tâm"
+                        >
+                          {removingTechnicianId === tech.user._id ? (
+                            <span className="animate-spin">⏳</span>
+                          ) : (
+                            <X className="h-4 w-4 text-red-600" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <p className="text-sm text-blue-800">
+                💡 <strong>Lưu ý:</strong> Sau khi thêm kỹ thuật viên, hệ thống sẽ 
+                tự động cập nhật <code className="bg-blue-100 px-1 rounded">availableSlots = 4</code> cho 
+                trung tâm này (mỗi technician có thể nhận tối đa 4 appointments/ngày).
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Đóng</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ✨ Add Technician Dialog */}
+      <Dialog open={isAddTechnicianDialogOpen} onOpenChange={setIsAddTechnicianDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Thêm Kỹ thuật viên</DialogTitle>
+            <DialogDescription>
+              Chọn người dùng có role "technician" để thêm vào trung tâm
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="technician">Chọn kỹ thuật viên *</Label>
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="-- Chọn kỹ thuật viên --" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allUsers.length === 0 ? (
+                    <div className="p-2 text-center text-sm text-muted-foreground">
+                      Không có người dùng nào
+                    </div>
+                  ) : (
+                    allUsers.map((user) => (
+                      <SelectItem key={user._id} value={user._id}>
+                        {user.fullName} - {user.email}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+              <p className="text-xs text-green-800">
+                ℹ️ Mỗi technician chỉ có thể thuộc về 1 trung tâm duy nhất.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={addingTechnician}>
+                Hủy
+              </Button>
+            </DialogClose>
+            <Button onClick={handleAddTechnician} disabled={addingTechnician}>
+              {addingTechnician ? "Đang thêm..." : "Thêm kỹ thuật viên"}
             </Button>
           </DialogFooter>
         </DialogContent>

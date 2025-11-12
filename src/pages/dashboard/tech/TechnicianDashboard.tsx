@@ -1,6 +1,5 @@
 import { TechnicianSidebar } from "@/components/dashboard/sidebars/TechnicianSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { DashboardLayout } from "@/components/dashboard/mainlayout/DashboardLayout";
+import { SidebarProvider, SidebarInset, SidebarRail } from "@/components/ui/sidebar";
 import { DashboardHeader } from "@/components/dashboard/mainlayout/DashboardHeader";
 import { Outlet } from "react-router-dom";
 
@@ -18,17 +17,16 @@ export const TechnicianDashboard = ({
 }: TechnicianDashboardProps) => {
   return (
     <SidebarProvider>
-      <DashboardLayout
-        sidebar={<TechnicianSidebar />}
-        header={
-          <DashboardHeader
-            user={user}
-            onLogout={onLogout}
-            notificationCount={0}
-          />
-        }>
-        <Outlet />
-      </DashboardLayout>
+      <div className="min-h-screen flex w-full bg-[radial-gradient(1200px_600px_at_80%_-10%,theme(colors.emerald.100/_0.4),transparent)] dark:bg-[radial-gradient(1200px_600px_at_80%_-10%,theme(colors.emerald.900/_0.2),transparent)]">
+        <TechnicianSidebar />
+        <SidebarRail />
+        <SidebarInset className="bg-background/80 backdrop-blur-sm">
+          <DashboardHeader user={user} onLogout={onLogout} />
+          <main className="flex-1 p-6">
+            <Outlet />
+          </main>
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 };

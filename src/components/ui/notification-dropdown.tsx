@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Bell, MessageSquare, Wrench, Clock, DollarSign, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getNotifications, Notification as ApiNotification } from "@/lib/notificationApi";
+import { getNotifications, Notification as ApiNotification, markNotificationAsRead, markAllNotificationsAsRead } from "@/lib/notificationApi";
 import { initializeSocket, onReminderSent, disconnectSocket, ReminderMessage } from "@/lib/socket";
 import { toast } from "react-toastify";
 import { formatDistanceToNow } from "date-fns";
@@ -40,7 +40,17 @@ export function NotificationDropdown({ children }: NotificationDropdownProps) {
         const response = await getNotifications();
         
         if (response.data && response.data.length > 0) {
-          const apiNotifications = response.data.map((notification: ApiNotification) => ({
+          // Filter out notifications with null vehicle_id
+          const validNotifications = response.data.filter(
+            (notification: ApiNotification) => notification.vehicle_id && notification.vehicle_id.license_plate
+          );
+          
+          if (validNotifications.length === 0) {
+            console.log("ℹ️ NotificationDropdown: No valid notifications available");
+            return;
+          }
+          
+          const apiNotifications = validNotifications.map((notification: ApiNotification) => ({
             id: notification._id,
             type: notification.reminder_type === "maintenance" ? "maintenance" : 
                   notification.reminder_type === "time_based" ? "maintenance" : "appointment",
@@ -50,7 +60,7 @@ export function NotificationDropdown({ children }: NotificationDropdownProps) {
               addSuffix: true, 
               locale: vi 
             }),
-            read: false,
+            read: notification.is_read || false,
             priority: "high",
             vehicle: notification.vehicle_id.license_plate,
             due_date: new Date(notification.due_date).toLocaleDateString('vi-VN'),
@@ -63,7 +73,6 @@ export function NotificationDropdown({ children }: NotificationDropdownProps) {
         }
       } catch (error) {
         console.error("❌ NotificationDropdown: Error fetching notifications:", error);
-        // Không hiển thị toast error để tránh làm phiền user
       }
     };
 
@@ -153,8 +162,37 @@ interface Notification {
   priority: string;
 }
 
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await markNotificationAsRead(notificationId);
+      // Cập nhật local state
+      setMaintenanceNotifications(prev => 
+        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      );
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      toast.error("Không thể đánh dấu đã đọc");
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead();
+      // Cập nhật local state
+      setMaintenanceNotifications(prev => 
+        prev.map(n => ({ ...n, read: true }))
+      );
+      toast.success("Đã đánh dấu tất cả đã đọc");
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+      toast.error("Không thể đánh dấu tất cả đã đọc");
+    }
+  };
+
   const NotificationItem = ({ notification }: { notification: Notification }) => (
-    <div className={cn(
+    <div 
+      onClick={() => !notification.read && handleMarkAsRead(notification.id)}
+      className={cn(
       "flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer",
       !notification.read && "bg-muted/30"
     )}>
@@ -251,7 +289,13 @@ interface Notification {
         </Tabs>
 
         <div className="p-3 border-t bg-muted/50">
-          <Button variant="ghost" size="sm" className="w-full text-xs">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full text-xs"
+            onClick={handleMarkAllAsRead}
+            disabled={unreadCount === 0}
+          >
             <CheckCircle className="h-3 w-3 mr-2" />
             Đánh dấu tất cả đã đọc
           </Button>

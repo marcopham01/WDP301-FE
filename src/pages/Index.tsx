@@ -32,7 +32,7 @@ const Index = () => {
         <div ref={heroRef}>
           <HeroSection />
         </div>
-        <div ref={featuresRef}>
+        <div ref={featuresRef} id="features-section">
           <FeaturesSection />
         </div>
         <div ref={feedbackRef}>

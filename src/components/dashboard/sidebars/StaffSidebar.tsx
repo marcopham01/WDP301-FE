@@ -1,12 +1,4 @@
-import {
-  Calendar,
-  ClipboardList,
-  Users,
-  Wrench,
-  Settings,
-  MapPin,
-  LucideIcon,
-} from "lucide-react";
+import { Calendar, ClipboardList, Users, Wrench, LucideIcon, MessageCircle, Clock } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -32,9 +24,19 @@ const items: Array<{ title: string; icon: LucideIcon; href: string }> = [
     href: "/dashboard/staff/appointments",
   },
   {
-    title: "Quản lý bảo dưỡng",
+    title: "Điều phối KTV",
     icon: Wrench,
-    href: "/dashboard/staff/maintenance",
+    href: "/dashboard/staff/technician-schedule",
+  },
+  {
+    title: "Hàng chờ",
+    icon: Clock,
+    href: "/dashboard/staff/queue",
+  },
+  {
+    title: "Chat",
+    icon: MessageCircle,
+    href: "/dashboard/staff/chat",
   },
 ];
 
@@ -43,11 +45,14 @@ export default function StaffSidebar() {
   const location = useLocation();
 
   return (
-    <Sidebar className="w-64 border-r bg-card">
-      <SidebarContent className="p-4">
+    <Sidebar className="w-64 border-r bg-white dark:bg-gray-950" collapsible="icon">
+      <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
         <div className="mb-6">
-          <div className="flex items-center gap-3">
-            <div>
+          <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-ev-green to-teal-500 flex items-center justify-center text-white font-bold shadow-sm">
+              EV
+            </div>
+            <div className="group-data-[collapsible=icon]:hidden">
               <h2 className="font-semibold text-lg">EV Service</h2>
               <p className="text-sm text-muted-foreground">Staff Panel</p>
             </div>
@@ -64,11 +69,13 @@ export default function StaffSidebar() {
                   location.pathname === item.href ||
                   (item.href !== "/dashboard/staff" &&
                     location.pathname.startsWith(item.href));
-                const Icon = item.icon as any;
+                const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       isActive={active}
+                      tooltip={item.title}
+                      className="relative data-[active=true]:bg-ev-green/10 data-[active=true]:text-ev-green hover:text-ev-green data-[active=true]:shadow-sm data-[active=true]:before:content-[''] data-[active=true]:before:absolute data-[active=true]:before:left-0 data-[active=true]:before:top-1 data-[active=true]:before:bottom-1 data-[active=true]:before:w-1 data-[active=true]:before:bg-ev-green"
                       onClick={() => navigate(item.href)}>
                       <Icon className="h-4 w-4" />
                       <span className="text-sm">{item.title}</span>

@@ -17,14 +17,14 @@ const technicianMenuItems = [
 
 export function TechnicianSidebar() {
   return (
-    <Sidebar className="w-64 border-r bg-card">
-      <SidebarContent className="p-4">
+    <Sidebar className="w-64 border-r bg-card" collapsible="icon">
+      <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
         <div className="mb-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
             <div className="p-2 rounded-lg bg-primary text-primary-foreground">
               <Car className="h-6 w-6" />
             </div>
-            <div>
+            <div className="group-data-[collapsible=icon]:hidden">
               <h2 className="font-semibold text-lg">EV Service</h2>
               <p className="text-sm text-muted-foreground">Management System</p>
             </div>
@@ -39,6 +39,7 @@ export function TechnicianSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
+                    tooltip={item.title}
                     className={
                       item.isActive ? "bg-primary text-primary-foreground" : ""
                     }>

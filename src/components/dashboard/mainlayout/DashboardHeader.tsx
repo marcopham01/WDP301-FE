@@ -1,19 +1,18 @@
 import { Button } from "@/components/ui/button";
-import { Bell } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+// import { MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+// Chat bubble moved to a global floating widget for staff; no header trigger
 
 interface DashboardHeaderProps {
   user: { name: string; role: string };
   onLogout: () => void;
-  notificationCount?: number;
   subtitle?: string;
 }
 
 export function DashboardHeader({
   user,
   onLogout,
-  notificationCount = 0,
   subtitle,
 }: DashboardHeaderProps) {
   const navigate = useNavigate();
@@ -26,37 +25,30 @@ export function DashboardHeader({
     }, 1000);
   };
   return (
-    <header className="bg-card border-b border-border/50 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">
-            Chào mừng trở lại, {user.name}
-          </h1>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
+    <header className="relative px-6 py-5 border-b border-transparent bg-gradient-to-r from-ev-green to-teal-500 text-white shadow-sm">
+      <div className="absolute inset-0 opacity-10 pointer-events-none select-none [background:radial-gradient(600px_200px_at_20%_-20%,white,transparent)]" />
+      <div className="relative flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <SidebarTrigger className="text-white hover:bg-white/10" />
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">Chào mừng trở lại, {user.name}</h1>
+            <p className="text-sm text-green-50/90">{subtitle || "Staff Panel"}</p>
+          </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="relative">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-              {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive rounded-full text-xs text-white flex items-center justify-center">
-                  {notificationCount}
-                </span>
-              )}
-            </Button>
-          </div>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+            <div className="w-9 h-9 rounded-full bg-white/15 ring-2 ring-white/30 text-white flex items-center justify-center text-sm font-semibold shadow-sm">
               {user.name.charAt(0)}
             </div>
             <div className="text-right">
-              <p className="font-medium">{user.name}</p>
-              <p className="text-sm text-muted-foreground capitalize">
-                {user.role}
-              </p>
+              <p className="font-medium leading-none">{user.name}</p>
+              <p className="text-xs text-green-50/80 capitalize">{user.role}</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
+          <Button
+            onClick={handleLogout}
+            className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+            variant="outline">
             Đăng xuất
           </Button>
         </div>

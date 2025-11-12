@@ -1,7 +1,6 @@
 import StaffSidebar from "@/components/dashboard/sidebars/StaffSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { Button } from "../../../components/ui/button";
-import { Car, LogOut } from "lucide-react";
+import { SidebarProvider, SidebarInset, SidebarRail } from "@/components/ui/sidebar";
+import { DashboardHeader } from "@/components/dashboard/mainlayout/DashboardHeader";
 import { Outlet } from "react-router-dom";
 
 // lightweight dashboard aggregates
@@ -20,30 +19,15 @@ export default function StaffDashboard({
 }: StaffDashboardProps) {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <StaffSidebar />
-        <SidebarInset>
-          <header className="bg-white border-b border-border">
-            <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Car className="h-8 w-8 text-primary" />
-                <span className="text-xl font-bold bg-gradient-to-r from-ev-green to-ev-blue bg-clip-text text-transparent">
-                  EV Service
-                </span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground">
-                  {user
-                    ? `Chào ${user.name}`
-                    : "Không tìm thấy thông tin người dùng"}
-                </span>
-                <Button variant="ghost" size="sm" onClick={onLogout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Đăng xuất
-                </Button>
-              </div>
-            </div>
-          </header>
+      <div className="min-h-screen flex w-full bg-[radial-gradient(1200px_600px_at_80%_-10%,theme(colors.emerald.100/_0.4),transparent)] dark:bg-[radial-gradient(1200px_600px_at_80%_-10%,theme(colors.emerald.900/_0.2),transparent)]">
+  <StaffSidebar />
+  <SidebarRail />
+        <SidebarInset className="bg-background/80 backdrop-blur-sm">
+          <DashboardHeader 
+            user={user} 
+            onLogout={onLogout}
+            subtitle="Staff Panel"
+          />
           <main className="flex-1">
             <Outlet />
           </main>

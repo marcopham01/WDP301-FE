@@ -35,7 +35,8 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicle, onEdit }: Veh
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              {/* Icon container color synced with vehicle card (green gradient) */}
+              <div className="w-14 h-14 bg-gradient-to-br from-ev-green to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
                 <Car className="h-7 w-7 text-white" />
               </div>
               <div>
