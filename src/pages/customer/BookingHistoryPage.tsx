@@ -14,6 +14,9 @@ import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 // Use relative path to avoid any alias resolution edge cases in this file
 import { PaymentDialog } from "../../components/customer/PaymentDialog";
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
 
 // Type guard and helpers
 // (removed unused toVNDate helper)
@@ -194,7 +197,7 @@ export default function BookingHistoryPage() {
   const handleCancelPayment = async () => {
     try {
       if (!paymentInfo?.order_code) return;
-      const res = await fetch(`/api/payment/cancel/${paymentInfo.order_code}`, {
+      const res = await fetch(`${BASE_URL}/api/payment/cancel/${paymentInfo.order_code}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

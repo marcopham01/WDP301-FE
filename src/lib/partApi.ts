@@ -1,3 +1,7 @@
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
+
 export interface ApiResult<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
@@ -89,7 +93,7 @@ export async function getPartsApi(params: {
   const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (search && search.trim()) qs.set("search", search.trim());
 
-  const response = await fetch(`/api/parts?${qs.toString()}`, {
+  const response = await fetch(`${BASE_URL}/api/parts?${qs.toString()}`, {
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeader(),
@@ -99,7 +103,7 @@ export async function getPartsApi(params: {
 }
 
 export async function getPartByIdApi(id: string): Promise<ApiResult<GetPartDetailResponse>> {
-  const response = await fetch(`/api/parts/${id}`, {
+  const response = await fetch(`${BASE_URL}/api/parts/${id}`, {
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeader(),
@@ -109,7 +113,7 @@ export async function getPartByIdApi(id: string): Promise<ApiResult<GetPartDetai
 }
 
 export async function createPartApi(payload: CreatePartPayload): Promise<ApiResult<GetPartDetailResponse>> {
-  const response = await fetch(`/api/parts`, {
+  const response = await fetch(`${BASE_URL}/api/parts`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -121,7 +125,7 @@ export async function createPartApi(payload: CreatePartPayload): Promise<ApiResu
 }
 
 export async function updatePartApi(id: string, payload: UpdatePartPayload): Promise<ApiResult<GetPartDetailResponse>> {
-  const response = await fetch(`/api/parts/${id}`, {
+  const response = await fetch(`${BASE_URL}/api/parts/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -133,7 +137,7 @@ export async function updatePartApi(id: string, payload: UpdatePartPayload): Pro
 }
 
 export async function deletePartApi(id: string): Promise<ApiResult<{ message: string; success: boolean; data?: { part_id: string; inventory_id: string; center_id: string } }>> {
-  const response = await fetch(`/api/parts/${id}`, {
+  const response = await fetch(`${BASE_URL}/api/parts/${id}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",

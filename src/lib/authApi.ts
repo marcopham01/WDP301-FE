@@ -1,7 +1,11 @@
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
+
 // Lấy profile user hiện tại
 export async function getProfileApi() {
   const token = localStorage.getItem("accessToken");
-  const response = await fetch("/api/users/getprofile", {
+  const response = await fetch(`${BASE_URL}/api/users/getprofile`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -35,7 +39,7 @@ export interface RegisterPayload {
 }
 
 export async function loginApi(payload: LoginPayload) {
-  const response = await fetch("/api/users/login", {
+  const response = await fetch(`${BASE_URL}/api/users/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -44,7 +48,7 @@ export async function loginApi(payload: LoginPayload) {
 }
 
 export async function registerApi(payload: RegisterPayload) {
-  const response = await fetch("/api/users/register", {
+  const response = await fetch(`${BASE_URL}/api/users/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -80,7 +84,7 @@ export async function getAllProfilesApi(params?: { page?: number; limit?: number
   if (params?.limit) qs.set("limit", String(params.limit));
   if (params?.role) qs.set("role", params.role);
   if (params?.id) qs.set("id", params.id);
-  const url = `/api/users/getallprofile${qs.toString() ? `?${qs.toString()}` : ""}`;
+  const url = `${BASE_URL}/api/users/getallprofile${qs.toString() ? `?${qs.toString()}` : ""}`;
   const response = await fetch(url, {
     method: "GET",
     headers: {
@@ -109,7 +113,7 @@ export async function getAllProfilesApi(params?: { page?: number; limit?: number
 
 // Quên mật khẩu - gửi email reset
 export async function forgotPasswordApi(email: string) {
-  const response = await fetch("/api/users/forgotPassword", {
+  const response = await fetch(`${BASE_URL}/api/users/forgotPassword`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),

@@ -1,3 +1,7 @@
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
+
 export interface ApiResult<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
@@ -83,7 +87,7 @@ export interface CreateAppointmentResponse {
 }
 
 export async function createAppointmentApi(payload: CreateAppointmentPayload): Promise<ApiResult<CreateAppointmentResponse>> {
-  const response = await fetch("/api/appointment/create", {
+  const response = await fetch(`${BASE_URL}/api/appointment/create`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -276,7 +280,7 @@ export async function getUserAppointmentsApi(
   if (params.limit) query.set("limit", String(params.limit));
   if (params.status) query.set("status", params.status);
   const qs = query.toString();
-  const url = qs ? `/api/appointment/user/${encodeURIComponent(username)}?${qs}` : `/api/appointment/user/${encodeURIComponent(username)}`;
+  const url = qs ? `${BASE_URL}/api/appointment/user/${encodeURIComponent(username)}?${qs}` : `${BASE_URL}/api/appointment/user/${encodeURIComponent(username)}`;
   const response = await fetch(url, {
     method: "GET",
     headers: {
@@ -317,7 +321,7 @@ export async function getAppointmentsApi(
   if (params.date_from) query.set("date_from", params.date_from);
   if (params.date_to) query.set("date_to", params.date_to);
   const qs = query.toString();
-  const url = `/api/appointment/list?${qs}`;
+  const url = `${BASE_URL}/api/appointment/list?${qs}`;
   const response = await fetch(url, {
     method: "GET",
     headers: {
@@ -342,7 +346,7 @@ export async function getMyAppointmentsApi(
   // Add cache-busting parameter
   query.set("_t", String(Date.now()));
   const qs = query.toString();
-  const url = `/api/appointment/myAppointment?${qs}`;
+  const url = `${BASE_URL}/api/appointment/myAppointment?${qs}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -364,7 +368,7 @@ export interface UpdateAppointmentStatusPayload {
 }
 
 export async function updateAppointmentStatusApi(payload: UpdateAppointmentStatusPayload): Promise<ApiResult<{ success: boolean }>> {
-  const response = await fetch("/api/appointment/update-status", {
+  const response = await fetch(`${BASE_URL}/api/appointment/update-status`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -377,7 +381,7 @@ export async function updateAppointmentStatusApi(payload: UpdateAppointmentStatu
 
 // API lấy thông tin appointment theo ID
 export async function getAppointmentByIdApi(appointmentId: string): Promise<ApiResult<{ success: boolean; data: Appointment }>> {
-  const response = await fetch(`/api/appointment/${appointmentId}`, {
+  const response = await fetch(`${BASE_URL}/api/appointment/${appointmentId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -389,7 +393,7 @@ export async function getAppointmentByIdApi(appointmentId: string): Promise<ApiR
 
 // API xóa appointment (chỉ cho phép xóa appointment có trạng thái pending)
 export async function deleteAppointmentApi(appointmentId: string): Promise<ApiResult<{ success: boolean; message: string }>> {
-  const response = await fetch(`/api/appointment/${appointmentId}`, {
+  const response = await fetch(`${BASE_URL}/api/appointment/${appointmentId}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -411,7 +415,7 @@ export async function getTechnicianScheduleApi(
   if (params.limit) query.set("limit", String(params.limit));
   
   const qs = query.toString();
-  const url = qs ? `/api/appointment/technician-schedule?${qs}` : `/api/appointment/technician-schedule`;
+  const url = qs ? `${BASE_URL}/api/appointment/technician-schedule?${qs}` : `${BASE_URL}/api/appointment/technician-schedule`;
   
   const response = await fetch(url, {
     method: "GET",
@@ -430,7 +434,7 @@ export interface AssignTechnicianPayload {
 
 // API gán technician cho appointment
 export async function assignTechnicianApi(payload: AssignTechnicianPayload): Promise<ApiResult<{ success: boolean }>> {
-  const response = await fetch("/api/appointment/assign-technician", {
+  const response = await fetch(`${BASE_URL}/api/appointment/assign-technician`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

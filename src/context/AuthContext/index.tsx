@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AuthContext, AppUser } from "./context";
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -12,7 +15,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       return;
     }
-    fetch("/api/users/getprofile", {
+    fetch(`${BASE_URL}/api/users/getprofile`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (res) => {

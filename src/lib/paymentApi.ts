@@ -1,3 +1,7 @@
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
+
 export interface ApiResult<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
@@ -188,7 +192,7 @@ export interface GetPaymentListParams {
 export async function createPaymentLinkApi(
   request: CreatePaymentRequest
 ): Promise<ApiResult<CreatePaymentResponse>> {
-  const response = await fetch("/api/payment/create", {
+  const response = await fetch(`${BASE_URL}/api/payment/create`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -208,7 +212,7 @@ export async function createPaymentLinkApi(
 export async function updatePaymentStatusApi(
   request: UpdatePaymentStatusRequest
 ): Promise<ApiResult<{ success: boolean; data: { payment_id: string; order_code: number; status: string; updated_at: string } }>> {
-  const response = await fetch("/api/payment/update-status", {
+  const response = await fetch(`${BASE_URL}/api/payment/update-status`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -228,7 +232,7 @@ export async function updatePaymentStatusApi(
 export async function getPaymentTransactionApi(
   orderCode: string | number
 ): Promise<ApiResult<{ success: boolean; message: string; data: Transaction }>> {
-  const response = await fetch(`/api/payment/transaction/${orderCode}`, {
+  const response = await fetch(`${BASE_URL}/api/payment/transaction/${orderCode}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -255,7 +259,7 @@ export async function getPaymentListApi(
   query.set("_t", String(Date.now()));
   
   const qs = query.toString();
-  const url = `/api/payment/list?${qs}`;
+  const url = `${BASE_URL}/api/payment/list?${qs}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -286,7 +290,7 @@ export async function getMyTransactionsApi(
   query.set("_t", String(Date.now()));
   
   const qs = query.toString();
-  const url = `/api/payment/myTransactions?${qs}`;
+  const url = `${BASE_URL}/api/payment/myTransactions?${qs}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -313,7 +317,7 @@ export async function getAllMyTransactionsApi(): Promise<ApiResult<{ success: bo
   query.set("_t", String(Date.now()));
 
   const qs = query.toString();
-  const url = `/api/payment/myTransactions?${qs}`;
+  const url = `${BASE_URL}/api/payment/myTransactions?${qs}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -337,7 +341,7 @@ export async function getAllMyTransactionsApi(): Promise<ApiResult<{ success: bo
 export async function retryPaymentApi(
   paymentId: string
 ): Promise<ApiResult<RetryPaymentResponse>> {
-  const response = await fetch(`/api/payment/retry/${paymentId}`, {
+  const response = await fetch(`${BASE_URL}/api/payment/retry/${paymentId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -356,7 +360,7 @@ export async function retryPaymentApi(
 export async function cancelPaymentApi(
   orderCode: string | number
 ): Promise<ApiResult<{ success: boolean; message: string; data?: { orderCode: number; status: string } }>> {
-  const response = await fetch(`/api/payment/cancel/${orderCode}`, {
+  const response = await fetch(`${BASE_URL}/api/payment/cancel/${orderCode}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -373,7 +377,7 @@ export async function cancelPaymentApi(
  * GET /api/payment/timeout-check
  */
 export async function timeoutCheckApi(): Promise<ApiResult<{ success: boolean; message: string; data?: { updated: number } }>> {
-  const response = await fetch("/api/payment/timeout-check", {
+  const response = await fetch(`${BASE_URL}/api/payment/timeout-check`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -392,7 +396,7 @@ export async function timeoutCheckApi(): Promise<ApiResult<{ success: boolean; m
 export async function testRetryFunctionalityApi(
   orderCode: string | number
 ): Promise<ApiResult<{ success: boolean; message: string; data?: unknown }>> {
-  const response = await fetch(`/api/payment/test-retry/${orderCode}`, {
+  const response = await fetch(`${BASE_URL}/api/payment/test-retry/${orderCode}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -420,7 +424,7 @@ export async function getPaymentHistoryByAppointmentApi(
     total_attempts: number;
   } 
 }>> {
-  const response = await fetch(`/api/payment/history/appointment/${appointmentId}`, {
+  const response = await fetch(`${BASE_URL}/api/payment/history/appointment/${appointmentId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
