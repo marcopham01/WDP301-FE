@@ -13,9 +13,6 @@ import {
 
 const technicianMenuItems = [
   { title: "Tổng quan", icon: Home, isActive: true },
-  { title: "Công việc được giao", icon: FileText },
-  { title: "Bảo dưỡng đang thực hiện", icon: Wrench },
-  { title: "Lịch sử hoàn thành", icon: Clock },
 ];
 
 export function TechnicianSidebar() {

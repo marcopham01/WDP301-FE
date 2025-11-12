@@ -445,7 +445,7 @@ export const TaskDetail = () => {
         {/* Checklist form */}
         {showChecklistForm && (
           <div className="lg:col-span-3">
-            <Card className="bg-gradient-card border-0 shadow-soft">
+            <Card className="bg-gradient-card border border-border shadow-soft">
               <CardContent className="p-6 space-y-4">
                 <h3 className="text-lg font-semibold">
                   Tạo checklist khi bắt đầu
@@ -639,7 +639,7 @@ export const TaskDetail = () => {
         )}
         {/* Thông tin appointment */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Thông tin Appointment</h3>
@@ -711,77 +711,88 @@ export const TaskDetail = () => {
             </CardContent>
           </Card>
 
-          {/* Thông tin khách hàng */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          {/* Thông tin khách hàng + xe */}
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Thông tin khách hàng
-              </h3>
-              <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">
-                    {appointment.user_id?.fullName ||
-                      appointment.user_id?.username}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {appointment.user_id?.email}
-                  </p>
+              <h3 className="text-lg font-semibold mb-4">Thông tin khách hàng</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <User className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">
+                      {appointment.user_id?.fullName ||
+                        appointment.user_id?.username}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {appointment.user_id?.email}
+                    </p>
+                    {appointment.user_id?.phone && (
+                      <p className="text-sm text-muted-foreground">
+                        {appointment.user_id?.phone}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Car className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">
+                      {(appointment.vehicle_id as { brand?: string })?.brand || ""}{" "}
+                      {(appointment.vehicle_id as { model?: string })?.model || ""}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Biển số: {appointment.vehicle_id?.license_plate}
+                    </p>
+                    {(appointment.vehicle_id as { vin?: string })?.vin && (
+                      <p className="text-sm text-muted-foreground">
+                        VIN: {(appointment.vehicle_id as { vin?: string }).vin}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Thông tin xe */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          {/* Thông tin dịch vụ + trung tâm */}
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Thông tin xe</h3>
-              <div className="flex items-center gap-3">
-                <Car className="h-5 w-5 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-4">Thông tin dịch vụ</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="font-medium">
-                    {(appointment.vehicle_id as { brand?: string })?.brand ||
-                      ""}{" "}
-                    {(appointment.vehicle_id as { model?: string })?.model ||
-                      ""}
+                  <p className="font-medium mb-2">
+                    {appointment.service_type_id?.service_name}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Biển số: {appointment.vehicle_id?.license_plate}
-                  </p>
-                  {(appointment.vehicle_id as { vin?: string })?.vin && (
+                  {(appointment.service_type_id as { description?: string })
+                    ?.description && (
                     <p className="text-sm text-muted-foreground">
-                      VIN: {(appointment.vehicle_id as { vin?: string }).vin}
+                      {
+                        (appointment.service_type_id as { description?: string })
+                          .description
+                      }
                     </p>
                   )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Thông tin dịch vụ */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Thông tin dịch vụ</h3>
-              <div>
-                <p className="font-medium mb-2">
-                  {appointment.service_type_id?.service_name}
-                </p>
-                {(appointment.service_type_id as { description?: string })
-                  ?.description && (
-                  <p className="text-sm text-muted-foreground">
-                    {
-                      (appointment.service_type_id as { description?: string })
-                        .description
-                    }
-                  </p>
-                )}
+                <div className="flex items-start gap-3 md:justify-end">
+                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="text-right md:text-left">
+                    <p className="font-medium">
+                      {appointment.center_id?.center_name ||
+                        appointment.center_id?.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {appointment.center_id?.address}
+                    </p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Thông tin checklist */}
           {checklist && (
-            <Card className="bg-gradient-card border-0 shadow-soft">
+            <Card className="bg-gradient-card border border-border shadow-soft">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Thông tin checklist</h3>
                 <div className="space-y-4">
@@ -856,7 +867,7 @@ export const TaskDetail = () => {
                           Tổng chi phí phụ tùng:{" "}
                           {checklistParts
                             .reduce((sum, item) => sum + item.cost, 0)
-                            .toLocaleString("vi-VN")}{" "}
+                            .toLocaleString("vi-VN")} {" "}
                           VNĐ
                         </div>
                       </div>
@@ -869,14 +880,14 @@ export const TaskDetail = () => {
 
           {/* Tổng chi phí */}
           {checklist && checklistParts.length > 0 && (
-            <Card className="bg-gradient-card border-0 shadow-soft border-primary/20">
+            <Card className="bg-gradient-card border border-primary/20 shadow-soft">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Tổng chi phí</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Chi phí dịch vụ:</span>
                     <span className="font-medium">
-                      {appointment.service_type_id?.base_price?.toLocaleString("vi-VN") || "0"}{" "}
+                      {appointment.service_type_id?.base_price?.toLocaleString("vi-VN") || "0"} {" "}
                       VNĐ
                     </span>
                   </div>
@@ -885,7 +896,7 @@ export const TaskDetail = () => {
                     <span className="font-medium">
                       {checklistParts
                         .reduce((sum, item) => sum + item.cost, 0)
-                        .toLocaleString("vi-VN")}{" "}
+                        .toLocaleString("vi-VN")} {" "}
                       VNĐ
                     </span>
                   </div>
@@ -895,7 +906,7 @@ export const TaskDetail = () => {
                       {(
                         (appointment.service_type_id?.base_price || 0) +
                         checklistParts.reduce((sum, item) => sum + item.cost, 0)
-                      ).toLocaleString("vi-VN")}{" "}
+                      ).toLocaleString("vi-VN")} {" "}
                       VNĐ
                     </span>
                   </div>
@@ -907,27 +918,8 @@ export const TaskDetail = () => {
 
         {/* Sidebar với actions */}
         <div className="space-y-6">
-          {/* Thông tin trung tâm */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Trung tâm dịch vụ</h3>
-              <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="font-medium">
-                    {appointment.center_id?.center_name ||
-                      appointment.center_id?.name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {appointment.center_id?.address}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Actions */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold mb-4">Hành động</h3>
               <div className="space-y-3">

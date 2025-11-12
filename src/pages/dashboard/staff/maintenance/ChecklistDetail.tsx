@@ -26,7 +26,6 @@ import {
   getPartByIdApi,
   acceptChecklistApi,
   cancelChecklistApi,
-  updateInventoryApi,
 } from "@/lib/checklistApi";
 import { Appointment, getAppointmentByIdApi } from "@/lib/appointmentApi";
 import { useEffect, useMemo, useState } from "react";
@@ -609,7 +608,7 @@ const ChecklistDetail = () => {
         {/* Main content - left side */}
         <div className="lg:col-span-2 space-y-6">
           {/* Appointment Information */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Thông tin Appointment</h3>
@@ -684,73 +683,87 @@ const ChecklistDetail = () => {
             </CardContent>
           </Card>
 
-          {/* Customer Information */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          {/* Customer + Vehicle Information */}
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold mb-4">
                 Thông tin khách hàng
               </h3>
-              <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">
-                    {customer?.fullName || customer?.username || "Chưa rõ"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {customer?.email || "-"}
-                  </p>
-                  {customer?.phone && (
-                    <p className="text-sm text-muted-foreground">
-                      {customer.phone}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <User className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">
+                      {customer?.fullName || customer?.username || "Chưa rõ"}
                     </p>
-                  )}
+                    <p className="text-sm text-muted-foreground">
+                      {customer?.email || "-"}
+                    </p>
+                    {customer?.phone && (
+                      <p className="text-sm text-muted-foreground">
+                        {customer.phone}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Car className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">
+                      {(vehicle?.brand || "") + " " + (vehicle?.model || "")}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Biển số: {vehicle?.license_plate || "-"}
+                    </p>
+                    {vehicle?.vin && (
+                      <p className="text-sm text-muted-foreground">
+                        VIN: {vehicle.vin}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Vehicle Information */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Thông tin xe</h3>
-              <div className="flex items-center gap-3">
-                <Car className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">
-                    {(vehicle?.brand || "") + " " + (vehicle?.model || "")}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Biển số: {vehicle?.license_plate || "-"}
-                  </p>
-                  {vehicle?.vin && (
-                    <p className="text-sm text-muted-foreground">
-                      VIN: {vehicle.vin}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Service Information */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          {/* Service + Center Information */}
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold mb-4">Thông tin dịch vụ</h3>
-              <div>
-                <p className="font-medium mb-2">
-                  {serviceType?.service_name || "Không xác định"}
-                </p>
-                {serviceType?.description && (
-                  <p className="text-sm text-muted-foreground">
-                    {serviceType.description}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="font-medium mb-2">
+                    {serviceType?.service_name || "Không xác định"}
                   </p>
-                )}
+                  {serviceType?.description && (
+                    <p className="text-sm text-muted-foreground">
+                      {serviceType.description}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-start gap-3 md:justify-end">
+                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="text-right md:text-left">
+                    <p className="font-medium">
+                      {center?.center_name || center?.name || "Không xác định"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {center?.address || "-"}
+                    </p>
+                    {center?.phone && (
+                      <p className="text-sm text-muted-foreground">
+                        Hotline: {center.phone}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Issue Information */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold mb-4">Thông tin vấn đề</h3>
               <div className="space-y-3">
@@ -777,7 +790,7 @@ const ChecklistDetail = () => {
           </Card>
 
           {/* Parts Information */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Phụ tùng sử dụng</h3>
@@ -885,35 +898,18 @@ const ChecklistDetail = () => {
 
         {/* Sidebar - right side */}
         <div className="space-y-6">
-          {/* Service Center */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Trung tâm dịch vụ</h3>
-              <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="font-medium">
-                    {center?.center_name || center?.name || "Không xác định"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {center?.address || "-"}
-                  </p>
-                  {center?.phone && (
-                    <p className="text-sm text-muted-foreground">
-                      Hotline: {center.phone}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Checklist Info */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
+          <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Thông tin checklist
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold">Thông tin checklist</h3>
+                <Badge
+                  className={`${getStatusColor(
+                    checklist.status
+                  )} px-3 py-1 text-base`}>
+                  {getStatusText(checklist.status)}
+                </Badge>
+              </div>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Package className="h-4 w-4" />
@@ -935,150 +931,90 @@ const ChecklistDetail = () => {
                     )}
                   </p>
                 )}
-                <p className="text-sm text-muted-foreground">
-                  Trạng thái: {getStatusText(checklist.status)}
-                </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Actions */}
-          <Card className="bg-gradient-card border-0 shadow-soft">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Hành động</h3>
-              <div className="space-y-3">
-                {checklist.status === "pending" ||
-                checklist.status === "check_in" ? (
-                  <>
-                    <Button
-                      className="w-full bg-success text-success-foreground"
-                      disabled={
-                        workingId === checklist._id ||
-                        !allPartsSufficient ||
-                        partsDetailList.length === 0
+          {/* Actions - only show when pending/check_in */}
+          {(checklist.status === "pending" ||
+            checklist.status === "check_in") && (
+            <Card className="bg-gradient-card border border-border shadow-soft">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Hành động</h3>
+                <div className="space-y-3">
+                  <Button
+                    className="w-full bg-success text-success-foreground"
+                    disabled={
+                      workingId === checklist._id ||
+                      !allPartsSufficient ||
+                      partsDetailList.length === 0
+                    }
+                    onClick={async () => {
+                      if (!allPartsSufficient) {
+                        alert(
+                          "Vui lòng kiểm tra tồn kho và đảm bảo tất cả phụ tùng đều đủ trước khi duyệt"
+                        );
+                        return;
                       }
-                      onClick={async () => {
-                        if (!allPartsSufficient) {
-                          alert(
-                            "Vui lòng kiểm tra tồn kho và đảm bảo tất cả phụ tùng đều đủ trước khi duyệt"
-                          );
-                          return;
+                      try {
+                        setWorkingId(checklist._id);
+
+                        // Backend sẽ tự cập nhật (trừ) inventory khi duyệt checklist.
+                        // Ở FE chỉ gọi accept để tránh trừ 2 lần.
+                        const res = await acceptChecklistApi(checklist._id);
+                        if (!res.ok) {
+                          alert(res.message || "Duyệt checklist thất bại");
+                        } else {
+                          window.location.reload();
                         }
-                        try {
-                          setWorkingId(checklist._id);
-
-                          // Trừ số lượng inventory cho từng part
-                          const inventoryUpdatePromises = partsDetailList.map(
-                            async (item) => {
-                              const check = inventoryCheck[item.id];
-                              if (
-                                !check ||
-                                !check.sufficient ||
-                                !check.inventoryId ||
-                                !check.inventoryItem
-                              ) {
-                                return { success: true }; // Skip if not sufficient or no inventory
-                              }
-
-                              const inventoryItem =
-                                check.inventoryItem as InventoryItem & {
-                                  quantity_avaiable?: number;
-                                };
-                              const currentAvailable =
-                                inventoryItem.quantity_available ||
-                                inventoryItem.quantity_avaiable ||
-                                0;
-                              const newQuantity =
-                                currentAvailable - check.required;
-
-                              // Update inventory
-                              const updateRes = await updateInventoryApi(
-                                check.inventoryId,
-                                {
-                                  quantity_avaiable: newQuantity,
-                                  minimum_stock: inventoryItem.minimum_stock,
-                                  cost_per_unit: inventoryItem.cost_per_unit,
-                                  last_restocked: inventoryItem.last_restocked,
-                                }
-                              );
-
-                              if (!updateRes.ok) {
-                                throw new Error(
-                                  `Không thể cập nhật inventory cho part ${item.id}: ${updateRes.message}`
-                                );
-                              }
-
-                              return { success: true };
-                            }
-                          );
-
-                          // Chờ tất cả inventory updates hoàn thành
-                          await Promise.all(inventoryUpdatePromises);
-
-                          // Sau đó mới accept checklist
-                          const res = await acceptChecklistApi(checklist._id);
-                          if (!res.ok) {
-                            alert(res.message || "Duyệt checklist thất bại");
-                          } else {
-                            // Reload page to refresh data
-                            window.location.reload();
-                          }
-                        } catch (err) {
-                          const errorMessage =
-                            err instanceof Error
-                              ? err.message
-                              : "Có lỗi xảy ra khi duyệt checklist";
-                          alert(errorMessage);
-                        } finally {
-                          setWorkingId(null);
+                      } catch (err) {
+                        const errorMessage =
+                          err instanceof Error
+                            ? err.message
+                            : "Có lỗi xảy ra khi duyệt checklist";
+                        alert(errorMessage);
+                      } finally {
+                        setWorkingId(null);
+                      }
+                    }}>
+                    Duyệt checklist
+                    {!allPartsSufficient && partsDetailList.length > 0 && (
+                      <span className="ml-2 text-xs">
+                        (Cần kiểm tra tồn kho)
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    disabled={workingId === checklist._id}
+                    onClick={async () => {
+                      const note =
+                        window.prompt("Nhập lý do hủy (tuỳ chọn):") ||
+                        undefined;
+                      try {
+                        setWorkingId(checklist._id);
+                        const res = await cancelChecklistApi(
+                          checklist._id,
+                          note
+                        );
+                        if (!res.ok) {
+                          alert(res.message || "Hủy checklist thất bại");
+                        } else {
+                          window.location.reload();
                         }
-                      }}>
-                      Duyệt checklist
-                      {!allPartsSufficient && partsDetailList.length > 0 && (
-                        <span className="ml-2 text-xs">
-                          (Cần kiểm tra tồn kho)
-                        </span>
-                      )}
-                    </Button>
-                    <Button
-                      className="w-full"
-                      variant="outline"
-                      disabled={workingId === checklist._id}
-                      onClick={async () => {
-                        const note =
-                          window.prompt("Nhập lý do hủy (tuỳ chọn):") ||
-                          undefined;
-                        try {
-                          setWorkingId(checklist._id);
-                          const res = await cancelChecklistApi(
-                            checklist._id,
-                            note
-                          );
-                          if (!res.ok) {
-                            alert(res.message || "Hủy checklist thất bại");
-                          } else {
-                            // Reload page to refresh data
-                            window.location.reload();
-                          }
-                        } catch {
-                          alert("Có lỗi xảy ra khi hủy checklist");
-                        } finally {
-                          setWorkingId(null);
-                        }
-                      }}>
-                      Từ chối checklist
-                    </Button>
-                  </>
-                ) : (
-                  <div className="text-center">
-                    <Badge className={getStatusColor(checklist.status)}>
-                      {getStatusText(checklist.status)}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                      } catch {
+                        alert("Có lỗi xảy ra khi hủy checklist");
+                      } finally {
+                        setWorkingId(null);
+                      }
+                    }}>
+                    Từ chối checklist
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </main>
