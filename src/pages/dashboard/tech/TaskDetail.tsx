@@ -11,7 +11,6 @@ import {
   Car,
   MapPin,
   Wrench,
-  DollarSign,
   AlertCircle,
   Package,
   Plus,
@@ -31,8 +30,6 @@ import {
   createChecklistApi,
   IssueType,
   PartItem,
-  getInventoryApi,
-  InventoryItem,
   getChecklistsApi,
   Checklist,
   getIssueTypeByIdApi,
@@ -209,7 +206,7 @@ export const TaskDetail = () => {
                   setChecklistIssueType(issueRes.data.data);
                 }
               }
-              // Fetch parts và inventory costs
+              // Fetch parts và tính giá từ sellPrice
               const partsWithCosts = await Promise.all(
                 foundChecklist.parts.map(async (p) => {
                   const partId =
@@ -220,37 +217,13 @@ export const TaskDetail = () => {
                   const partRes = await getPartByIdApi(partId);
                   if (!partRes.ok || !partRes.data?.success) return null;
                   const part = partRes.data.data;
-                  // Get inventory cost
-                  const centerId = appointment.center_id?._id;
-                  const partName = part.part_name;
-                  let cost = 0;
-                  if (centerId && partName) {
-                    const invRes = await getInventoryApi({
-                      center_id: centerId,
-                      part_name: partName,
-                      limit: 50,
-                    });
-                    if (invRes.ok && invRes.data?.success) {
-                      const items = (invRes.data.data.items ||
-                        []) as InventoryItem[];
-                      const matched =
-                        items.find(
-                          (it) =>
-                            (it.part_id as unknown as { _id?: string })?._id ===
-                            partId
-                        ) || items[0];
-                      if (matched) {
-                        const matchedWithTypo = matched as InventoryItem & {
-                          quantity_avaiable?: number;
-                        };
-                        cost = matchedWithTypo.cost_per_unit || 0;
-                      }
-                    }
-                  }
+                  // Lấy giá từ sellPrice của part
+                  const sellPrice =
+                    (part as { sellPrice?: number }).sellPrice || 0;
                   return {
                     part,
                     quantity: p.quantity,
-                    cost: cost * p.quantity,
+                    cost: sellPrice * p.quantity,
                   };
                 })
               );
@@ -516,21 +489,6 @@ export const TaskDetail = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <DollarSign className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Chi phí dịch vụ
-                    </p>
-                    <p className="font-medium">
-                      {appointment.service_type_id?.base_price?.toLocaleString(
-                        "vi-VN"
-                      )}{" "}
-                      VNĐ
-                    </p>
-                  </div>
-                </div>
-
                 {appointment.service_type_id?.estimated_duration && (
                   <div className="flex items-center gap-3">
                     <Wrench className="h-5 w-5 text-muted-foreground" />
@@ -751,17 +709,6 @@ export const TaskDetail = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
-                      Chi phí dịch vụ:
-                    </span>
-                    <span className="font-medium">
-                      {appointment.service_type_id?.base_price?.toLocaleString(
-                        "vi-VN"
-                      ) || "0"}{" "}
-                      VNĐ
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">
                       Chi phí phụ tùng:
                     </span>
                     <span className="font-medium">
@@ -774,10 +721,9 @@ export const TaskDetail = () => {
                   <div className="border-t pt-2 mt-2 flex justify-between">
                     <span className="font-semibold text-lg">Tổng cộng:</span>
                     <span className="font-bold text-lg text-primary">
-                      {(
-                        (appointment.service_type_id?.base_price || 0) +
-                        checklistParts.reduce((sum, item) => sum + item.cost, 0)
-                      ).toLocaleString("vi-VN")}{" "}
+                      {checklistParts
+                        .reduce((sum, item) => sum + item.cost, 0)
+                        .toLocaleString("vi-VN")}{" "}
                       VNĐ
                     </span>
                   </div>
