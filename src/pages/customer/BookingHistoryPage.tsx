@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Clock, MapPin, Eye, Trash2, RefreshCw, CheckCircle2, XCircle, PlayCircle } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, MapPin, Eye, Trash2, RefreshCw, CheckCircle2, XCircle, PlayCircle, Wrench, FileText } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -577,36 +577,45 @@ export default function BookingHistoryPage() {
               </div>
 
               {/* Dịch vụ */}
-              <div className="p-3 bg-muted/50 rounded-md">
-                <div className="font-medium">Dịch vụ</div>
-                <div className="text-sm text-muted-foreground">
-                  {selectedAppointment.service_type_id?.service_name || "Chưa xác định"}
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-md">
+                <Wrench className="w-5 h-5 text-primary" />
+                <div>
+                  <div className="font-medium">Dịch vụ</div>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedAppointment.service_type_id?.service_name || "Chưa xác định"}
+                  </div>
                 </div>
               </div>
 
               {/* Trung tâm */}
-              <div className="p-3 bg-muted/50 rounded-md">
-                <div className="font-medium">Trung tâm</div>
-                <div className="text-sm text-muted-foreground">
-                  {(() => {
-                    const center = selectedAppointment.center_id;
-                    const centerName = center?.center_name || center?.name;
-                    const centerAddress = center?.address;
-                    const centerId = center?._id;
-                    if (centerName) {
-                      return centerAddress ? `${centerName} (${centerAddress})` : centerName;
-                    }
-                    return centerId ? `Trung tâm: ${centerId}` : "Chưa xác định";
-                  })()}
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-md">
+                <MapPin className="w-5 h-5 text-primary" />
+                <div>
+                  <div className="font-medium">Trung tâm</div>
+                  <div className="text-sm text-muted-foreground">
+                    {(() => {
+                      const center = selectedAppointment.center_id;
+                      const centerName = center?.center_name || center?.name;
+                      const centerAddress = center?.address;
+                      const centerId = center?._id;
+                      if (centerName) {
+                        return centerAddress ? `${centerName} (${centerAddress})` : centerName;
+                      }
+                      return centerId ? `Trung tâm: ${centerId}` : "Chưa xác định";
+                    })()}
+                  </div>
                 </div>
               </div>
 
               {/* Mô tả/Ghi chú */}
               {selectedAppointment.notes && (
-                <div className="p-3 bg-muted/50 rounded-md">
-                  <div className="font-medium">Mô tả</div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {selectedAppointment.notes}
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-md">
+                  <FileText className="w-5 h-5 text-primary" />
+                  <div>
+                    <div className="font-medium">Mô tả</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {selectedAppointment.notes}
+                    </div>
                   </div>
                 </div>
               )}
