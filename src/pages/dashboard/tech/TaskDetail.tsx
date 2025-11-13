@@ -68,8 +68,11 @@ export const TaskDetail = () => {
     parts: [] as Array<{ part_id: string; quantity: number }>,
   });
   const [checklist, setChecklist] = useState<Checklist | null>(null);
-  const [checklistIssueType, setChecklistIssueType] = useState<IssueType | null>(null);
-  const [checklistParts, setChecklistParts] = useState<Array<{ part: PartItem; quantity: number; cost: number }>>([]);
+  const [checklistIssueType, setChecklistIssueType] =
+    useState<IssueType | null>(null);
+  const [checklistParts, setChecklistParts] = useState<
+    Array<{ part: PartItem; quantity: number; cost: number }>
+  >([]);
 
   // Lấy thông tin chi tiết appointment trực tiếp theo ID
   useEffect(() => {
@@ -147,14 +150,17 @@ export const TaskDetail = () => {
               ? payload
               : Array.isArray(payload?.items)
               ? payload?.items
-              : Array.isArray((payload as { checklists?: Checklist[] })?.checklists)
+              : Array.isArray(
+                  (payload as { checklists?: Checklist[] })?.checklists
+                )
               ? (payload as { checklists?: Checklist[] }).checklists
               : [];
             const foundChecklist = (normalized as Checklist[]).find(
               (c) =>
                 (typeof c.appointment_id === "string"
                   ? c.appointment_id
-                  : (c.appointment_id as { _id?: string })?._id) === appointmentId
+                  : (c.appointment_id as { _id?: string })?._id) ===
+                appointmentId
             );
             if (foundChecklist) {
               setChecklist(foundChecklist);
@@ -191,11 +197,13 @@ export const TaskDetail = () => {
                       limit: 50,
                     });
                     if (invRes.ok && invRes.data?.success) {
-                      const items = (invRes.data.data.items || []) as InventoryItem[];
+                      const items = (invRes.data.data.items ||
+                        []) as InventoryItem[];
                       const matched =
                         items.find(
                           (it) =>
-                            (it.part_id as unknown as { _id?: string })?._id === partId
+                            (it.part_id as unknown as { _id?: string })?._id ===
+                            partId
                         ) || items[0];
                       if (matched) {
                         const matchedWithTypo = matched as InventoryItem & {
@@ -213,7 +221,12 @@ export const TaskDetail = () => {
                 })
               );
               setChecklistParts(
-                partsWithCosts.filter((p): p is { part: PartItem; quantity: number; cost: number } => p !== null)
+                partsWithCosts.filter(
+                  (
+                    p
+                  ): p is { part: PartItem; quantity: number; cost: number } =>
+                    p !== null
+                )
               );
             }
           }
@@ -300,12 +313,12 @@ export const TaskDetail = () => {
       setUpdating(true);
       const result = await updateAppointmentStatusApi({
         appointment_id: appointmentId,
-        status: "completed",
+        status: "repaired",
       });
 
       if (result.ok && result.data?.success) {
         if (appointment) {
-          setAppointment({ ...appointment, status: "completed" });
+          setAppointment({ ...appointment, status: "repaired" });
         }
         console.log("Đã hoàn thành công việc thành công");
       } else {
@@ -714,7 +727,9 @@ export const TaskDetail = () => {
           {/* Thông tin khách hàng + xe */}
           <Card className="bg-gradient-card border border-border shadow-soft">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Thông tin khách hàng</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                Thông tin khách hàng
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-3">
                   <User className="h-5 w-5 text-muted-foreground" />
@@ -738,8 +753,10 @@ export const TaskDetail = () => {
                   <Car className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="font-medium">
-                      {(appointment.vehicle_id as { brand?: string })?.brand || ""}{" "}
-                      {(appointment.vehicle_id as { model?: string })?.model || ""}
+                      {(appointment.vehicle_id as { brand?: string })?.brand ||
+                        ""}{" "}
+                      {(appointment.vehicle_id as { model?: string })?.model ||
+                        ""}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Biển số: {appointment.vehicle_id?.license_plate}
@@ -768,8 +785,11 @@ export const TaskDetail = () => {
                     ?.description && (
                     <p className="text-sm text-muted-foreground">
                       {
-                        (appointment.service_type_id as { description?: string })
-                          .description
+                        (
+                          appointment.service_type_id as {
+                            description?: string;
+                          }
+                        ).description
                       }
                     </p>
                   )}
@@ -794,7 +814,9 @@ export const TaskDetail = () => {
           {checklist && (
             <Card className="bg-gradient-card border border-border shadow-soft">
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Thông tin checklist</h3>
+                <h3 className="text-lg font-semibold mb-4">
+                  Thông tin checklist
+                </h3>
                 <div className="space-y-4">
                   {/* Issue Type */}
                   {checklistIssueType && (
@@ -803,9 +825,12 @@ export const TaskDetail = () => {
                         Loại vấn đề
                       </p>
                       <p className="font-medium">
-                        {checklistIssueType.category && checklistIssueType.severity
+                        {checklistIssueType.category &&
+                        checklistIssueType.severity
                           ? `${checklistIssueType.category} • ${checklistIssueType.severity}`
-                          : checklistIssueType.category || checklistIssueType.severity || "Không xác định"}
+                          : checklistIssueType.category ||
+                            checklistIssueType.severity ||
+                            "Không xác định"}
                       </p>
                     </div>
                   )}
@@ -816,7 +841,9 @@ export const TaskDetail = () => {
                       <p className="text-sm text-muted-foreground mb-1">
                         Mô tả vấn đề
                       </p>
-                      <p className="font-medium">{checklist.issue_description}</p>
+                      <p className="font-medium">
+                        {checklist.issue_description}
+                      </p>
                     </div>
                   )}
 
@@ -826,7 +853,9 @@ export const TaskDetail = () => {
                       <p className="text-sm text-muted-foreground mb-1">
                         Giải pháp áp dụng
                       </p>
-                      <p className="font-medium">{checklist.solution_applied}</p>
+                      <p className="font-medium">
+                        {checklist.solution_applied}
+                      </p>
                     </div>
                   )}
 
@@ -843,7 +872,9 @@ export const TaskDetail = () => {
                             className="rounded-md border border-border p-3 bg-background/60">
                             <div className="flex items-center justify-between">
                               <div className="font-medium">
-                                {item.part.part_name || item.part.part_number || `Phụ tùng ${idx + 1}`}
+                                {item.part.part_name ||
+                                  item.part.part_number ||
+                                  `Phụ tùng ${idx + 1}`}
                               </div>
                               <div className="text-right">
                                 <div className="text-sm">
@@ -851,7 +882,8 @@ export const TaskDetail = () => {
                                 </div>
                                 {item.cost > 0 && (
                                   <div className="text-xs text-muted-foreground">
-                                    Thành tiền: {item.cost.toLocaleString("vi-VN")} VNĐ
+                                    Thành tiền:{" "}
+                                    {item.cost.toLocaleString("vi-VN")} VNĐ
                                   </div>
                                 )}
                               </div>
@@ -867,7 +899,7 @@ export const TaskDetail = () => {
                           Tổng chi phí phụ tùng:{" "}
                           {checklistParts
                             .reduce((sum, item) => sum + item.cost, 0)
-                            .toLocaleString("vi-VN")} {" "}
+                            .toLocaleString("vi-VN")}{" "}
                           VNĐ
                         </div>
                       </div>
@@ -885,18 +917,24 @@ export const TaskDetail = () => {
                 <h3 className="text-lg font-semibold mb-4">Tổng chi phí</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Chi phí dịch vụ:</span>
+                    <span className="text-muted-foreground">
+                      Chi phí dịch vụ:
+                    </span>
                     <span className="font-medium">
-                      {appointment.service_type_id?.base_price?.toLocaleString("vi-VN") || "0"} {" "}
+                      {appointment.service_type_id?.base_price?.toLocaleString(
+                        "vi-VN"
+                      ) || "0"}{" "}
                       VNĐ
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Chi phí phụ tùng:</span>
+                    <span className="text-muted-foreground">
+                      Chi phí phụ tùng:
+                    </span>
                     <span className="font-medium">
                       {checklistParts
                         .reduce((sum, item) => sum + item.cost, 0)
-                        .toLocaleString("vi-VN")} {" "}
+                        .toLocaleString("vi-VN")}{" "}
                       VNĐ
                     </span>
                   </div>
@@ -906,7 +944,7 @@ export const TaskDetail = () => {
                       {(
                         (appointment.service_type_id?.base_price || 0) +
                         checklistParts.reduce((sum, item) => sum + item.cost, 0)
-                      ).toLocaleString("vi-VN")} {" "}
+                      ).toLocaleString("vi-VN")}{" "}
                       VNĐ
                     </span>
                   </div>
