@@ -243,12 +243,13 @@ const ChecklistDetail = () => {
       });
       setInventoryCheck(results);
 
-      // Check each part
       const checkPromises = partsDetailList.map(async (item) => {
         const partName = item.detail?.part_name;
-        if (!partName) {
+        const partId = item.id;
+
+        if (!partName || !center?._id) {
           return {
-            id: item.id,
+            id: partId,
             result: {
               available: 0,
               required: item.quantity || 0,
@@ -267,52 +268,9 @@ const ChecklistDetail = () => {
             limit: 50,
           });
 
-          if (res.ok && res.data?.success) {
-            const items = (res.data.data.items || []) as InventoryItem[];
-            // Try to match by part_id first, then take first match
-            const matched =
-              items.find(
-                (it) =>
-                  (it.part_id as unknown as { _id?: string })?._id === item.id
-              ) || items[0];
-
-            if (matched) {
-              // Handle both quantity_available and quantity_avaiable (typo in API)
-              const matchedWithTypo = matched as InventoryItem & {
-                quantity_avaiable?: number;
-              };
-              const available =
-                matchedWithTypo.quantity_available ||
-                matchedWithTypo.quantity_avaiable ||
-                0;
-              const required = item.quantity || 0;
-              return {
-                id: item.id,
-                result: {
-                  available,
-                  required,
-                  sufficient: available >= required,
-                  checking: false,
-                  inventoryId: matched._id,
-                  inventoryItem: matched,
-                },
-              };
-            } else {
-              return {
-                id: item.id,
-                result: {
-                  available: 0,
-                  required: item.quantity || 0,
-                  sufficient: false,
-                  checking: false,
-                  inventoryId: undefined,
-                  inventoryItem: undefined,
-                },
-              };
-            }
-          } else {
+          if (!res.ok || !res.data?.success) {
             return {
-              id: item.id,
+              id: partId,
               result: {
                 available: 0,
                 required: item.quantity || 0,
@@ -323,9 +281,69 @@ const ChecklistDetail = () => {
               },
             };
           }
+
+          const items = (res.data.data?.items || []) as InventoryItem[];
+
+          console.log("🔍 Checking inventory:", {
+            partId,
+            partName,
+            itemsCount: items.length,
+            items: items.map((it) => ({
+              inventoryId: it._id,
+              partId:
+                typeof it.part_id === "string"
+                  ? it.part_id
+                  : (it.part_id as { _id?: string })?._id,
+              partIdType: typeof it.part_id,
+              partIdValue: it.part_id,
+            })),
+          });
+
+          const matched = items.find((it) => {
+            const invPartId =
+              typeof it.part_id === "string"
+                ? it.part_id
+                : (it.part_id as { _id?: string })?._id;
+            return invPartId === partId;
+          });
+
+          if (matched) {
+            const matchedWithTypo = matched as InventoryItem & {
+              quantity_avaiable?: number;
+            };
+            const available =
+              matchedWithTypo.quantity_available ??
+              matchedWithTypo.quantity_avaiable ??
+              0;
+            const required = item.quantity || 0;
+
+            return {
+              id: partId,
+              result: {
+                available,
+                required,
+                sufficient: available >= required,
+                checking: false,
+                inventoryId: matched._id,
+                inventoryItem: matched,
+              },
+            };
+          }
+
+          return {
+            id: partId,
+            result: {
+              available: 0,
+              required: item.quantity || 0,
+              sufficient: false,
+              checking: false,
+              inventoryId: undefined,
+              inventoryItem: undefined,
+            },
+          };
         } catch {
           return {
-            id: item.id,
+            id: partId,
             result: {
               available: 0,
               required: item.quantity || 0,

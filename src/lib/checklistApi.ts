@@ -1,3 +1,7 @@
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
+
 export interface ApiResult<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
@@ -43,7 +47,7 @@ export interface GetIssueTypesResponse {
 }
 
 export async function getIssueTypesApi(): Promise<ApiResult<GetIssueTypesResponse>> {
-  const response = await fetch(`/api/issue-types`, {
+  const response = await fetch(`${BASE_URL}/api/issue-types`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -54,7 +58,7 @@ export async function getIssueTypesApi(): Promise<ApiResult<GetIssueTypesRespons
 }
 
 export async function getIssueTypeByIdApi(issueTypeId: string): Promise<ApiResult<{ success: boolean; data: IssueType }>> {
-  const response = await fetch(`/api/issue-types/${encodeURIComponent(issueTypeId)}`, {
+  const response = await fetch(`${BASE_URL}/api/issue-types/${encodeURIComponent(issueTypeId)}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -86,7 +90,7 @@ export async function getPartsApi(params: { page?: number; limit?: number; searc
   if (params.page) q.set("page", String(params.page));
   if (params.limit) q.set("limit", String(params.limit));
   if (params.search) q.set("search", params.search);
-  const url = q.toString() ? `/api/parts?${q.toString()}` : `/api/parts`;
+  const url = q.toString() ? `${BASE_URL}/api/parts?${q.toString()}` : `${BASE_URL}/api/parts`;
   const response = await fetch(url, {
     method: "GET",
     headers: {
@@ -98,7 +102,7 @@ export async function getPartsApi(params: { page?: number; limit?: number; searc
 }
 
 export async function getPartByIdApi(partId: string): Promise<ApiResult<{ success: boolean; data: PartItem }>> {
-  const response = await fetch(`/api/parts/${encodeURIComponent(partId)}`, {
+  const response = await fetch(`${BASE_URL}/api/parts/${encodeURIComponent(partId)}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -144,7 +148,7 @@ export async function getInventoryApi(params: { page?: number; limit?: number; c
   if (params.center_id) q.set("center_id", params.center_id);
   if (params.part_name) q.set("part_name", params.part_name);
   if (params.low_stock) q.set("low_stock", params.low_stock);
-  const url = q.toString() ? `/api/inventory?${q.toString()}` : `/api/inventory`;
+  const url = q.toString() ? `${BASE_URL}/api/inventory?${q.toString()}` : `${BASE_URL}/api/inventory`;
   const response = await fetch(url, {
     method: "GET",
     headers: {
@@ -166,7 +170,7 @@ export async function updateInventoryApi(
   inventoryId: string,
   payload: UpdateInventoryPayload
 ): Promise<ApiResult<{ success: boolean; message?: string }>> {
-  const response = await fetch(`/api/inventory/${encodeURIComponent(inventoryId)}`, {
+  const response = await fetch(`${BASE_URL}/api/inventory/${encodeURIComponent(inventoryId)}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -207,7 +211,7 @@ export async function getChecklistsApi(params: { page?: number; limit?: number; 
   if (params.page) q.set("page", String(params.page));
   if (params.limit) q.set("limit", String(params.limit));
   if (params.status) q.set("status", params.status);
-  const url = q.toString() ? `/api/checklist?${q.toString()}` : `/api/checklist`;
+  const url = q.toString() ? `${BASE_URL}/api/checklist?${q.toString()}` : `${BASE_URL}/api/checklist`;
   const response = await fetch(url, {
     method: "GET",
     headers: {
@@ -219,7 +223,7 @@ export async function getChecklistsApi(params: { page?: number; limit?: number; 
 }
 
 export async function acceptChecklistApi(checklistId: string): Promise<ApiResult<{ success: boolean }>> {
-  const response = await fetch(`/api/checklist/${encodeURIComponent(checklistId)}/accept`, {
+  const response = await fetch(`${BASE_URL}/api/checklist/${encodeURIComponent(checklistId)}/accept`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -230,7 +234,7 @@ export async function acceptChecklistApi(checklistId: string): Promise<ApiResult
 }
 
 export async function cancelChecklistApi(checklistId: string, note?: string): Promise<ApiResult<{ success: boolean }>> {
-  const response = await fetch(`/api/checklist/${encodeURIComponent(checklistId)}/cancel`, {
+  const response = await fetch(`${BASE_URL}/api/checklist/${encodeURIComponent(checklistId)}/cancel`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -259,7 +263,7 @@ export interface CreateChecklistResponse {
 }
 
 export async function createChecklistApi(payload: CreateChecklistPayload): Promise<ApiResult<CreateChecklistResponse>> {
-  const response = await fetch(`/api/checklist`, {
+  const response = await fetch(`${BASE_URL}/api/checklist`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

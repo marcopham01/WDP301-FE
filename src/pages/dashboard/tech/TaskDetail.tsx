@@ -12,6 +12,11 @@ import {
   MapPin,
   Wrench,
   DollarSign,
+  AlertCircle,
+  Package,
+  Plus,
+  Trash2,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext/useAuth";
 import {
@@ -33,6 +38,31 @@ import {
   getIssueTypeByIdApi,
   getPartByIdApi,
 } from "@/lib/checklistApi";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+type ChecklistFormState = {
+  issue_type_id: string;
+  issue_description: string;
+  solution_applied: string;
+  parts: Array<{ part_id: string; quantity: number }>;
+};
 
 function formatDate(date?: string) {
   if (!date) return "";
@@ -58,21 +88,25 @@ export const TaskDetail = () => {
   const [checklistMessage, setChecklistMessage] = useState<string | null>(null);
   const [issueTypes, setIssueTypes] = useState<IssueType[]>([]);
   const [parts, setParts] = useState<PartItem[]>([]);
-  const [partInventoryInfo, setPartInventoryInfo] = useState<
-    Record<number, { available: number; unitCost?: number }>
-  >({});
-  const [checklistForm, setChecklistForm] = useState({
+  const createEmptyChecklistForm = (): ChecklistFormState => ({
     issue_type_id: "",
     issue_description: "",
     solution_applied: "",
-    parts: [] as Array<{ part_id: string; quantity: number }>,
+    parts: [],
   });
+  const [checklistForm, setChecklistForm] = useState<ChecklistFormState>(
+    createEmptyChecklistForm
+  );
   const [checklist, setChecklist] = useState<Checklist | null>(null);
   const [checklistIssueType, setChecklistIssueType] =
     useState<IssueType | null>(null);
   const [checklistParts, setChecklistParts] = useState<
     Array<{ part: PartItem; quantity: number; cost: number }>
   >([]);
+  const closeChecklistForm = () => {
+    setShowChecklistForm(false);
+    setChecklistForm(createEmptyChecklistForm());
+  };
 
   // Lấy thông tin chi tiết appointment trực tiếp theo ID
   useEffect(() => {
@@ -290,13 +324,7 @@ export const TaskDetail = () => {
       setChecklistMessage(
         "Checklist đã gửi thành công. Trạng thái đã chuyển sang 'check_in'. Vui lòng chờ staff duyệt."
       );
-      setShowChecklistForm(false);
-      setChecklistForm({
-        issue_type_id: "",
-        issue_description: "",
-        solution_applied: "",
-        parts: [],
-      });
+      closeChecklistForm();
     } catch (err) {
       setError("Có lỗi khi gửi checklist");
       console.error(err);
@@ -455,201 +483,6 @@ export const TaskDetail = () => {
 
       {/* Thông tin chính */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Checklist form */}
-        {showChecklistForm && (
-          <div className="lg:col-span-3">
-            <Card className="bg-gradient-card border border-border shadow-soft">
-              <CardContent className="p-6 space-y-4">
-                <h3 className="text-lg font-semibold">
-                  Tạo checklist khi bắt đầu
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Loại vấn đề
-                    </p>
-                    <select
-                      className="w-full border rounded px-3 py-2 bg-background"
-                      value={checklistForm.issue_type_id}
-                      onChange={(e) =>
-                        setChecklistForm((s) => ({
-                          ...s,
-                          issue_type_id: e.target.value,
-                        }))
-                      }>
-                      <option value="">-- Chọn --</option>
-                      {issueTypes.map((it) => (
-                        <option key={it._id} value={it._id}>
-                          {it.category} - {it.severity}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Giải pháp áp dụng
-                    </p>
-                    <input
-                      className="w-full border rounded px-3 py-2 bg-background"
-                      value={checklistForm.solution_applied}
-                      onChange={(e) =>
-                        setChecklistForm((s) => ({
-                          ...s,
-                          solution_applied: e.target.value,
-                        }))
-                      }
-                      placeholder="Ví dụ: Thay phanh, cân chỉnh..."
-                    />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Mô tả vấn đề
-                  </p>
-                  <textarea
-                    className="w-full border rounded px-3 py-2 bg-background"
-                    rows={3}
-                    value={checklistForm.issue_description}
-                    onChange={(e) =>
-                      setChecklistForm((s) => ({
-                        ...s,
-                        issue_description: e.target.value,
-                      }))
-                    }
-                    placeholder="Mô tả chi tiết vấn đề khách gặp phải"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">Phụ tùng sử dụng</p>
-                    <button
-                      className="text-sm underline"
-                      onClick={() =>
-                        setChecklistForm((s) => ({
-                          ...s,
-                          parts: [...s.parts, { part_id: "", quantity: 1 }],
-                        }))
-                      }>
-                      + Thêm phụ tùng
-                    </button>
-                  </div>
-                  {checklistForm.parts.map((p, idx) => (
-                    <div
-                      key={idx}
-                      className="grid grid-cols-1 md:grid-cols-6 gap-2">
-                      <select
-                        className="md:col-span-4 border rounded px-3 py-2 bg-background"
-                        value={p.part_id}
-                        onChange={(e) => {
-                          const part_id = e.target.value;
-                          // Fetch inventory info for selected part (by part_name)
-                          const selected = parts.find(
-                            (pt) => pt._id === part_id
-                          );
-                          if (selected?.part_name) {
-                            const centerId = (
-                              appointment?.center_id as { _id?: string }
-                            )?._id;
-                            getInventoryApi({
-                              part_name: selected.part_name,
-                              ...(centerId ? { center_id: centerId } : {}),
-                              limit: 50,
-                            }).then((inv) => {
-                              if (inv.ok && inv.data?.success) {
-                                const items = inv.data.data.items || [];
-                                const totalAvailable = items.reduce(
-                                  (sum: number, it: InventoryItem) =>
-                                    sum + (it.quantity_available || 0),
-                                  0
-                                );
-                                const unitCost = items[0]?.cost_per_unit;
-                                setPartInventoryInfo((prev) => ({
-                                  ...prev,
-                                  [idx]: {
-                                    available: totalAvailable,
-                                    unitCost,
-                                  },
-                                }));
-                              } else {
-                                setPartInventoryInfo((prev) => ({
-                                  ...prev,
-                                  [idx]: { available: 0 },
-                                }));
-                              }
-                            });
-                          }
-                          setChecklistForm((s) => {
-                            const partsArr = [...s.parts];
-                            partsArr[idx] = { ...partsArr[idx], part_id };
-                            return { ...s, parts: partsArr };
-                          });
-                        }}>
-                        <option value="">-- Chọn phụ tùng --</option>
-                        {parts.map((pt) => (
-                          <option key={pt._id} value={pt._id}>
-                            {pt.part_name || pt.part_number || pt._id}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        min={1}
-                        className="md:col-span-1 border rounded px-3 py-2 bg-background"
-                        value={p.quantity}
-                        onChange={(e) => {
-                          const quantity = Math.max(
-                            1,
-                            Number(e.target.value) || 1
-                          );
-                          setChecklistForm((s) => {
-                            const partsArr = [...s.parts];
-                            partsArr[idx] = { ...partsArr[idx], quantity };
-                            return { ...s, parts: partsArr };
-                          });
-                        }}
-                      />
-                      <div className="md:col-span-6 text-xs text-muted-foreground">
-                        {partInventoryInfo[idx] && (
-                          <span>
-                            Tồn khả dụng:{" "}
-                            {partInventoryInfo[idx].available ?? 0}
-                            {partInventoryInfo[idx].unitCost !== undefined &&
-                              ` • Giá đơn vị: ${partInventoryInfo[
-                                idx
-                              ].unitCost?.toLocaleString("vi-VN")} VNĐ`}
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        className="md:col-span-1 text-sm text-destructive underline"
-                        onClick={() =>
-                          setChecklistForm((s) => ({
-                            ...s,
-                            parts: s.parts.filter((_, i) => i !== idx),
-                          }))
-                        }>
-                        Xóa
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    className="bg-primary text-primary-foreground"
-                    disabled={updating || !checklistForm.issue_type_id}
-                    onClick={submitChecklist}>
-                    {updating ? "Đang gửi..." : "Gửi checklist & bắt đầu"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowChecklistForm(false)}>
-                    Hủy
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
         {/* Thông tin appointment */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="bg-gradient-card border border-border shadow-soft">
@@ -1004,6 +837,219 @@ export const TaskDetail = () => {
           </Card>
         </div>
       </div>
+
+      <Dialog
+        open={showChecklistForm}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeChecklistForm();
+          }
+        }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <FileText className="h-5 w-5 text-primary" />
+              Tạo checklist khi bắt đầu
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              Ghi nhận vấn đề, giải pháp và phụ tùng sử dụng trước khi gửi cho
+              bộ phận điều phối.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Loại vấn đề và Giải pháp */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                  Loại vấn đề
+                </Label>
+                <Select
+                  value={checklistForm.issue_type_id}
+                  onValueChange={(value) =>
+                    setChecklistForm((s) => ({
+                      ...s,
+                      issue_type_id: value,
+                    }))
+                  }>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Chọn loại vấn đề" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {issueTypes.map((it) => (
+                      <SelectItem key={it._id} value={it._id}>
+                        {it.category} • {it.severity}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <Wrench className="h-4 w-4 text-muted-foreground" />
+                  Giải pháp áp dụng
+                </Label>
+                <Input
+                  value={checklistForm.solution_applied}
+                  onChange={(e) =>
+                    setChecklistForm((s) => ({
+                      ...s,
+                      solution_applied: e.target.value,
+                    }))
+                  }
+                  placeholder="Ví dụ: Thay phanh, cân chỉnh..."
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            {/* Mô tả vấn đề */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Mô tả vấn đề
+              </Label>
+              <Textarea
+                rows={4}
+                value={checklistForm.issue_description}
+                onChange={(e) =>
+                  setChecklistForm((s) => ({
+                    ...s,
+                    issue_description: e.target.value,
+                  }))
+                }
+                placeholder="Mô tả chi tiết vấn đề khách gặp phải..."
+                className="resize-none"
+              />
+            </div>
+
+            {/* Phụ tùng sử dụng */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  Phụ tùng sử dụng
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setChecklistForm((s) => ({
+                      ...s,
+                      parts: [...s.parts, { part_id: "", quantity: 1 }],
+                    }))
+                  }
+                  className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Thêm phụ tùng
+                </Button>
+              </div>
+
+              {checklistForm.parts.length === 0 ? (
+                <div className="border-2 border-dashed rounded-lg p-8 text-center bg-muted/30">
+                  <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Chưa thêm phụ tùng nào. Nhấn nút "Thêm phụ tùng" để bắt đầu.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {checklistForm.parts.map((p, idx) => (
+                    <Card
+                      key={`${idx}-${p.part_id}`}
+                      className="border border-border bg-card">
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                          <div className="md:col-span-8 space-y-2">
+                            <Label className="text-xs text-muted-foreground">
+                              Phụ tùng
+                            </Label>
+                            <Select
+                              value={p.part_id}
+                              onValueChange={(value) => {
+                                setChecklistForm((s) => {
+                                  const partsArr = [...s.parts];
+                                  partsArr[idx] = {
+                                    ...partsArr[idx],
+                                    part_id: value,
+                                  };
+                                  return { ...s, parts: partsArr };
+                                });
+                              }}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Chọn phụ tùng" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {parts.map((pt) => (
+                                  <SelectItem key={pt._id} value={pt._id}>
+                                    {pt.part_name || pt.part_number || pt._id}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="md:col-span-3 space-y-2">
+                            <Label className="text-xs text-muted-foreground">
+                              Số lượng
+                            </Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={p.quantity}
+                              onChange={(e) => {
+                                const quantity = Math.max(
+                                  1,
+                                  Number(e.target.value) || 1
+                                );
+                                setChecklistForm((s) => {
+                                  const partsArr = [...s.parts];
+                                  partsArr[idx] = {
+                                    ...partsArr[idx],
+                                    quantity,
+                                  };
+                                  return { ...s, parts: partsArr };
+                                });
+                              }}
+                              className="w-full"
+                            />
+                          </div>
+                          <div className="md:col-span-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                setChecklistForm((s) => ({
+                                  ...s,
+                                  parts: s.parts.filter((_, i) => i !== idx),
+                                }))
+                              }
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-end sm:space-x-2 border-t pt-4">
+            <Button variant="outline" onClick={closeChecklistForm}>
+              Hủy
+            </Button>
+            <Button
+              className="bg-primary text-primary-foreground"
+              disabled={updating || !checklistForm.issue_type_id}
+              onClick={submitChecklist}>
+              {updating ? "Đang gửi..." : "Gửi checklist & bắt đầu"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };
