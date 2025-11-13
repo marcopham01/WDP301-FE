@@ -423,6 +423,11 @@ export default function BookingPage() {
             createdPayment.qrCode ||
             createdPayment.qr_code)
         ) {
+          console.log("📦 [BookingPage] Payment from create API:", {
+            qrCode: createdPayment.qrCode,
+            qr_code: createdPayment.qr_code,
+            checkoutUrl: createdPayment.checkoutUrl,
+          });
           setPaymentInfo({
             amount: createdPayment.amount,
             checkout_url:
@@ -551,6 +556,12 @@ export default function BookingPage() {
             }
           } else {
             const p = paymentFound as RawPayment & Record<string, unknown>;
+            console.log("📦 [BookingPage] Payment from appointment detail:", {
+              qrCode: p.qrCode,
+              qr_code: p.qr_code,
+              checkoutUrl: p.checkoutUrl,
+              checkout_url: p.checkout_url,
+            });
             setPaymentInfo({
               amount: p.amount,
               checkout_url: (p.checkoutUrl || p.checkout_url) as string,

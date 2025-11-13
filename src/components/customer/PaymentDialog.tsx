@@ -5,6 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Copy, ExternalLink, X, Clock, AlertCircle } from "lucide-react";
 import { toast } from "react-toastify";
 import { useCountdown } from "@/hooks/use-countdown";
+import { QRCodeSVG } from "qrcode.react";
+import { getPaymentTransactionApi } from "@/lib/paymentApi";
+import { useNavigate } from "react-router-dom";
 
 interface PaymentDialogProps {
   open: boolean;
@@ -44,6 +47,8 @@ export function PaymentDialog({
 }: PaymentDialogProps) {
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
   const [isExpired, setIsExpired] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<string | undefined>(paymentInfo?.status);
+  const navigate = useNavigate();
   // interval handled by useCountdown hook
 
   // 🕒 Countdown logic via reusable hook
@@ -52,6 +57,44 @@ export function PaymentDialog({
     setRemainingSeconds(countdown.remainingSeconds);
     setIsExpired(countdown.isExpired);
   }, [countdown.remainingSeconds, countdown.isExpired]);
+
+  // Poll payment status every 3s until reaching a terminal state
+  useEffect(() => {
+    if (!open) return;
+    if (!paymentInfo?.order_code) return;
+    if (currentStatus && ["PAID", "FAILED", "CANCELLED", "TIMEOUT", "EXPIRED"].includes(currentStatus)) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await getPaymentTransactionApi(paymentInfo.order_code);
+        if (res.ok && res.data?.data) {
+          const newStatus = (res.data.data.status || "").toUpperCase();
+          if (newStatus && newStatus !== currentStatus) {
+            setCurrentStatus(newStatus);
+            if (newStatus === "PAID") {
+              toast.success("✅ Thanh toán thành công!");
+              setTimeout(() => {
+                onOpenChange(false);
+                navigate("/customer/booking-history");
+              }, 1200);
+            } else if (["FAILED", "CANCELLED"].includes(newStatus)) {
+              toast.error("Thanh toán không thành công (" + newStatus + ")");
+            }
+          }
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [open, paymentInfo?.order_code, currentStatus, onOpenChange, navigate]);
+
+  // Keep local status in sync if prop changes externally
+  useEffect(() => {
+    if (paymentInfo?.status && paymentInfo.status !== currentStatus) {
+      setCurrentStatus(paymentInfo.status);
+    }
+  }, [paymentInfo?.status, currentStatus]);
 
   // 🧭 Copy & open
   const handleCopyLink = async () => {
@@ -67,44 +110,38 @@ export function PaymentDialog({
     }
   };
 
-  // 🔄 Normalize QR source (backend có thể trả về nhiều định dạng khác nhau)
-  const { qrRenderMode, qrImgSrc, qrSvgMarkup } = useMemo(() => {
+  // 🔄 Parse QR code data - PayOS trả về raw EMVCo string, cần generate thành image
+  const qrCodeValue = useMemo(() => {
     const raw = paymentInfo?.qr_code?.trim();
-    if (!raw) return { qrRenderMode: "none" as const, qrImgSrc: "", qrSvgMarkup: "" };
-
-    // Case 1: Already a full data URL
-    if (/^data:image\/(png|jpg|jpeg|gif|svg\+xml);base64,/i.test(raw)) {
-      return { qrRenderMode: "img" as const, qrImgSrc: raw, qrSvgMarkup: "" };
+    
+    console.log("🔍 [PaymentDialog] QR Code Analysis:", {
+      raw: raw,
+      type: typeof raw,
+      length: raw?.length,
+      preview: raw?.substring(0, 50),
+    });
+    
+    if (!raw) {
+      console.warn("⚠️ [PaymentDialog] QR code is empty or undefined");
+      return null;
     }
 
-    // Case 2: Raw base64 without prefix (length heuristic >= 100)
-    if (/^[A-Za-z0-9+/=]+$/.test(raw) && raw.length > 100) {
-      return { qrRenderMode: "img" as const, qrImgSrc: `data:image/png;base64,${raw}` , qrSvgMarkup: "" };
+    // PayOS returns EMVCo QR format as string (e.g., "00020101021238...")
+    // We need to generate QR image from this string
+    console.log("✅ [PaymentDialog] QR code string received, will generate QR image");
+    return raw;
+  }, [paymentInfo]);
+
+  // Fallback: Generate QR from checkout URL if qr_code is not available
+  const fallbackQrValue = useMemo(() => {
+    if (!qrCodeValue && paymentInfo?.checkout_url) {
+      console.log("🔄 [PaymentDialog] Using checkout URL as fallback for QR generation");
+      return paymentInfo.checkout_url;
     }
+    return null;
+  }, [qrCodeValue, paymentInfo?.checkout_url]);
 
-    // Case 3: SVG markup
-    if (raw.startsWith("<svg")) {
-      return { qrRenderMode: "svg" as const, qrImgSrc: "", qrSvgMarkup: raw };
-    }
-
-    // Case 4: URL (http/https)
-    if (/^https?:\/\//i.test(raw)) {
-      return { qrRenderMode: "img" as const, qrImgSrc: raw, qrSvgMarkup: "" };
-    }
-
-    return { qrRenderMode: "none" as const, qrImgSrc: "", qrSvgMarkup: "" };
-  }, [paymentInfo?.qr_code]);
-
-  // 🔁 Fallback: nếu backend không trả qr_code hợp lệ, tự tạo QR tạm từ checkout_url thông qua public API
-  const fallbackQr = useMemo(() => {
-    if (qrRenderMode === "none" && paymentInfo?.checkout_url) {
-      const encoded = encodeURIComponent(paymentInfo.checkout_url);
-      return `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encoded}`;
-    }
-    return "";
-  }, [qrRenderMode, paymentInfo?.checkout_url]);
-
-  const effectiveHasQr = qrRenderMode !== "none" || !!fallbackQr;
+  const effectiveQrValue = qrCodeValue || fallbackQrValue;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,7 +155,7 @@ export function PaymentDialog({
 
         <div className="p-4 space-y-3">
           {/* Countdown Timer */}
-          {paymentInfo?.timeoutAt && (
+          {paymentInfo?.timeoutAt && currentStatus !== "PAID" && (
             <Card
               className={`border-2 ${isExpired ? "border-red-200 bg-red-50" : "border-yellow-200 bg-yellow-50"}`}
             >
@@ -144,6 +181,23 @@ export function PaymentDialog({
                     <span className="leading-tight">Link thanh toán đã hết hạn. Bạn có thể thanh toán lại từ lịch sử thanh toán.</span>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {currentStatus === "PAID" && (
+            <Card className="border-2 border-green-200 bg-green-50">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">💳</span>
+                    <span className="font-medium text-xs">Thanh toán đã xác nhận</span>
+                  </div>
+                  <span className="text-green-600 text-xs font-semibold">Đang chuyển...</span>
+                </div>
+                <div className="mt-2 text-xs text-green-700 leading-tight">
+                  Lịch hẹn của bạn đã được cập nhật. Cảm ơn bạn!
+                </div>
               </CardContent>
             </Card>
           )}
@@ -189,43 +243,33 @@ export function PaymentDialog({
             </Card>
           )}
 
-          {/* QR Code (multi-format + fallback) */}
-          {!isExpired && effectiveHasQr && (
-            <div className="flex flex-col items-center gap-2 p-3 bg-white rounded-lg border relative">
-              <p className="text-xs font-medium">Quét mã QR</p>
-              {qrRenderMode === "img" && (
-                <img
-                  src={qrImgSrc}
-                  alt="QR thanh toán"
-                  className="w-48 h-48 object-contain rounded-md"
-                  onError={(e) => {
-                    // Nếu load ảnh thất bại và có fallback => dùng fallback
-                    if (fallbackQr) (e.currentTarget as HTMLImageElement).src = fallbackQr;
-                  }}
+          {/* QR Code - Generated from PayOS EMVCo string */}
+          {!isExpired && effectiveQrValue && (
+            <div className="flex flex-col items-center gap-3 p-4 bg-white rounded-lg border-2 border-gray-200 relative">
+              <p className="text-sm font-semibold text-gray-900">Quét mã QR để thanh toán</p>
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                <QRCodeSVG
+                  value={effectiveQrValue}
+                  size={220}
+                  level="H"
+                  includeMargin={true}
+                  bgColor="#ffffff"
+                  fgColor="#000000"
                 />
-              )}
-              {qrRenderMode === "svg" && (
-                <div
-                  className="w-48 h-48 rounded-md flex items-center justify-center"
-                  /* Using SVG received from backend (trusted internal source) */
-                  dangerouslySetInnerHTML={{ __html: qrSvgMarkup }}
-                />
-              )}
-              {qrRenderMode === "none" && fallbackQr && (
-                <img
-                  src={fallbackQr}
-                  alt="QR thanh toán (tạo tạm)"
-                  className="w-48 h-48 object-contain rounded-md"
-                />
-              )}
-              <p className="text-xs text-muted-foreground text-center">
-                Sử dụng ứng dụng ngân hàng để quét mã QR
-              </p>
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-xs text-gray-600 font-medium">
+                  Mở app ngân hàng và quét mã QR này
+                </p>
+                <p className="text-xs text-gray-500">
+                  Hỗ trợ tất cả ngân hàng tại Việt Nam
+                </p>
+              </div>
               {paymentInfo?.checkout_url && (
                 <Button
                   variant="link"
                   size="sm"
-                  className="absolute top-2 right-2 h-auto p-0 text-[10px]"
+                  className="absolute top-2 right-2 h-auto p-1 text-[10px]"
                   onClick={handleOpenPayment}
                 >
                   Mở link
@@ -233,7 +277,7 @@ export function PaymentDialog({
               )}
             </div>
           )}
-          {!isExpired && !effectiveHasQr && (
+          {!isExpired && !effectiveQrValue && (
             <div className="flex flex-col items-center gap-2 p-3 bg-white rounded-lg border animate-pulse">
               <p className="text-xs font-medium">Đang chuẩn bị mã QR…</p>
               <div className="w-48 h-48 rounded-md bg-muted flex items-center justify-center text-[10px] text-muted-foreground">
@@ -254,7 +298,7 @@ export function PaymentDialog({
               <Button
                 variant="default"
                 size="sm"
-                disabled={isExpired}
+                disabled={isExpired || currentStatus === "PAID"}
                 onClick={handleOpenPayment}
                 className="w-full gap-1 h-9"
               >
@@ -264,7 +308,7 @@ export function PaymentDialog({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={isExpired}
+                disabled={isExpired || currentStatus === "PAID"}
                 onClick={handleCopyLink}
                 className="w-full gap-1 h-9"
               >
@@ -275,7 +319,7 @@ export function PaymentDialog({
           </div>
 
           {/* Cancel button */}
-          {onCancel && (
+          {onCancel && currentStatus !== "PAID" && (
             <Button
               variant="destructive"
               size="sm"
@@ -289,7 +333,7 @@ export function PaymentDialog({
           )}
 
           {/* Guide */}
-          {!isExpired && (
+          {!isExpired && currentStatus !== "PAID" && (
             <Card className="bg-blue-50 border-blue-200">
               <CardContent className="p-3">
                 <p className="text-xs text-blue-800 font-medium mb-1">Hướng dẫn thanh toán</p>
@@ -311,7 +355,7 @@ export function PaymentDialog({
           )}
           
           {/* Expired message */}
-          {isExpired && onViewHistory && (
+          {isExpired && currentStatus !== "PAID" && onViewHistory && (
             <Card className="bg-orange-50 border-orange-200">
               <CardContent className="p-3">
                 <p className="text-xs text-orange-800 font-medium mb-1">⚠️ Link thanh toán đã hết hạn</p>
