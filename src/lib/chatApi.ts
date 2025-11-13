@@ -8,6 +8,13 @@ export interface ChatMessageDTO {
   content: string;
   createdAt?: string;
   attachments?: AttachmentDTO[];
+  senderInfo?: {
+    _id: string;
+    fullName?: string;
+    username?: string;
+    email?: string;
+    role?: string;
+  };
 }
 
 const BASE = config.API_BASE_URL;

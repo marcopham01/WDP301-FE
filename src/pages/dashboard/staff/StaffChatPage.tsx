@@ -1,12 +1,14 @@
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Paperclip, Smile, X, Image as ImageIcon } from "lucide-react";
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext/useAuth";
 import { initializeSocket } from "@/lib/socket";
-import { getChatHistory, sendChatMessage, ChatMessageDTO, getChatPartners, AttachmentDTO } from "@/lib/chatApi";
+import { getChatHistory, ChatMessageDTO, getChatPartners, AttachmentDTO, uploadChatFile, sendChatWithAttachments } from "@/lib/chatApi";
 import { config } from "@/config/config";
+import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 
 // Customer minimal shape for sidebar
@@ -29,6 +31,11 @@ export default function StaffChatPage() {
   const [otherId, setOtherId] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessageUI[]>([]);
   const [loadingCustomer, setLoadingCustomer] = useState(true);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [attachedFilePreview, setAttachedFilePreview] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -70,12 +77,24 @@ export default function StaffChatPage() {
     socket.emit("join", user.id); // staff join room của mình
     // Lắng nghe tin nhắn đến
     socket.on("new_message", (msg: ChatMessageDTO) => {
-      // Nếu khách chưa có trong danh sách -> thêm vào đầu danh sách
+      console.log("📨 New message received:", msg);
+      
+      // Nếu khách chưa có trong danh sách -> thêm vào đầu danh sách với thông tin đầy đủ
       setCustomers((prev) => {
         const exists = prev.some((c) => c._id === msg.sender);
         if (exists) return prev;
-        return [{ _id: msg.sender }, ...prev];
+        
+        // Thêm customer mới với thông tin từ senderInfo
+        const newCustomer: Customer = {
+          _id: msg.sender,
+          fullName: msg.senderInfo?.fullName,
+          username: msg.senderInfo?.username,
+          email: msg.senderInfo?.email,
+        };
+        console.log("➕ Adding new customer to list:", newCustomer);
+        return [newCustomer, ...prev];
       });
+      
       // Nếu đang chưa chọn khách, hoặc tin nhắn đến từ khách khác -> tự động chuyển cuộc trò chuyện sang khách đó
       if (!otherId || otherId !== msg.sender) {
         setOtherId(msg.sender);
@@ -115,19 +134,63 @@ export default function StaffChatPage() {
 
   const send = useCallback(() => {
     const text = input.trim();
-    if (!text || !accessToken || !otherId) return;
-    sendChatMessage(otherId, text, accessToken).then(saved => {
+    if ((!text && !attachedFile) || !accessToken || !otherId) return;
+    const flow = async () => {
+      const attachments: AttachmentDTO[] = [];
+      if (attachedFile) {
+        try {
+          setUploading(true);
+          const uploaded = await uploadChatFile(attachedFile, accessToken);
+          attachments.push(uploaded);
+        } catch (e) {
+          console.error("❌ Upload failed", e);
+        } finally {
+          setUploading(false);
+        }
+      }
+      const saved = await sendChatWithAttachments({ receiver: otherId, content: text, attachments }, accessToken);
       setMessages(prev => [...prev, {
         id: saved._id || crypto.randomUUID(),
         text: saved.content,
         at: formatAt(new Date(saved.createdAt || Date.now())),
-        sender: "staff"
+        sender: "staff",
+        attachments: saved.attachments,
       }]);
-      // Emit qua socket cho customer (server đã emit cho receiver) -> không cần emit lại.
       setInput("");
+      setAttachedFile(null);
+      setAttachedFilePreview("");
       requestAnimationFrame(() => endRef.current?.scrollIntoView({ behavior: "smooth" }));
-    });
-  }, [input, accessToken, otherId]);
+    };
+    flow();
+  }, [input, accessToken, otherId, attachedFile]);
+
+  const handleEmojiClick = (emoji: EmojiClickData) => {
+    setInput((prev) => prev + emoji.emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      // 10MB limit
+      return;
+    }
+    setAttachedFile(file);
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onloadend = () => setAttachedFilePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setAttachedFilePreview("");
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setAttachedFile(null);
+    setAttachedFilePreview("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   return (
     <main className="flex-1 p-6">
@@ -212,17 +275,77 @@ export default function StaffChatPage() {
           </div>
 
           {/* Composer */}
+          {/* File preview */}
+          {attachedFile && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center gap-3">
+              {attachedFilePreview ? (
+                <img src={attachedFilePreview} alt="Preview" className="w-16 h-16 object-cover rounded" />
+              ) : (
+                <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
+                  <ImageIcon className="h-6 w-6 text-gray-400" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-700 truncate">{attachedFile.name}</p>
+                <p className="text-xs text-gray-500">{(attachedFile.size / 1024).toFixed(1)} KB</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleRemoveFile} className="h-8 w-8 text-gray-400 hover:text-red-500">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
           <div className="mt-4 flex items-center gap-3">
-            <Input
-              placeholder="Nhập tin nhắn..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") send();
-              }}
-              className="flex-1"
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx,.txt"
             />
-            <Button onClick={send} className="bg-ev-green hover:bg-ev-green/90">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              className="h-10 w-10 rounded-full hover:bg-gray-100 text-gray-500"
+              title="Đính kèm file"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+
+            <div className="flex-1 relative">
+              <Input
+                placeholder="Nhập tin nhắn..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") send();
+                }}
+                className="pr-10"
+              />
+              <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-gray-100 text-gray-500"
+                    title="Chọn emoji"
+                  >
+                    <Smile className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0 border-0" align="end">
+                  <EmojiPicker onEmojiClick={handleEmojiClick} width={320} height={400} />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <Button
+              onClick={send}
+              disabled={uploading || (!input.trim() && !attachedFile)}
+              className="bg-ev-green hover:bg-ev-green/90"
+              title={uploading ? 'Đang upload...' : 'Gửi tin nhắn'}
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
