@@ -46,6 +46,7 @@ type MyAppointment = Appointment & {
   note?: string;
   createdAt?: string;
   updatedAt?: string;
+  final_cost?: number;
 };
 
 export default function BookingHistoryPage() {
@@ -187,9 +188,84 @@ export default function BookingHistoryPage() {
     }, 1000);
   };
 
+
   const handleViewDetail = (appointment: MyAppointment) => {
     setSelectedAppointment(appointment);
     setIsDetailDialogOpen(true);
+  };
+
+  // Hàm xử lý thanh toán final payment
+  const handleFinalPayment = async (item: MyAppointment) => {
+    try {
+      interface FinalPaymentResp {
+        success?: boolean;
+        message?: string;
+        data?: {
+          final_payment_id?: {
+            orderCode?: number;
+            checkoutUrl?: string;
+            qrCode?: string;
+            status?: string;
+            timeoutAt?: string;
+          };
+        } & Record<string, unknown>;
+      }
+      const res = await fetch(`${BASE_URL}/api/appointment/${item._id}/final-payment`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+      const obj = (await res.json().catch(() => ({}))) as FinalPaymentResp;
+      if (!res.ok) {
+        toast.error(obj?.message || "Không thể thực hiện thanh toán");
+        return;
+      }
+
+      // API trả về đối tượng appointment đã populate
+      const appt = obj?.data || {};
+      type FP = {
+        orderCode?: number; order_code?: number;
+        checkoutUrl?: string; checkout_url?: string;
+        qrCode?: string; qr_code?: string;
+        status?: string;
+        timeoutAt?: string; timeout_at?: string;
+      };
+      const fp = (appt as { final_payment_id?: FP }).final_payment_id || ({} as FP);
+
+      // Chuẩn hóa key từ camelCase -> snake_case cho PaymentDialog
+      const checkoutUrl = fp.checkoutUrl || fp.checkout_url;
+      const qrCode = fp.qrCode || fp.qr_code;
+      const orderCode = fp.orderCode || fp.order_code;
+      const timeoutAt = fp.timeoutAt || fp.timeout_at;
+      const status = (fp.status || "").toUpperCase();
+
+      if (checkoutUrl || qrCode || orderCode) {
+        setPaymentInfo({
+          amount: item.final_cost,
+          checkout_url: checkoutUrl,
+          qr_code: qrCode,
+          order_code: orderCode,
+          timeoutAt,
+          status,
+          description: `Thanh toán số tiền còn lại cho lịch hẹn ngày ${item.appoinment_date}`,
+        });
+        setPaymentDialogOpen(true);
+        if (status === "PAID") {
+          toast.success("Đã thanh toán thành công!");
+          fetchData({ soft: true });
+        } else if (status === "PENDING") {
+          // nhắc người dùng hoàn tất
+          toast.info("Vui lòng hoàn tất thanh toán.");
+        }
+      } else {
+        // Không có thông tin link/qr -> báo lỗi rõ ràng
+        toast.error("Không nhận được link thanh toán.");
+      }
+    } catch {
+      toast.error("Lỗi khi thực hiện thanh toán");
+    }
   };
 
 
@@ -309,6 +385,7 @@ export default function BookingHistoryPage() {
                       <th className="text-left px-4 py-3">Dịch vụ</th>
                       <th className="text-left px-4 py-3">Thời gian</th>
                       <th className="text-left px-4 py-3">Trạng thái</th>
+                      <th className="text-left px-4 py-3">Số tiền còn lại</th>
                       <th className="text-left px-4 py-3">Hành động</th>
                     </tr>
                   </thead>
@@ -354,6 +431,11 @@ export default function BookingHistoryPage() {
                             </td>
                             <td className="px-4 py-3"><Badge variant={st.variant}>{st.text}</Badge></td>
                             <td className="px-4 py-3">
+                              {(item.status === "repaired" && typeof item.final_cost === "number" && item.final_cost > 0)
+                                ? item.final_cost.toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+                                : "—"}
+                            </td>
+                            <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <Button size="sm" variant="ghost" className="h-8 px-2" title="Xem chi tiết" onClick={() => handleViewDetail(item)}><Eye className="w-4 h-4" /></Button>
                                 {(item.status === "pending" || item.status === "assigned") && (
@@ -364,8 +446,16 @@ export default function BookingHistoryPage() {
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
                                 )}
+                                {/* Nút thanh toán cho lịch đã sửa xong */}
+                                {item.status === "repaired" && typeof item.final_cost === "number" && item.final_cost > 0 && (
+                                  <Button size="sm" variant="default" className="h-8 px-3 text-white bg-emerald-600 hover:bg-emerald-700" onClick={() => handleFinalPayment(item)}>
+                                    Thanh toán
+                                  </Button>
+                                )}
                               </div>
                             </td>
+
+
                           </tr>
                         );
                       })
