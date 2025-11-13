@@ -30,6 +30,15 @@ import {
 import { Appointment, getAppointmentByIdApi } from "@/lib/appointmentApi";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 type IssueTypeRef =
   | string
@@ -82,6 +91,10 @@ const ChecklistDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectError, setRejectError] = useState<string | null>(null);
+  const [submittingReject, setSubmittingReject] = useState(false);
   const [unitCostMap, setUnitCostMap] = useState<Record<string, number>>({});
   const [inventoryCheck, setInventoryCheck] = useState<
     Record<
@@ -988,26 +1001,10 @@ const ChecklistDetail = () => {
                     className="w-full"
                     variant="outline"
                     disabled={workingId === checklist._id}
-                    onClick={async () => {
-                      const note =
-                        window.prompt("Nhập lý do hủy (tuỳ chọn):") ||
-                        undefined;
-                      try {
-                        setWorkingId(checklist._id);
-                        const res = await cancelChecklistApi(
-                          checklist._id,
-                          note
-                        );
-                        if (!res.ok) {
-                          alert(res.message || "Hủy checklist thất bại");
-                        } else {
-                          window.location.reload();
-                        }
-                      } catch {
-                        alert("Có lỗi xảy ra khi hủy checklist");
-                      } finally {
-                        setWorkingId(null);
-                      }
+                    onClick={() => {
+                      setRejectError(null);
+                      setRejectReason("");
+                      setRejectDialogOpen(true);
                     }}>
                     Từ chối checklist
                   </Button>
@@ -1017,6 +1014,78 @@ const ChecklistDetail = () => {
           )}
         </div>
       </div>
+
+      <Dialog
+        open={rejectDialogOpen}
+        onOpenChange={(open) => {
+          setRejectDialogOpen(open);
+          if (!open) {
+            setRejectReason("");
+            setRejectError(null);
+          }
+        }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Lý do từ chối checklist</DialogTitle>
+            <DialogDescription>
+              Vui lòng ghi rõ lý do để thông báo cho kỹ thuật viên.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Textarea
+              placeholder="Nhập lý do từ chối..."
+              rows={4}
+              value={rejectReason}
+              onChange={(e) => {
+                setRejectReason(e.target.value);
+                if (rejectError) setRejectError(null);
+              }}
+              disabled={submittingReject}
+            />
+            {rejectError ? (
+              <p className="text-sm text-destructive">{rejectError}</p>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRejectDialogOpen(false)}
+              disabled={submittingReject}>
+              Hủy
+            </Button>
+            <Button
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={submittingReject}
+              onClick={async () => {
+                if (!rejectReason.trim()) {
+                  setRejectError("Vui lòng nhập lý do từ chối.");
+                  return;
+                }
+                try {
+                  setSubmittingReject(true);
+                  setWorkingId(checklist._id);
+                  const res = await cancelChecklistApi(
+                    checklist._id,
+                    rejectReason.trim()
+                  );
+                  if (!res.ok) {
+                    alert(res.message || "Từ chối checklist thất bại");
+                  } else {
+                    setRejectDialogOpen(false);
+                    window.location.reload();
+                  }
+                } catch {
+                  alert("Có lỗi xảy ra khi từ chối checklist");
+                } finally {
+                  setSubmittingReject(false);
+                  setWorkingId(null);
+                }
+              }}>
+              Xác nhận từ chối
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };

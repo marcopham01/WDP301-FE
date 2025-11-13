@@ -80,7 +80,7 @@ const AdminOverview = () => {
     ? [
         {
           title: "Tổng khách hàng",
-          value: "2,847", // TODO: Cần API riêng cho số khách hàng
+          value: "2,847 đang là số giả nha", // TODO: Cần API riêng cho số khách hàng
           change: "+12%",
           changeType: "increase" as const,
           icon: Users,
