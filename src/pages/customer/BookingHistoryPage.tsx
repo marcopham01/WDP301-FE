@@ -133,7 +133,9 @@ export default function BookingHistoryPage() {
     if (user?.id) {
       try {
         socket.emit("join", user.id);
-      } catch {}
+      } catch {
+        /* no-op */
+      }
     }
     const handler = (payload: { appointment_id: string; status: string }) => {
       // Soft refresh current list to reflect latest status
@@ -144,8 +146,10 @@ export default function BookingHistoryPage() {
     onAppointmentUpdated(handler);
     return () => {
       try {
-        socket.off("appointment_updated", handler as any);
-      } catch {}
+        socket.off("appointment_updated", handler);
+      } catch {
+        /* no-op */
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);

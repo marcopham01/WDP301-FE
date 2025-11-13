@@ -16,7 +16,7 @@ import {
   Eye,
   DollarSign,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext/useAuth";
 import { useNavigate } from "react-router-dom";
 import {
@@ -42,52 +42,61 @@ export const TechnicianOverview = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const fetchTechnicianAppointments = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const params: GetAppointmentsParams = {
+        technicianId: user.id,
+        page: 1,
+        limit: 100,
+      };
+      const result = await getAppointmentsApi(params);
+      if (result.ok && result.data?.success) {
+        const data = result.data.data as { items?: Appointment[]; appointments?: Appointment[] };
+        const appointmentsData = (data.items || data.appointments || []) as Appointment[];
+        setAppointments(appointmentsData);
+      } else {
+        setError(result.message || "Không thể tải danh sách appointments");
+      }
+    } catch (err) {
+      setError("Có lỗi xảy ra khi tải dữ liệu");
+      console.error("Error fetching technician appointments:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   // Lấy dữ liệu appointments của technician khi đăng nhập
   useEffect(() => {
-    const fetchTechnicianAppointments = async () => {
-      if (!user?.id) return;
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        const params: GetAppointmentsParams = {
-          technicianId: user.id,
-          page: 1,
-          limit: 100, // Lấy nhiều appointments để hiển thị
-        };
-
-        const result = await getAppointmentsApi(params);
-
-        console.log("Technician Appointments API Response:", result);
-        console.log("Technician ID:", user.id);
-
-        if (result.ok && result.data?.success) {
-          // Backend trả về items hoặc appointments
-          const data = result.data.data as {
-            items?: Appointment[];
-            appointments?: Appointment[];
-          };
-          const appointmentsData = (data.items ||
-            data.appointments ||
-            []) as Appointment[];
-          setAppointments(appointmentsData);
-          console.log("Appointments loaded:", appointmentsData.length);
-          console.log("Appointments data:", appointmentsData);
-        } else {
-          setError(result.message || "Không thể tải danh sách appointments");
-        }
-      } catch (err) {
-        setError("Có lỗi xảy ra khi tải dữ liệu");
-        console.error("Error fetching technician appointments:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTechnicianAppointments();
-  }, [user?.id]);
+  }, [fetchTechnicianAppointments]);
+
+  // Realtime: refresh on socket 'appointment_updated'
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    (async () => {
+      try {
+        const { initializeSocket, onAppointmentUpdated } = await import("@/lib/socket");
+        const socket = initializeSocket();
+        if (user?.id) socket.emit("join", user.id);
+        const handler = () => {
+          fetchTechnicianAppointments();
+        };
+        onAppointmentUpdated(handler);
+        cleanup = () => {
+          try { socket.off("appointment_updated", handler); } catch {}
+        };
+      } catch (e) {
+        console.error("Realtime subscribe error (TechnicianOverview):", e);
+      }
+    })();
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [user?.id, fetchTechnicianAppointments]);
 
   // Helper function to get vehicle info
   const getVehicleInfo = (vehicle: any) => {

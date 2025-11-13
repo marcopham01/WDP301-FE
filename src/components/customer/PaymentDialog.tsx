@@ -60,7 +60,12 @@ export function PaymentDialog({
 
   // Poll payment status every 3s until reaching a terminal state
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      // Reset state when dialog closes
+      setRemainingSeconds(0);
+      setIsExpired(false);
+      return;
+    }
     if (!paymentInfo?.order_code) return;
     if (currentStatus && ["PAID", "FAILED", "CANCELLED", "TIMEOUT", "EXPIRED"].includes(currentStatus)) return;
 
@@ -79,6 +84,9 @@ export function PaymentDialog({
               }, 1200);
             } else if (["FAILED", "CANCELLED"].includes(newStatus)) {
               toast.error("Thanh toán không thành công (" + newStatus + ")");
+              setTimeout(() => {
+                onOpenChange(false);
+              }, 1500);
             }
           }
         }
