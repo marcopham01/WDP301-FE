@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -170,7 +170,9 @@ export default function ChecklistManagement() {
       "-";
 
     return (
-      <Card key={c._id} className="bg-gradient-card border-0 shadow-soft">
+      <Card
+        key={c._id}
+        className="bg-card border rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
@@ -369,64 +371,54 @@ export default function ChecklistManagement() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-warning/10">
-                <Clock className="h-5 w-5 text-warning" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Chờ duyệt</p>
-                <p className="text-2xl font-bold">{pendingChecklists.length}</p>
-              </div>
-            </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <Card className="border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Chờ duyệt</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingChecklists.length}</div>
+            <p className="text-xs text-muted-foreground">Đang chờ xử lý</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-destructive/10">
-                <Trash2 className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Đã từ chối</p>
-                <p className="text-2xl font-bold">
-                  {rejectedChecklists.length}
-                </p>
-              </div>
+        <Card className="border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Đã từ chối</CardTitle>
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {rejectedChecklists.length}
             </div>
+            <p className="text-xs text-muted-foreground">Cần xem xét lại</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-success/10">
-                <CheckCircle className="h-5 w-5 text-success" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Đã duyệt</p>
-                <p className="text-2xl font-bold">
-                  {approvedChecklists.length}
-                </p>
-              </div>
+        <Card className="border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Đã duyệt</CardTitle>
+            <CheckCircle className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {approvedChecklists.length}
             </div>
+            <p className="text-xs text-muted-foreground">Đã hoàn tất</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <FileText className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Tổng số</p>
-                <p className="text-2xl font-bold">{items.length}</p>
-              </div>
-            </div>
+        <Card className="border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tổng số</CardTitle>
+            <FileText className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{items.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Tổng checklist nhận được
+            </p>
           </CardContent>
         </Card>
       </div>

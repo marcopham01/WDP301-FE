@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -220,75 +220,65 @@ export const TechnicianOverview = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-warning/10">
-                <Clock className="h-5 w-5 text-warning" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Công việc được giao
-                </p>
-                <p className="text-2xl font-bold">{assignedTasks.length}</p>
-              </div>
-            </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <Card className="border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Công việc được giao
+            </CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{assignedTasks.length}</div>
+            <p className="text-xs text-muted-foreground">Tổng số nhiệm vụ</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Wrench className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Đang thực hiện</p>
-                <p className="text-2xl font-bold">{inProgressTasks.length}</p>
-              </div>
-            </div>
+        <Card className="border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Đang thực hiện
+            </CardTitle>
+            <Wrench className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{inProgressTasks.length}</div>
+            <p className="text-xs text-muted-foreground">Đang xử lý</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-success/10">
-                <CheckCircle className="h-5 w-5 text-success" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Hoàn thành tuần này
-                </p>
-                <p className="text-2xl font-bold">{completedTasks.length}</p>
-              </div>
-            </div>
+        <Card className="border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Hoàn thành tuần này
+            </CardTitle>
+            <CheckCircle className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{completedTasks.length}</div>
+            <p className="text-xs text-muted-foreground">Trong 7 ngày qua</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-electric/10">
-                <Battery className="h-5 w-5 text-electric" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Đánh giá trung bình
-                </p>
-                <p className="text-2xl font-bold">
-                  {completedTasks.length > 0
-                    ? (
-                        completedTasks.reduce(
-                          (sum, task) => sum + task.rating,
-                          0
-                        ) / completedTasks.length
-                      ).toFixed(1)
-                    : "0.0"}
-                </p>
-              </div>
+        <Card className="border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Đánh giá trung bình
+            </CardTitle>
+            <Battery className="h-4 w-4 text-electric" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {completedTasks.length > 0
+                ? (
+                    completedTasks.reduce((sum, task) => sum + task.rating, 0) /
+                    completedTasks.length
+                  ).toFixed(1)
+                : "0.0"}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Từ phản hồi khách hàng
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -322,7 +312,7 @@ export const TechnicianOverview = () => {
             {assignedTasks.map((task) => (
               <Card
                 key={task.id}
-                className="bg-gradient-card border-0 shadow-soft">
+                className="bg-card border rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
@@ -400,7 +390,7 @@ export const TechnicianOverview = () => {
             {inProgressTasks.map((task) => (
               <Card
                 key={task.id}
-                className="bg-gradient-card border-0 shadow-soft">
+                className="bg-card border rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
@@ -455,11 +445,6 @@ export const TechnicianOverview = () => {
                       onClick={() => handleViewDetails(task.id)}>
                       Xem chi tiết
                     </Button>
-                    <Button
-                      className="bg-success text-success-foreground"
-                      size="sm">
-                      Hoàn thành
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -477,7 +462,7 @@ export const TechnicianOverview = () => {
             {completedTasks.map((task) => (
               <Card
                 key={task.id}
-                className="bg-gradient-card border-0 shadow-soft">
+                className="bg-card border rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
