@@ -15,6 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Use relative path to avoid any alias resolution edge cases in this file
 import { PaymentDialog } from "../../components/customer/PaymentDialog";
 import { config } from "@/config/config";
+import { initializeSocket, onAppointmentUpdated } from "@/lib/socket";
+import { useAuth } from "@/context/AuthContext/useAuth";
 
 const BASE_URL = config.API_BASE_URL;
 
@@ -50,6 +52,7 @@ type MyAppointment = Appointment & {
 };
 
 export default function BookingHistoryPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
@@ -123,6 +126,29 @@ export default function BookingHistoryPage() {
     fetchData({ soft: !initialLoad });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, statusFilter]);
+
+  // Realtime: subscribe to appointment updates for current user
+  useEffect(() => {
+    const socket = initializeSocket();
+    if (user?.id) {
+      try {
+        socket.emit("join", user.id);
+      } catch {}
+    }
+    const handler = (payload: { appointment_id: string; status: string }) => {
+      // Soft refresh current list to reflect latest status
+      fetchData({ soft: true });
+      const st = statusLabel(payload.status).text;
+      toast.info(`Cập nhật lịch hẹn: ${st}`);
+    };
+    onAppointmentUpdated(handler);
+    return () => {
+      try {
+        socket.off("appointment_updated", handler as any);
+      } catch {}
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // Derived counters (from current page data)
   const counters = useMemo(() => {

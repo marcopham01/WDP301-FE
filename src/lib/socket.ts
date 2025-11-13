@@ -73,6 +73,19 @@ export function onReminderSent(callback: (data: ReminderMessage) => void): void 
 }
 
 /**
+ * Lắng nghe sự kiện cập nhật lịch hẹn (appointment realtime)
+ */
+export function onAppointmentUpdated(
+  callback: (data: { appointment_id: string; status: string; appointment?: unknown }) => void
+): void {
+  if (!socket) {
+    console.warn("⚠️ Socket not initialized. Call initializeSocket() first.");
+    return;
+  }
+  socket.on("appointment_updated", callback);
+}
+
+/**
  * Ngắt kết nối Socket.IO
  */
 export function disconnectSocket(): void {
