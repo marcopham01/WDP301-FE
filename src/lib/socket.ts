@@ -1,3 +1,14 @@
+/**
+ * Lắng nghe sự kiện new_message từ server (chat realtime)
+ */
+import type { ChatMessageDTO } from "./chatApi";
+export function onNewMessage(callback: (data: ChatMessageDTO) => void): void {
+  if (!socket) {
+    console.warn("⚠️ Socket not initialized. Call initializeSocket() first.");
+    return;
+  }
+  socket.on("new_message", callback);
+}
 import { io, Socket } from "socket.io-client";
 import { config } from "@/config/config";
 

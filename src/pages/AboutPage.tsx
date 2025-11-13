@@ -4,8 +4,13 @@ import Footer from "@/components/MainLayout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Target, Star, Users, Sparkles, Award, Heart, CheckCircle } from "lucide-react";
+import { useAuth } from "@/context/AuthContext/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const AboutPage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     setTimeout(() => (window.location.href = "/login"), 400);
@@ -211,6 +216,14 @@ const AboutPage = () => {
             <Button
               variant="secondary"
               className="px-6 py-5 bg-white text-teal-700 hover:bg-white/90"
+              onClick={() => {
+                // Nếu đã login thì đi tới trang booking, chưa login thì đi tới login
+                if (user) {
+                  navigate('/booking');
+                } else {
+                  navigate('/login');
+                }
+              }}
             >
               Đặt lịch ngay
             </Button>

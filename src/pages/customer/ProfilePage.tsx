@@ -17,8 +17,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { getProfileApi, forgotPasswordApi } from "@/lib/authApi";
+import { getProfileApi, forgotPasswordApi, uploadAvatarApi, updateProfileApi } from "@/lib/authApi";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext/useAuth";
 import { 
   User, 
   Mail, 
@@ -28,11 +29,15 @@ import {
   Shield, 
   Save,
   X,
-  Camera
+  Camera,
+  Loader2
 } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { toast } from "react-toastify";
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
 
 interface UserProfile {
   id?: string;
@@ -44,6 +49,7 @@ interface UserProfile {
   phone_number?: string;
   createdAt?: string;
   created_at?: string;
+  avatar?: string;
   // add other fields as needed
 }
 
@@ -54,13 +60,18 @@ const ProfilePage = () => {
   const [editData, setEditData] = useState<UserProfile | null>(null);
   const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
   const [sendingResetEmail, setSendingResetEmail] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const navigate = useNavigate();
+  const { setUser: setAuthUser, user: authUser } = useAuth();
 
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
       const res = await getProfileApi();
       if (res.ok && res.data?.user) {
+        console.log('📥 [ProfilePage] Fetched profile:', res.data.user);
+        console.log('📥 [ProfilePage] Avatar:', res.data.user.avatar);
         setUser(res.data.user);
       } else {
         setUser(null);
@@ -69,6 +80,14 @@ const ProfilePage = () => {
     };
     fetchProfile();
   }, []);
+
+  // Sync with auth context when it updates
+  useEffect(() => {
+    if (authUser && authUser.avatar && user && user.avatar !== authUser.avatar) {
+      console.log('🔄 [ProfilePage] Syncing avatar from AuthContext:', authUser.avatar);
+      setUser(prev => prev ? { ...prev, avatar: authUser.avatar } : null);
+    }
+  }, [authUser, user]);
 
   if (loading) {
     return (
@@ -114,6 +133,78 @@ const ProfilePage = () => {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Chỉ chấp nhận file ảnh (jpeg, jpg, png, gif, webp)");
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Kích thước file không được vượt quá 5MB");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    const res = await uploadAvatarApi(file);
+    setUploadingAvatar(false);
+
+    if (res.ok && res.data?.avatar) {
+      toast.success("Upload avatar thành công!");
+      // Update local user state with new avatar
+      setUser(prev => prev ? { ...prev, avatar: res.data.avatar } : null);
+      // Update auth context - re-fetch profile to ensure sync
+      const profileRes = await getProfileApi();
+      if (profileRes.ok && profileRes.data?.user) {
+        setAuthUser({
+          id: profileRes.data.user._id || profileRes.data.user.id,
+          username: profileRes.data.user.username,
+          email: profileRes.data.user.email,
+          fullName: profileRes.data.user.fullName,
+          role: profileRes.data.user.role,
+          avatar: profileRes.data.user.avatar,
+        });
+        console.log('✅ [ProfilePage] Auth context updated with avatar:', profileRes.data.user.avatar);
+      }
+    } else {
+      toast.error(res.message || "Không thể upload avatar. Vui lòng thử lại.");
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editData) return;
+
+    setSavingProfile(true);
+    const res = await updateProfileApi({
+      fullName: editData.fullName || editData.full_name || editData.name,
+      phoneNumber: editData.phoneNumber || editData.phone_number,
+    });
+    setSavingProfile(false);
+
+    if (res.ok && res.data?.user) {
+      toast.success("Cập nhật thông tin thành công!");
+      setUser(res.data.user);
+      setEditMode(false);
+      setEditData(null);
+      // Update auth context
+      setAuthUser({
+        id: res.data.user._id || res.data.user.id,
+        username: res.data.user.username,
+        email: res.data.user.email,
+        fullName: res.data.user.fullName,
+        avatar: res.data.user.avatar,
+        role: res.data.user.role,
+      });
+    } else {
+      toast.error(res.message || "Không thể cập nhật thông tin. Vui lòng thử lại.");
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -139,12 +230,35 @@ const ProfilePage = () => {
                   {/* Avatar Section */}
                   <div className="relative group">
                     <div className="w-32 h-32 md:w-40 md:h-40 bg-gradient-to-br from-ev-green to-teal-500 rounded-2xl flex items-center justify-center shadow-xl ring-4 ring-white relative overflow-hidden">
-                      <span className="text-white text-5xl md:text-6xl font-bold">
-                        {(user.fullName || user.full_name || user.name || user.email || 'U').charAt(0).toUpperCase()}
-                      </span>
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                        <Camera className="w-8 h-8 text-white" />
-                      </div>
+                      {user.avatar ? (
+                        <img 
+                          src={`${BASE_URL}${user.avatar}`} 
+                          alt="Avatar" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-white text-5xl md:text-6xl font-bold">
+                          {(user.fullName || user.full_name || user.name || user.email || 'U').charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <label 
+                        htmlFor="avatar-upload" 
+                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                      >
+                        {uploadingAvatar ? (
+                          <Loader2 className="w-8 h-8 text-white animate-spin" />
+                        ) : (
+                          <Camera className="w-8 h-8 text-white" />
+                        )}
+                      </label>
+                      <input
+                        id="avatar-upload"
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                        disabled={uploadingAvatar}
+                      />
                     </div>
                     <div className="absolute -bottom-2 -right-2">
                       <Badge className="bg-green-500 text-white border-4 border-white shadow-lg px-3 py-1">
@@ -181,7 +295,15 @@ const ProfilePage = () => {
                         <Button 
                           size="sm"
                           className="bg-gradient-to-r from-ev-green to-teal-500 hover:from-green-700 hover:to-teal-600 text-white gap-2"
-                          onClick={() => setEditMode(!editMode)}
+                          onClick={() => {
+                            if (editMode) {
+                              setEditMode(false);
+                              setEditData(null);
+                            } else {
+                              setEditMode(true);
+                              setEditData(user);
+                            }
+                          }}
                         >
                           {editMode ? (<><X className="w-4 h-4" /> Hủy</>) : (<><Pencil className="w-4 h-4" /> Chỉnh sửa</>)}
                         </Button>
@@ -263,7 +385,7 @@ const ProfilePage = () => {
                       <Input
                         id="fullName"
                         value={editMode ? (editData?.fullName || editData?.full_name || editData?.name || '') : (user.fullName || user.full_name || user.name || '')}
-                        onChange={(e) => setEditData((prev: UserProfile | null) => ({ ...prev, fullName: e.target.value }))}
+                        onChange={(e) => setEditData((prev: UserProfile | null) => ({ ...prev, fullName: e.target.value, full_name: e.target.value, name: e.target.value }))}
                         disabled={!editMode}
                         className={!editMode ? "bg-gray-50 border-gray-200 focus-visible:ring-0" : "border-ev-green focus:ring-ev-green"}
                         placeholder="Nhập họ và tên đầy đủ"
@@ -289,7 +411,8 @@ const ProfilePage = () => {
                       </Label>
                       <Input
                         id="phone"
-                        value={user.phoneNumber || user.phone_number || ''}
+                        value={editMode ? (editData?.phoneNumber || editData?.phone_number || '') : (user.phoneNumber || user.phone_number || '')}
+                        onChange={(e) => setEditData((prev: UserProfile | null) => ({ ...prev, phoneNumber: e.target.value, phone_number: e.target.value }))}
                         disabled={!editMode}
                         className={!editMode ? "bg-gray-50 border-gray-200 focus-visible:ring-0" : "border-ev-green focus:ring-ev-green"}
                         placeholder="Nhập số điện thoại"
@@ -305,22 +428,32 @@ const ProfilePage = () => {
                   <div className="flex gap-3 pt-4 border-t">
                     <Button
                       variant="outline"
-                      onClick={() => setEditMode(false)}
+                      onClick={() => {
+                        setEditMode(false);
+                        setEditData(null);
+                      }}
                       className="flex-1 gap-2"
+                      disabled={savingProfile}
                     >
                       <X className="w-4 h-4" />
                       Hủy bỏ
                     </Button>
                     <Button
                       className="flex-1 bg-gradient-to-r from-ev-green to-teal-500 hover:from-green-700 hover:to-teal-600 text-white gap-2 shadow-lg"
-                      onClick={() => {
-                        setUser(editData);
-                        setEditMode(false);
-                        toast.success("Cập nhật thông tin thành công!");
-                      }}
+                      onClick={handleSaveProfile}
+                      disabled={savingProfile}
                     >
-                      <Save className="w-4 h-4" />
-                      Lưu thay đổi
+                      {savingProfile ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Đang lưu...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Lưu thay đổi
+                        </>
+                      )}
                     </Button>
                   </div>
                 )}

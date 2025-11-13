@@ -131,3 +131,64 @@ export async function forgotPasswordApi(email: string) {
     message: data?.message || data?.error || undefined,
   };
 }
+
+// Upload avatar
+export async function uploadAvatarApi(file: File) {
+  const token = localStorage.getItem("accessToken");
+  const formData = new FormData();
+  formData.append("avatar", file);
+
+  const response = await fetch(`${BASE_URL}/api/users/upload-avatar`, {
+    method: "POST",
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+    body: formData,
+  });
+  
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  
+  return {
+    ok: response.ok,
+    status: response.status,
+    data,
+    message: data?.message || data?.error || undefined,
+  };
+}
+
+// Update profile
+export interface UpdateProfilePayload {
+  fullName?: string;
+  phoneNumber?: string;
+}
+
+export async function updateProfileApi(payload: UpdateProfilePayload) {
+  const token = localStorage.getItem("accessToken");
+  const response = await fetch(`${BASE_URL}/api/users/update-profile`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+    body: JSON.stringify(payload),
+  });
+  
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  
+  return {
+    ok: response.ok,
+    status: response.status,
+    data,
+    message: data?.message || data?.error || undefined,
+  };
+}

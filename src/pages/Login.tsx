@@ -72,7 +72,9 @@ const Login = () => {
             email: profileData.user.email,
             fullName: profileData.user.fullName,
             role: userRole,
+            avatar: profileData.user.avatar, // ✅ Thêm avatar
           });
+          console.log('✅ [Login - Google] Set user with avatar:', profileData.user.avatar);
           toast.success("Đăng nhập thành công! Chào mừng bạn quay trở lại.");
           if (userRole === "staff") {
             navigate("/dashboard/staff");
@@ -119,7 +121,9 @@ const Login = () => {
             email: data.user.email,
             fullName: data.user.fullName,
             role: userRole,
+            avatar: data.user.avatar, // ✅ Thêm avatar
           });
+          console.log('✅ [Login - Normal] Set user with avatar:', data.user.avatar);
           toast.success("Đăng nhập thành công! Chào mừng bạn quay trở lại.");
           setTimeout(() => {
             if (userRole === "staff") {

@@ -1,73 +1,85 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Paperclip, Smile } from "lucide-react";
+import { Send, Paperclip, Smile, X, Image as ImageIcon } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { useAuth } from "@/context/AuthContext/useAuth";
+import { initializeSocket } from "@/lib/socket";
+import { getChatHistory, fetchAllStaff, ChatMessageDTO, StaffInfo, uploadChatFile, sendChatWithAttachments, AttachmentDTO } from "@/lib/chatApi";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { config } from "@/config/config";
 
-interface Message {
-  id: number;
-  sender: string;
+
+interface MessageUI {
+  id: string;
+  senderLabel: string;
   message: string;
   time: string;
   isSupport: boolean;
+  attachments?: AttachmentDTO[];
 }
 
 const ChatPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const userId = user?.id || "default";
-  const storageKey =
-    userId === "default" ? "chatMessages" : `chatMessages_${userId}`;
+  const { accessToken } = useAuth();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: "EV Care Support",
-      message: "Xin chào! Chúng tôi có thể giúp gì cho bạn hôm nay?",
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      isSupport: true,
-    },
-  ]);
+  const [messages, setMessages] = useState<MessageUI[]>([]);
+  const [staffId, setStaffId] = useState<string>("");
   const [newMessage, setNewMessage] = useState("");
+  const [loadingStaff, setLoadingStaff] = useState(true);
+  const [allStaff, setAllStaff] = useState<StaffInfo[]>([]);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [attachedFile, setAttachedFile] = useState<File | null>(null);
+    const [attachedFilePreview, setAttachedFilePreview] = useState<string>("");
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load messages from localStorage
-  useEffect(() => {
-    let savedMessages = localStorage.getItem(storageKey);
-    if (!savedMessages && storageKey !== "chatMessages") {
-      savedMessages = localStorage.getItem("chatMessages");
-    }
-    if (savedMessages) {
-      try {
-        const parsed = JSON.parse(savedMessages);
-        setMessages(parsed);
-      } catch (error) {
-        console.error("Error loading chat messages:", error);
-      }
-    }
-  }, [storageKey]);
+  // Helper
+  const fmt = (d: Date) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-  // Save messages to localStorage
+  // Lấy tất cả staff
   useEffect(() => {
-    if (messages.length > 1) {
-      const payload = JSON.stringify(messages);
-      localStorage.setItem(storageKey, payload);
-      if (storageKey !== "chatMessages") {
-        localStorage.setItem("chatMessages", payload);
+    if (!accessToken) return;
+    fetchAllStaff(accessToken).then((staff) => {
+      setAllStaff(staff);
+      if (staff.length > 0) {
+        const defaultId = staff[0]._id || staff[0].id;
+        setStaffId(defaultId || "");
+        console.log("✅ Loaded", staff.length, "staff, default:", defaultId);
       }
-    }
-  }, [messages, storageKey]);
+      setLoadingStaff(false);
+    });
+  }, [accessToken]);
+
+  // Lấy lịch sử khi staffId thay đổi
+  useEffect(() => {
+    if (!accessToken || !user?.id || !staffId) return;
+    console.log("📜 Loading chat history with staff:", staffId);
+    getChatHistory(staffId, accessToken).then((list) => {
+      setMessages(
+        list.map((m: ChatMessageDTO) => ({
+          id: m._id || crypto.randomUUID(),
+          senderLabel: m.sender === staffId ? "EV Care Support" : user?.fullName || user?.username || "Bạn",
+          message: m.content,
+          time: fmt(new Date(m.createdAt || Date.now())),
+          isSupport: m.sender === staffId,
+          attachments: m.attachments,
+        }))
+      );
+    }).catch((err) => {
+      console.error("❌ Lỗi load lịch sử chat:", err);
+    });
+  }, [staffId, accessToken, user?.id, user?.fullName, user?.username]);
 
   // Auto scroll to bottom when new message arrives
   useEffect(() => {
@@ -81,37 +93,121 @@ const ChatPage = () => {
     }
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      const message: Message = {
-        id: messages.length + 1,
-        sender: user?.fullName || user?.username || "Bạn",
-        message: newMessage,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        isSupport: false,
-      };
-      setMessages([...messages, message]);
-      setNewMessage("");
-
-      // Simulate support response
-      setTimeout(() => {
-        const supportMessage: Message = {
-          id: messages.length + 2,
-          sender: "EV Care Support",
-          message:
-            "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm nhất có thể!",
-          time: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+  // Socket join và lắng nghe tin nhắn mới từ staff
+  useEffect(() => {
+    if (!user?.id || !staffId) return;
+    const socket = initializeSocket();
+    socket.emit("join", user.id);
+    
+    const handleNewMessage = (msg: ChatMessageDTO) => {
+      console.log("📨 Received message:", msg);
+      if (msg.sender !== staffId) {
+        console.log("⚠️ Message not from current staff, ignoring");
+        return; // chỉ nhận từ staff hiện tại
+      }
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: msg._id || crypto.randomUUID(),
+          senderLabel: allStaff.find(s => (s._id || s.id) === staffId)?.fullName || "EV Care Support",
+          message: msg.content,
+          time: fmt(new Date(msg.createdAt || Date.now())),
           isSupport: true,
-        };
-        setMessages((prev) => [...prev, supportMessage]);
-      }, 2000);
+          attachments: (msg as unknown as { attachments?: AttachmentDTO[] }).attachments,
+        },
+      ]);
+    };
+    
+    socket.on("new_message", handleNewMessage);
+    
+    return () => {
+      socket.off("new_message", handleNewMessage);
+    };
+  }, [user?.id, staffId, allStaff]);
+
+  const handleSendMessage = useCallback(() => {
+      const messageText = newMessage.trim();
+      console.log("📤 Trying to send:", { newMessage: messageText, accessToken: !!accessToken, staffId, hasFile: !!attachedFile });
+    
+      if ((!messageText && !attachedFile) || !accessToken || !staffId) {
+        console.warn("⚠️ Missing data:", { hasMessage: !!messageText, hasToken: !!accessToken, hasStaffId: !!staffId });
+      return;
     }
+    
+      // Tạm thời chỉ gửi text, file sẽ implement sau với upload API
+      const sendFlow = async () => {
+    const attachments: AttachmentDTO[] = [];
+        if (attachedFile) {
+          try {
+            setUploading(true);
+            const uploaded = await uploadChatFile(attachedFile, accessToken);
+            attachments.push(uploaded);
+          } catch (e) {
+            console.error('❌ Upload failed', e);
+            toast.error('Upload file thất bại');
+          } finally {
+            setUploading(false);
+          }
+        }
+        const saved = await sendChatWithAttachments({ receiver: staffId, content: messageText, attachments }, accessToken);
+      console.log("✅ Message sent:", saved);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: saved._id || crypto.randomUUID(),
+          senderLabel: user?.fullName || user?.username || "Bạn",
+          message: saved.content,
+          time: fmt(new Date(saved.createdAt || Date.now())),
+          isSupport: false,
+          attachments: saved.attachments,
+        },
+      ]);
+        // Nếu có attachments -> append hiển thị đặc biệt (render logic phía dưới)
+      setNewMessage("");
+      setAttachedFile(null);
+      setAttachedFilePreview("");
+      };
+      sendFlow().catch(err => {
+        console.error('❌ Send flow failed:', err);
+        toast.error('Không thể gửi tin nhắn.');
+      });
+  }, [newMessage, accessToken, staffId, user?.fullName, user?.username, attachedFile]);
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setNewMessage((prev) => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Kiểm tra kích thước file (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File quá lớn! Vui lòng chọn file nhỏ hơn 10MB");
+      return;
+    }
+
+    setAttachedFile(file);
+
+    // Tạo preview nếu là ảnh
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAttachedFilePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setAttachedFilePreview("");
+    }
+
+    toast.success(`Đã đính kèm: ${file.name}`);
+  };
+
+  const handleRemoveFile = () => {
+    setAttachedFile(null);
+    setAttachedFilePreview("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleLogout = () => {
@@ -131,47 +227,67 @@ const ChatPage = () => {
     >
       <Header onLogout={handleLogout} />
       <main className="flex-1 py-8">
-        <div className="container max-w-5xl pt-20 px-4">
-          <div className="mb-6">
+        <div className="container max-w-4xl mx-auto pt-20 px-4">
+          <div className="mb-6 text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {" "}
-              {/* Text đen, không gradient */}
               Trung tâm Chat
             </h1>
             <p className="text-gray-600">
               Liên hệ với đội ngũ hỗ trợ của chúng tôi
-            </p>{" "}
-            {/* Text xám */}
+            </p>
+            {loadingStaff && (
+              <p className="text-sm text-yellow-600 mt-2">⏳ Đang tải thông tin staff...</p>
+            )}
+            {!loadingStaff && !staffId && (
+              <p className="text-sm text-red-600 mt-2">
+                ⚠️ Không tìm thấy staff. Vui lòng liên hệ admin.
+              </p>
+            )}
           </div>
 
           {/* Modern Chat Container */}
-          <div className="w-full max-w-4xl mx-auto bg-white rounded-lg shadow-md border border-gray-200 flex flex-col overflow-hidden">
+          <div className="w-full bg-white rounded-lg shadow-md border border-gray-200 flex flex-col overflow-hidden">
             {" "}
             {/* Trắng, border xám, shadow nhẹ */}
             {/* Chat Header - Modern Design */}
-            <div className="bg-ev-green p-6 flex items-center justify-between">
-              {" "}
-              {/* ev-green, không gradient */}
-              <div className="flex items-center gap-4">
+            <div className="bg-ev-green p-4 flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-3 flex-1 min-w-[220px]">
                 <div className="relative">
-                  <Avatar className="h-14 w-14 border-2 border-white shadow-sm">
-                    {" "}
-                    {/* Shadow nhẹ */}
+                  <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
                     <AvatarImage src="/support-avatar.png" />
-                    <AvatarFallback className="bg-white text-ev-green font-bold text-lg">
-                      EV
-                    </AvatarFallback>
+                    <AvatarFallback className="bg-white text-ev-green font-bold text-base">EV</AvatarFallback>
                   </Avatar>
-                  <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></span>
+                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></span>
                 </div>
-                <div className="text-white">
-                  <h3 className="font-semibold text-lg">EV Care Support</h3>
-                  <p className="text-sm text-green-100 flex items-center gap-1">
-                    <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></span>
-                    Đang hoạt động • Phản hồi trong 24h
+                <div className="text-white leading-tight">
+                  <h3 className="font-semibold text-base">
+                    {allStaff.find(s => (s._id || s.id) === staffId)?.fullName || "EV Care Support"}
+                  </h3>
+                  <p className="text-[11px] text-green-100 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-300 rounded-full animate-pulse"></span>
+                    Online • Phản hồi nhanh
                   </p>
                 </div>
               </div>
+              {allStaff.length > 1 && (
+                <div className="ml-auto w-full sm:w-auto">
+                  <label className="text-xs text-white/80 block mb-1">Chọn nhân viên hỗ trợ</label>
+                  <div className="relative">
+                    <select
+                      className="text-sm rounded-md bg-white/90 text-gray-700 px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-ev-green shadow-sm"
+                      value={staffId}
+                      onChange={(e) => setStaffId(e.target.value)}
+                    >
+                      {allStaff.map(st => (
+                        <option key={st._id || st.id} value={st._id || st.id}>
+                          {st.fullName || st.username}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-gray-500">▾</span>
+                  </div>
+                </div>
+              )}
             </div>
             {/* Quick Actions Banner */}
             <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
@@ -243,21 +359,50 @@ const ChatPage = () => {
                     >
                       {msg.isSupport && (
                         <div className="text-xs text-gray-500 mb-1 ml-1">
-                          {msg.sender}
+                          {msg.senderLabel}
                         </div>
                       )}
 
-                      <div
-                        className={`px-4 py-2.5 rounded-lg shadow-sm ${
-                          // Bo góc vừa, shadow nhẹ
-                          msg.isSupport
-                            ? "bg-white text-gray-900 rounded-tl-sm border border-gray-200" // Trắng, border xám
-                            : "bg-ev-green text-white rounded-tr-sm" // ev-green
-                        }`}
-                      >
-                        <div className="text-sm leading-relaxed">
-                          {msg.message}
+                      <div className="space-y-1 max-w-full">
+                        <div
+                          className={`px-4 py-2.5 rounded-lg shadow-sm break-words ${
+                            msg.isSupport
+                              ? "bg-white text-gray-900 rounded-tl-sm border border-gray-200"
+                              : "bg-ev-green text-white rounded-tr-sm"
+                          }`}
+                        >
+                          <div className="text-sm leading-relaxed">{msg.message}</div>
                         </div>
+                        {/* Attachments hiển thị nếu có */}
+                        {(msg as unknown as { attachments?: AttachmentDTO[] }).attachments?.length > 0 && (
+                          <div className={`flex flex-col gap-2 ${msg.isSupport ? '' : 'items-end'}`}>
+                            {(msg as unknown as { attachments?: AttachmentDTO[] }).attachments!.map((att: AttachmentDTO, i: number) => {
+                              const href = att.url.startsWith('http') ? att.url : `${config.API_BASE_URL}${att.url}`;
+                              return att.type.startsWith('image/') ? (
+                                <a
+                                  key={i}
+                                  href={href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block rounded-md overflow-hidden border border-gray-200 hover:opacity-90 transition w-48"
+                                >
+                                  <img src={href} alt={att.name} className="w-full h-32 object-cover" />
+                                  <div className="bg-white text-[10px] text-gray-600 px-2 py-1 truncate">{att.name}</div>
+                                </a>
+                              ) : (
+                                <a
+                                  key={i}
+                                  href={href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs px-2 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 inline-flex items-center gap-1"
+                                >
+                                  <Paperclip className="h-3 w-3" /> {att.name || 'Tệp đính kèm'}
+                                </a>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
 
                       <div
@@ -271,6 +416,9 @@ const ChatPage = () => {
 
                     {!msg.isSupport && (
                       <Avatar className="h-8 w-8 ml-2 mt-1">
+                        {user?.avatar && (
+                          <AvatarImage src={`${config.API_BASE_URL}${user.avatar}`} alt={user?.fullName || user?.username || ""} />
+                        )}
                         <AvatarFallback className="bg-gray-200 text-gray-700 text-xs">
                           {(user?.fullName || user?.username || "U")
                             .charAt(0)
@@ -306,13 +454,44 @@ const ChatPage = () => {
             </div>
             {/* Input Area - Modern Design */}
             <div className="p-6 border-t border-gray-200 bg-white">
-              {" "}
-              {/* Border xám, trắng */}
+                {/* File preview */}
+                {attachedFile && (
+                  <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center gap-3">
+                    {attachedFilePreview ? (
+                      <img src={attachedFilePreview} alt="Preview" className="w-16 h-16 object-cover rounded" />
+                    ) : (
+                      <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
+                        <ImageIcon className="h-6 w-6 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-700 truncate">{attachedFile.name}</p>
+                      <p className="text-xs text-gray-500">{(attachedFile.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleRemoveFile}
+                      className="h-8 w-8 text-gray-400 hover:text-red-500"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
               <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                  />
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 rounded-full hover:bg-gray-100 text-gray-500" // Hover xám nhạt
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-10 w-10 rounded-full hover:bg-gray-100 text-gray-500"
                   title="Đính kèm file"
                 >
                   <Paperclip className="h-4 w-4" />
@@ -331,23 +510,35 @@ const ChatPage = () => {
                     }}
                     className="pr-10 rounded-full border-2 border-gray-200 focus:border-ev-green" // Border xám, focus ev-green
                   />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-gray-100 text-gray-500" // Hover xám nhạt
-                    title="Chọn emoji"
-                  >
-                    <Smile className="h-4 w-4" />
-                  </Button>
+                  <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-gray-100 text-gray-500"
+                        title="Chọn emoji"
+                      >
+                        <Smile className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0 border-0" align="end">
+                      <EmojiPicker onEmojiClick={handleEmojiClick} width={320} height={400} />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!newMessage.trim()}
+                  disabled={uploading || ((!newMessage.trim() && !attachedFile) || !staffId || !accessToken)}
                   size="icon"
-                  className="h-11 w-11 rounded-full bg-ev-green hover:bg-ev-green/90 shadow-md disabled:opacity-50" // ev-green, shadow nhẹ
+                  className="h-11 w-11 rounded-full bg-ev-green hover:bg-ev-green/90 shadow-md disabled:opacity-50 relative"
+                  title={uploading ? 'Đang upload...' : (!staffId ? "Đang tải thông tin staff..." : !accessToken ? "Chưa đăng nhập" : "Gửi tin nhắn")}
                 >
-                  <Send className="h-5 w-5" />
+                  {uploading ? (
+                    <span className="animate-pulse text-xs">...</span>
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
                 </Button>
               </div>
               <div className="mt-2 text-xs text-center text-gray-400">

@@ -21,13 +21,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then(async (res) => {
         if (!res.ok) throw new Error("Not authenticated");
         const data = await res.json();
+        console.log('🔍 [AuthContext] Raw API response:', data);
+        console.log('🔍 [AuthContext] Avatar from API:', data.user?.avatar);
         setUser({
           id: data.user._id || data.user.id,
           username: data.user.username,
           email: data.user.email,
           fullName: data.user.fullName,
           role: data.user.role,
+          avatar: data.user.avatar,
         });
+        console.log('✅ [AuthContext] User state set with avatar:', data.user.avatar);
       })
       .catch(() => setUser(null))
       .finally(() => setLoading(false));

@@ -1,8 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, MessageSquare, CreditCard, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext/useAuth";
 
 const QuickActions = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const actions = [
     {
       id: "book-service",
@@ -38,6 +42,32 @@ const QuickActions = () => {
     }
   ];
 
+  const handleActionClick = (actionId: string) => {
+    // Nếu chưa login, redirect về login page
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    // Nếu đã login, navigate theo action
+    switch (actionId) {
+      case 'book-service':
+        navigate('/customer/booking');
+        break;
+      case 'emergency':
+        navigate('/customer/chat');
+        break;
+      case 'payment':
+        navigate('/customer/appointments');
+        break;
+      case 'add-vehicle':
+        navigate('/customer/vehicles');
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <Card className="p-6 shadow-card gradient-card border-0">
       <h2 className="text-xl font-semibold text-foreground mb-4">Thao tác nhanh</h2>
@@ -49,6 +79,7 @@ const QuickActions = () => {
             className={`h-auto p-4 flex flex-col space-y-2 hover:shadow-glow transition-smooth relative ${
               action.urgent ? 'border border-destructive/20' : ''
             }`}
+            onClick={() => handleActionClick(action.id)}
           >
             {action.urgent && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full animate-pulse" />

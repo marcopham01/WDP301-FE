@@ -2,8 +2,12 @@ import SlideArrowButton from "@/components/ui/slide-arrow-button";
 import { Card } from "@/components/ui/card";
 import { CheckCircle, Zap, Shield, Clock, Users } from "lucide-react";
 import heroImage from "@/assets/hero-ev-service.jpg";
+import { useAuth } from "@/context/AuthContext/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const HeroSection = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const features = [
     { icon: Zap, title: "Công nghệ hiện đại", desc: "Thiết bị chẩn đoán EV tiên tiến" },
     { icon: Shield, title: "Bảo hành toàn diện", desc: "Cam kết chất lượng dịch vụ" },
@@ -72,7 +76,14 @@ const HeroSection = () => {
                 text="Đặt lịch bảo dưỡng"
                 primaryColor="linear-gradient(90deg, #43ea6d 0%, #1abc9c 100%)"
                 className="text-lg px-0 py-0"
-                onClick={() => window.location.href = '/login'}
+                onClick={() => {
+                  // Nếu đã login thì đi tới trang booking, chưa login thì đi tới login
+                  if (user) {
+                    navigate('/booking');
+                  } else {
+                    navigate('/login');
+                  }
+                }}
               />
             </div>
           </div>
