@@ -16,6 +16,11 @@ import {
   Plus,
   Trash2,
   FileText,
+  Hash,
+  Mail,
+  Phone,
+  Building2,
+  DollarSign,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext/useAuth";
 import {
@@ -458,45 +463,60 @@ export const TaskDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Thông tin appointment */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-gradient-card border border-border shadow-soft">
+          <Card className="bg-gradient-card border-2 border-border shadow-md">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Thông tin Appointment</h3>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Thông tin Appointment
+                </h3>
                 <Badge
                   className={`${getStatusColor(
                     appointment.status
-                  )} text-white`}>
+                  )} text-white px-3 py-1.5 text-sm font-semibold`}>
                   {getStatusText(appointment.status)}
                 </Badge>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-start gap-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Calendar className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Ngày hẹn</p>
-                    <p className="font-medium">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Ngày hẹn
+                    </p>
+                    <p className="font-bold text-base">
                       {formatDate(appointment.appoinment_date)}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-start gap-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Clock className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Giờ hẹn</p>
-                    <p className="font-medium">{appointment.appoinment_time}</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Giờ hẹn
+                    </p>
+                    <p className="font-bold text-base">
+                      {appointment.appoinment_time}
+                    </p>
                   </div>
                 </div>
 
                 {appointment.service_type_id?.estimated_duration && (
-                  <div className="flex items-center gap-3">
-                    <Wrench className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-start gap-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Wrench className="h-5 w-5 text-primary" />
+                    </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mb-1">
                         Thời gian dự kiến
                       </p>
-                      <p className="font-medium">
+                      <p className="font-bold text-base">
                         {appointment.service_type_id.estimated_duration} giờ
                       </p>
                     </div>
@@ -505,9 +525,11 @@ export const TaskDetail = () => {
               </div>
 
               {appointment.notes && (
-                <div className="mt-4">
-                  <p className="text-sm text-muted-foreground mb-2">Ghi chú</p>
-                  <p className="text-sm bg-muted/50 p-3 rounded-lg">
+                <div className="mt-6 pt-4 border-t">
+                  <p className="text-sm font-semibold text-muted-foreground mb-2">
+                    Ghi chú
+                  </p>
+                  <p className="text-sm bg-muted/50 p-4 rounded-lg border">
                     {appointment.notes}
                   </p>
                 </div>
@@ -516,47 +538,126 @@ export const TaskDetail = () => {
           </Card>
 
           {/* Thông tin khách hàng + xe */}
-          <Card className="bg-gradient-card border border-border shadow-soft">
+          <Card className="bg-gradient-card border-2 border-border shadow-md">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Thông tin khách hàng
+              <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Thông tin khách hàng & Phương tiện
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3">
-                  <User className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">
-                      {appointment.user_id?.fullName ||
-                        appointment.user_id?.username}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {appointment.user_id?.email}
-                    </p>
-                    {appointment.user_id?.phone && (
-                      <p className="text-sm text-muted-foreground">
-                        {appointment.user_id?.phone}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Customer Information */}
+                <div className="p-4 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg border border-blue-200/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <User className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <h4 className="font-semibold text-base">Khách hàng</h4>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Họ tên
                       </p>
+                      <p className="font-bold text-base">
+                        {appointment.user_id?.fullName ||
+                          appointment.user_id?.username ||
+                          "Chưa rõ"}
+                      </p>
+                    </div>
+                    {appointment.user_id?.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          {appointment.user_id.email}
+                        </p>
+                      </div>
+                    )}
+                    {(appointment.user_id as { phoneNumber?: string })
+                      ?.phoneNumber && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          {
+                            (appointment.user_id as { phoneNumber?: string })
+                              .phoneNumber
+                          }
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Car className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">
-                      {(appointment.vehicle_id as { brand?: string })?.brand ||
-                        ""}{" "}
-                      {(appointment.vehicle_id as { model?: string })?.model ||
-                        ""}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Biển số: {appointment.vehicle_id?.license_plate}
-                    </p>
-                    {(appointment.vehicle_id as { vin?: string })?.vin && (
-                      <p className="text-sm text-muted-foreground">
-                        VIN: {(appointment.vehicle_id as { vin?: string }).vin}
-                      </p>
-                    )}
+                {/* Vehicle Information */}
+                <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-emerald-500/10 rounded-lg">
+                      <Car className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <h4 className="font-semibold text-base">Phương tiện</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {(() => {
+                      const vehicle = appointment.vehicle_id as {
+                        brand?: string;
+                        model?: string;
+                        model_id?:
+                          | string
+                          | { brand?: string; model_name?: string };
+                        license_plate?: string;
+                        color?: string;
+                        vin?: string;
+                      };
+                      const modelData =
+                        vehicle?.model_id &&
+                        typeof vehicle.model_id === "object"
+                          ? vehicle.model_id
+                          : null;
+                      const brand = modelData?.brand || vehicle?.brand || "";
+                      const model =
+                        modelData?.model_name || vehicle?.model || "";
+                      return (
+                        <>
+                          {(brand || model) && (
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">
+                                Loại xe
+                              </p>
+                              <p className="font-bold text-base">
+                                {[brand, model].filter(Boolean).join(" ")}
+                              </p>
+                            </div>
+                          )}
+                          {vehicle?.license_plate && (
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">
+                                Biển số
+                              </p>
+                              <p className="font-bold text-lg text-emerald-700 dark:text-emerald-400">
+                                {vehicle.license_plate}
+                              </p>
+                            </div>
+                          )}
+                          {vehicle?.color && (
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                Màu
+                              </p>
+                              <p className="font-medium">{vehicle.color}</p>
+                            </div>
+                          )}
+                          {vehicle?.vin && (
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                VIN
+                              </p>
+                              <p className="text-sm font-mono font-medium">
+                                {vehicle.vin}
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -564,37 +665,72 @@ export const TaskDetail = () => {
           </Card>
 
           {/* Thông tin dịch vụ + trung tâm */}
-          <Card className="bg-gradient-card border border-border shadow-soft">
+          <Card className="bg-gradient-card border-2 border-border shadow-md">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Thông tin dịch vụ</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="font-medium mb-2">
-                    {appointment.service_type_id?.service_name}
-                  </p>
-                  {(appointment.service_type_id as { description?: string })
-                    ?.description && (
-                    <p className="text-sm text-muted-foreground">
-                      {
-                        (
-                          appointment.service_type_id as {
-                            description?: string;
-                          }
-                        ).description
-                      }
+              <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-primary" />
+                Thông tin dịch vụ & Trung tâm
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Service Information */}
+                <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 rounded-lg border border-purple-200/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-purple-500/10 rounded-lg">
+                      <Wrench className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <h4 className="font-semibold text-base">Dịch vụ</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-bold text-base">
+                      {appointment.service_type_id?.service_name ||
+                        "Không xác định"}
                     </p>
-                  )}
+                    {(appointment.service_type_id as { description?: string })
+                      ?.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {
+                          (
+                            appointment.service_type_id as {
+                              description?: string;
+                            }
+                          ).description
+                        }
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-start gap-3 md:justify-end">
-                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="text-right md:text-left">
-                    <p className="font-medium">
+
+                {/* Center Information */}
+                <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-indigo-500/10 rounded-lg">
+                      <Building2 className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <h4 className="font-semibold text-base">Trung tâm</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-bold text-base">
                       {appointment.center_id?.center_name ||
-                        appointment.center_id?.name}
+                        appointment.center_id?.name ||
+                        "Không xác định"}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {appointment.center_id?.address}
-                    </p>
+                    {appointment.center_id?.address && (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-muted-foreground">
+                          {appointment.center_id.address}
+                        </p>
+                      </div>
+                    )}
+                    {(appointment.center_id as { phone?: string })?.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Hotline:{" "}
+                          {(appointment.center_id as { phone?: string }).phone}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -603,7 +739,7 @@ export const TaskDetail = () => {
 
           {/* Thông tin checklist */}
           {checklist && (
-            <Card className="bg-gradient-card border border-border shadow-soft">
+            <Card className="bg-gradient-card border-2 border-border shadow-md">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">
                   Thông tin checklist
@@ -735,8 +871,107 @@ export const TaskDetail = () => {
 
         {/* Sidebar với actions */}
         <div className="space-y-6">
+          {/* Appointment Info */}
+          <Card className="bg-gradient-card border-2 border-border shadow-md">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Thông tin Appointment
+                </h3>
+              </div>
+              <div className="space-y-4">
+                {/* Short ID */}
+                <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Hash className="h-4 w-4 text-primary" />
+                    <p className="text-xs text-muted-foreground">
+                      ID Appointment
+                    </p>
+                  </div>
+                  <p className="font-bold text-lg text-primary font-mono">
+                    {appointment._id
+                      ? appointment._id.slice(-4).toUpperCase()
+                      : "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 font-mono">
+                    {appointment._id}
+                  </p>
+                </div>
+
+                {/* Dates */}
+                <div className="space-y-3">
+                  {appointment.createdAt && (
+                    <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Tạo lúc</p>
+                        <p className="text-sm font-semibold">
+                          {formatDate(appointment.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {appointment.updatedAt && (
+                    <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Cập nhật
+                        </p>
+                        <p className="text-sm font-semibold">
+                          {formatDate(appointment.updatedAt)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Costs */}
+                {((appointment as { deposit_cost?: number }).deposit_cost ||
+                  (appointment as { final_cost?: number }).final_cost) && (
+                  <div className="space-y-2">
+                    {(appointment as { deposit_cost?: number })
+                      .deposit_cost && (
+                      <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-200/50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <DollarSign className="h-4 w-4 text-amber-600" />
+                          <p className="text-xs text-muted-foreground">
+                            Tiền đặt cọc
+                          </p>
+                        </div>
+                        <p className="font-bold text-base text-amber-700 dark:text-amber-400">
+                          {(
+                            appointment as { deposit_cost?: number }
+                          ).deposit_cost?.toLocaleString("vi-VN")}{" "}
+                          VNĐ
+                        </p>
+                      </div>
+                    )}
+                    {(appointment as { final_cost?: number }).final_cost && (
+                      <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200/50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <DollarSign className="h-4 w-4 text-emerald-600" />
+                          <p className="text-xs text-muted-foreground">
+                            Tổng chi phí
+                          </p>
+                        </div>
+                        <p className="font-bold text-lg text-emerald-700 dark:text-emerald-400">
+                          {(
+                            appointment as { final_cost?: number }
+                          ).final_cost?.toLocaleString("vi-VN")}{" "}
+                          VNĐ
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Actions */}
-          <Card className="bg-gradient-card border border-border shadow-soft">
+          <Card className="bg-gradient-card border-2 border-border shadow-md">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold mb-4">Hành động</h3>
               <div className="space-y-3">
@@ -773,7 +1008,7 @@ export const TaskDetail = () => {
                   </Button>
                 ) : (
                   <div className="text-center">
-                    <Badge className="bg-success text-white">
+                    <Badge className="bg-success text-white px-3 py-1.5 text-sm font-semibold">
                       Công việc đã hoàn thành
                     </Badge>
                   </div>

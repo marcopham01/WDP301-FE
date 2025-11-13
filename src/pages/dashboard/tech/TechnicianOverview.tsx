@@ -2,7 +2,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wrench, Clock, CheckCircle, Battery, FileText } from "lucide-react";
+import {
+  Wrench,
+  Clock,
+  CheckCircle,
+  Battery,
+  FileText,
+  Hash,
+  User,
+  Car,
+  Calendar,
+  Building2,
+  Eye,
+  DollarSign,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -76,35 +89,83 @@ export const TechnicianOverview = () => {
     fetchTechnicianAppointments();
   }, [user?.id]);
 
+  // Helper function to get vehicle info
+  const getVehicleInfo = (vehicle: any) => {
+    if (!vehicle) return { brand: "", model: "", licensePlate: "" };
+    const modelData =
+      vehicle.model_id && typeof vehicle.model_id === "object"
+        ? vehicle.model_id
+        : null;
+    return {
+      brand: modelData?.brand || vehicle.brand || "",
+      model: modelData?.model_name || vehicle.model || "",
+      licensePlate: vehicle.license_plate || "",
+      color: vehicle.color || "",
+    };
+  };
+
+  // Helper function to get status badge
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case "assigned":
+      case "pending":
+        return {
+          text: "Đã giao",
+          className: "bg-amber-100 text-amber-800 border-amber-200",
+        };
+      case "check_in":
+      case "in_progress":
+        return {
+          text: "Đang thực hiện",
+          className: "bg-blue-100 text-blue-800 border-blue-200",
+        };
+      case "repaired":
+      case "completed":
+      case "done":
+        return {
+          text: "Đã hoàn thành",
+          className: "bg-emerald-100 text-emerald-800 border-emerald-200",
+        };
+      default:
+        return {
+          text: status || "N/A",
+          className: "bg-muted text-muted-foreground",
+        };
+    }
+  };
+
   // Phân loại tasks theo status
   const assignedTasks = appointments
     .filter(
       (appointment) =>
         appointment.status === "assigned" || appointment.status === "pending"
     )
-    .map((appointment) => ({
-      id: appointment._id,
-      vehicle: `${appointment.vehicle_id?.brand || ""} ${
-        appointment.vehicle_id?.model || ""
-      } - ${appointment.vehicle_id?.license_plate || ""}`,
-      licensePlate: appointment.vehicle_id?.license_plate || "",
-      customer: appointment.user_id?.fullName || "N/A",
-      service: appointment.service_type_id?.service_name || "N/A",
-      serviceDescription:
-        appointment.service_type_id?.description || "Không có mô tả",
-      assignedDate: formatDate(appointment.appoinment_date) || "",
-      estimatedHours:
-        parseInt(appointment.service_type_id?.estimated_duration || "2") || 2,
-      description: appointment.notes || "Không có mô tả chi tiết",
-      estimatedCost: appointment.service_type_id?.base_price,
-      centerName:
-        appointment.center_id?.center_name ||
-        appointment.center_id?.name ||
-        "N/A",
-      centerAddress: appointment.center_id?.address || "N/A",
-      customerEmail: appointment.user_id?.email || "N/A",
-      vehicleVin: appointment.vehicle_id?.vin || "N/A",
-    }));
+    .map((appointment) => {
+      const vehicleInfo = getVehicleInfo(appointment.vehicle_id);
+      return {
+        id: appointment._id,
+        appointment,
+        vehicleInfo,
+        customer: appointment.user_id?.fullName || "N/A",
+        customerEmail: appointment.user_id?.email || "N/A",
+        customerPhone: appointment.user_id?.phoneNumber || "",
+        service: appointment.service_type_id?.service_name || "N/A",
+        serviceDescription:
+          appointment.service_type_id?.description || "Không có mô tả",
+        assignedDate: formatDate(appointment.appoinment_date) || "",
+        appointmentTime: appointment.appoinment_time || "",
+        estimatedHours:
+          parseInt(appointment.service_type_id?.estimated_duration || "2") || 2,
+        estimatedCost: appointment.service_type_id?.base_price,
+        centerName:
+          appointment.center_id?.center_name ||
+          appointment.center_id?.name ||
+          "N/A",
+        centerAddress: appointment.center_id?.address || "N/A",
+        depositCost: appointment.deposit_cost,
+        finalCost: appointment.final_cost,
+      };
+    });
 
   const inProgressTasks = appointments
     .filter(
@@ -112,62 +173,229 @@ export const TechnicianOverview = () => {
         appointment.status === "in_progress" ||
         appointment.status === "check_in"
     )
-    .map((appointment) => ({
-      id: appointment._id,
-      vehicle: `${appointment.vehicle_id?.brand || ""} ${
-        appointment.vehicle_id?.model || ""
-      } - ${appointment.vehicle_id?.license_plate || ""}`,
-      licensePlate: appointment.vehicle_id?.license_plate || "",
-      customer: appointment.user_id?.fullName || "N/A",
-      service: appointment.service_type_id?.service_name || "N/A",
-      serviceDescription:
-        appointment.service_type_id?.description || "Không có mô tả",
-      progress: 50,
-      startTime: appointment.appoinment_time || "",
-      estimatedCompletion: appointment.estimated_end_time || "16:00",
-      description: appointment.notes || "Không có mô tả chi tiết",
-      estimatedCost: appointment.service_type_id?.base_price,
-      centerName:
-        appointment.center_id?.center_name ||
-        appointment.center_id?.name ||
-        "N/A",
-      centerAddress: appointment.center_id?.address || "N/A",
-      customerEmail: appointment.user_id?.email || "N/A",
-      vehicleVin: appointment.vehicle_id?.vin || "N/A",
-    }));
+    .map((appointment) => {
+      const vehicleInfo = getVehicleInfo(appointment.vehicle_id);
+      return {
+        id: appointment._id,
+        appointment,
+        vehicleInfo,
+        customer: appointment.user_id?.fullName || "N/A",
+        customerEmail: appointment.user_id?.email || "N/A",
+        customerPhone: appointment.user_id?.phoneNumber || "",
+        service: appointment.service_type_id?.service_name || "N/A",
+        serviceDescription:
+          appointment.service_type_id?.description || "Không có mô tả",
+        startTime: appointment.appoinment_time || "",
+        estimatedCompletion: appointment.estimated_end_time || "16:00",
+        estimatedCost: appointment.service_type_id?.base_price,
+        centerName:
+          appointment.center_id?.center_name ||
+          appointment.center_id?.name ||
+          "N/A",
+        centerAddress: appointment.center_id?.address || "N/A",
+        depositCost: appointment.deposit_cost,
+        finalCost: appointment.final_cost,
+      };
+    });
 
   const completedTasks = appointments
     .filter(
       (appointment) =>
         appointment.status === "completed" || appointment.status === "repaired"
     )
-    .map((appointment) => ({
-      id: appointment._id,
-      vehicle: `${appointment.vehicle_id?.brand || ""} ${
-        appointment.vehicle_id?.model || ""
-      } - ${appointment.vehicle_id?.license_plate || ""}`,
-      licensePlate: appointment.vehicle_id?.license_plate || "",
-      customer: appointment.user_id?.fullName || "N/A",
-      service: appointment.service_type_id?.service_name || "N/A",
-      serviceDescription:
-        appointment.service_type_id?.description || "Không có mô tả",
-      completedDate: formatDate(appointment.appoinment_date) || "",
-      completedTime: appointment.appoinment_time || "",
-      rating: 5,
-      feedback: "Công việc hoàn thành tốt",
-      estimatedCost: appointment.service_type_id?.base_price,
-      centerName:
-        appointment.center_id?.center_name ||
-        appointment.center_id?.name ||
-        "N/A",
-      centerAddress: appointment.center_id?.address || "N/A",
-      customerEmail: appointment.user_id?.email || "N/A",
-      vehicleVin: appointment.vehicle_id?.vin || "N/A",
-    }));
+    .map((appointment) => {
+      const vehicleInfo = getVehicleInfo(appointment.vehicle_id);
+      return {
+        id: appointment._id,
+        appointment,
+        vehicleInfo,
+        customer: appointment.user_id?.fullName || "N/A",
+        customerEmail: appointment.user_id?.email || "N/A",
+        customerPhone: appointment.user_id?.phoneNumber || "",
+        service: appointment.service_type_id?.service_name || "N/A",
+        serviceDescription:
+          appointment.service_type_id?.description || "Không có mô tả",
+        completedDate: formatDate(appointment.appoinment_date) || "",
+        completedTime: appointment.appoinment_time || "",
+        estimatedCost: appointment.service_type_id?.base_price,
+        centerName:
+          appointment.center_id?.center_name ||
+          appointment.center_id?.name ||
+          "N/A",
+        centerAddress: appointment.center_id?.address || "N/A",
+        depositCost: appointment.deposit_cost,
+        finalCost: appointment.final_cost,
+      };
+    });
 
   // Function để navigate đến trang task detail
   const handleViewDetails = (appointmentId: string) => {
     navigate(`/dashboard/technician/task/${appointmentId}`);
+  };
+
+  // Render card component
+  const renderTaskCard = (task: any) => {
+    const shortId = task.id ? task.id.slice(-4).toUpperCase() : "N/A";
+    const statusBadge = getStatusBadge(task.appointment?.status);
+    return (
+      <Card
+        key={task.id}
+        className="bg-card border-2 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+        {/* Header with ID and Status */}
+        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">
+                <Hash className="h-4 w-4 text-primary" />
+                <span className="font-bold text-lg text-primary font-mono">
+                  {shortId}
+                </span>
+              </div>
+              <Badge
+                className={`text-xs px-2.5 py-1 font-semibold border ${statusBadge.className}`}>
+                {statusBadge.text}
+              </Badge>
+            </div>
+            {(task.assignedDate || task.completedDate) && (
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Ngày</p>
+                <p className="text-sm font-semibold">
+                  {task.assignedDate || task.completedDate}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <CardContent className="p-6">
+          {/* Key Information Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Customer */}
+            <div className="flex items-start gap-3 p-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg border border-blue-200/50">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <User className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground mb-1">Khách hàng</p>
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {task.customer}
+                </p>
+                {task.customerEmail !== "N/A" && (
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {task.customerEmail}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Vehicle */}
+            {(task.vehicleInfo.brand ||
+              task.vehicleInfo.model ||
+              task.vehicleInfo.licensePlate) && (
+              <div className="flex items-start gap-3 p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200/50">
+                <div className="p-2 bg-emerald-500/10 rounded-lg">
+                  <Car className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground mb-1">Phương tiện</p>
+                  {(task.vehicleInfo.brand || task.vehicleInfo.model) && (
+                    <p className="text-sm font-semibold text-foreground">
+                      {[task.vehicleInfo.brand, task.vehicleInfo.model]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </p>
+                  )}
+                  {task.vehicleInfo.licensePlate && (
+                    <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 mt-1">
+                      {task.vehicleInfo.licensePlate}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Service */}
+            <div className="flex items-start gap-3 p-3 bg-purple-50/50 dark:bg-purple-950/20 rounded-lg border border-purple-200/50">
+              <div className="p-2 bg-purple-500/10 rounded-lg">
+                <Wrench className="h-4 w-4 text-purple-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground mb-1">Dịch vụ</p>
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {task.service}
+                </p>
+              </div>
+            </div>
+
+            {/* Center */}
+            <div className="flex items-start gap-3 p-3 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200/50">
+              <div className="p-2 bg-indigo-500/10 rounded-lg">
+                <Building2 className="h-4 w-4 text-indigo-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground mb-1">Trung tâm</p>
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {task.centerName}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Service Description */}
+          {task.serviceDescription && (
+            <div className="mb-4 p-4 bg-primary/5 rounded-lg border-l-4 border-primary">
+              <p className="text-xs text-muted-foreground mb-1">Mô tả dịch vụ</p>
+              <p className="text-sm font-medium">{task.serviceDescription}</p>
+            </div>
+          )}
+
+          {/* Additional Info */}
+          <div className="pt-4 border-t space-y-2">
+            <div className="grid grid-cols-3 gap-3 text-xs">
+              {(task.appointmentTime || task.startTime || task.completedTime) && (
+                <div>
+                  <p className="text-muted-foreground">Giờ</p>
+                  <p className="font-medium">
+                    {task.appointmentTime || task.startTime || task.completedTime}
+                  </p>
+                </div>
+              )}
+              {task.estimatedHours && (
+                <div>
+                  <p className="text-muted-foreground">Thời gian dự kiến</p>
+                  <p className="font-medium">{task.estimatedHours} giờ</p>
+                </div>
+              )}
+              {(task.estimatedCost || task.finalCost) && (
+                <div>
+                  <p className="text-muted-foreground">
+                    {task.finalCost ? "Chi phí cuối" : "Chi phí dự kiến"}
+                  </p>
+                  <p className="font-medium">
+                    {(task.finalCost || task.estimatedCost)?.toLocaleString(
+                      "vi-VN"
+                    )}{" "}
+                    VNĐ
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <div className="flex gap-2 mt-6 pt-4 border-t">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => handleViewDetails(task.id)}
+              className="flex-1">
+              <Eye className="h-4 w-4 mr-2" />
+              Xem chi tiết
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   // Loading state
@@ -309,72 +537,7 @@ export const TechnicianOverview = () => {
           </div>
 
           <div className="grid gap-4">
-            {assignedTasks.map((task) => (
-              <Card
-                key={task.id}
-                className="bg-card border rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div>
-                          <h4 className="font-semibold text-lg">
-                            {task.service}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {task.serviceDescription}
-                          </p>
-                        </div>
-                      </div>
-
-                      <p className="text-sm font-medium mt-3">
-                        Phương tiện: {task.vehicle}
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Khách hàng: {task.customer} • Liên hệ:{" "}
-                        {task.customerEmail}
-                      </p>
-
-                      <div className="grid grid-cols-2 gap-4 text-sm mt-3">
-                        <div>
-                          <p className="text-muted-foreground">Ngày giao</p>
-                          <p className="font-medium">{task.assignedDate}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">
-                            Thời gian dự kiến
-                          </p>
-                          <p className="font-medium">
-                            {task.estimatedHours} giờ
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">
-                            Chi phí dự kiến
-                          </p>
-                          <p className="font-medium">
-                            {task.estimatedCost?.toLocaleString("vi-VN")} VNĐ
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Trung tâm</p>
-                          <p className="font-medium">{task.centerName}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewDetails(task.id)}>
-                      Xem chi tiết
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {assignedTasks.map((task) => renderTaskCard(task))}
           </div>
         </TabsContent>
 
@@ -387,68 +550,7 @@ export const TechnicianOverview = () => {
           </div>
 
           <div className="grid gap-4">
-            {inProgressTasks.map((task) => (
-              <Card
-                key={task.id}
-                className="bg-card border rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-lg">{task.service}</h4>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {task.serviceDescription}
-                      </p>
-
-                      <p className="text-sm font-medium">
-                        Phương tiện: {task.vehicle}
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Khách hàng: {task.customer} • Liên hệ:{" "}
-                        {task.customerEmail}
-                      </p>
-
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                        <div>
-                          <p className="text-muted-foreground">Bắt đầu</p>
-                          <p className="font-medium">{task.startTime}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">
-                            Dự kiến hoàn thành
-                          </p>
-                          <p className="font-medium">
-                            {task.estimatedCompletion}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">
-                            Chi phí dự kiến
-                          </p>
-                          <p className="font-medium">
-                            {task.estimatedCost?.toLocaleString("vi-VN")} VNĐ
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Trung tâm</p>
-                          <p className="font-medium">{task.centerName}</p>
-                        </div>
-                      </div>
-
-                      {/* Removed progress section per request */}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewDetails(task.id)}>
-                      Xem chi tiết
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {inProgressTasks.map((task) => renderTaskCard(task))}
           </div>
         </TabsContent>
 
@@ -459,75 +561,7 @@ export const TechnicianOverview = () => {
           </div>
 
           <div className="grid gap-4">
-            {completedTasks.map((task) => (
-              <Card
-                key={task.id}
-                className="bg-card border rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="font-semibold text-lg">
-                          {task.service}
-                        </h4>
-                        <Badge className="bg-success text-white">
-                          Hoàn thành
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {task.serviceDescription}
-                      </p>
-
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Khách hàng: {task.customer} • Liên hệ:{" "}
-                        {task.customerEmail}
-                      </p>
-
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                        <div>
-                          <p className="text-muted-foreground">Hoàn thành</p>
-                          <p className="font-medium">
-                            {task.completedDate} - {task.completedTime}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Đánh giá</p>
-                          <p className="font-medium">{task.rating}/5 sao</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Chi phí</p>
-                          <p className="font-medium">
-                            {task.estimatedCost?.toLocaleString("vi-VN")} VNĐ
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Trung tâm</p>
-                          <p className="font-medium">{task.centerName}</p>
-                        </div>
-                      </div>
-
-                      {task.feedback && (
-                        <div className="p-3 bg-muted/50 rounded-lg">
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Phản hồi từ khách hàng:
-                          </p>
-                          <p className="text-sm italic">"{task.feedback}"</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewDetails(task.id)}>
-                      Xem chi tiết
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {completedTasks.map((task) => renderTaskCard(task))}
           </div>
         </TabsContent>
       </Tabs>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Eye,
@@ -10,6 +11,10 @@ import {
   CheckCircle,
   FileText,
   Wrench,
+  User,
+  Car,
+  DollarSign,
+  Hash,
 } from "lucide-react";
 import { getChecklistsApi, Checklist } from "@/lib/checklistApi";
 import { Appointment } from "@/lib/appointmentApi";
@@ -94,6 +99,12 @@ export default function ChecklistManagement() {
                   license_plate?: string;
                   brand?: string;
                   model?: string;
+                  model_id?:
+                    | string
+                    | {
+                        brand?: string;
+                        model_name?: string;
+                      };
                   year?: number;
                   vin?: string;
                   color?: string;
@@ -147,10 +158,14 @@ export default function ChecklistManagement() {
     // Vehicle information
     const vehicleRaw = appointmentData?.vehicle_id;
     const vehicle = typeof vehicleRaw === "object" ? vehicleRaw : undefined;
+    const modelData =
+      vehicle && typeof vehicle.model_id === "object"
+        ? (vehicle.model_id as { brand?: string; model_name?: string })
+        : undefined;
     const vehicleDetails = vehicle
       ? {
-          brand: vehicle.brand || "-",
-          model: vehicle.model || "-",
+          brand: modelData?.brand || vehicle.brand || "-",
+          model: modelData?.model_name || vehicle.model || "-",
           licensePlate: vehicle.license_plate || "-",
           year: vehicle.year || "-",
           vin: vehicle.vin || "-",
@@ -169,138 +184,240 @@ export default function ChecklistManagement() {
       appointmentData?.center_id?.name ||
       "-";
 
+    // Get short ID (last 4 characters)
+    const shortId = c._id ? c._id.slice(-4).toUpperCase() : "N/A";
+
+    // Get status badge info
+    const getStatusBadge = (status?: string) => {
+      switch (status) {
+        case "pending":
+        case "check_in":
+          return {
+            text: "Chờ duyệt",
+            variant: "default" as const,
+            className: "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100",
+          };
+        case "accepted":
+        case "approved":
+          return {
+            text: "Đã duyệt",
+            variant: "default" as const,
+            className: "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100",
+          };
+        case "in_progress":
+          return {
+            text: "Đang xử lý",
+            variant: "default" as const,
+            className: "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100",
+          };
+        case "canceled":
+        case "rejected":
+          return {
+            text: "Đã từ chối",
+            variant: "destructive" as const,
+            className: "bg-red-100 text-red-800 border-red-200 hover:bg-red-100",
+          };
+        default:
+          return {
+            text: status || "N/A",
+            variant: "secondary" as const,
+            className: "",
+          };
+      }
+    };
+
+    const statusBadge = getStatusBadge(c.status);
+
+    // Format total cost
+    const totalCost = (c as { total_cost?: number }).total_cost;
+    const formattedCost = totalCost
+      ? totalCost.toLocaleString("vi-VN") + " VNĐ"
+      : "Chưa có";
+
     return (
       <Card
         key={c._id}
-        className="bg-card border rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+        className="bg-card border-2 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+        {/* Header with ID and Status */}
+        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">
+                <Hash className="h-4 w-4 text-primary" />
+                <span className="font-bold text-lg text-primary font-mono">
+                  {shortId}
+                </span>
+              </div>
+              <Badge
+                variant={statusBadge.variant}
+                className={`text-xs px-2.5 py-1 font-semibold border ${statusBadge.className || ""}`}>
+                {statusBadge.text}
+              </Badge>
+            </div>
+            {checklistCreatedDate && (
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Ngày gửi</p>
+                <p className="text-sm font-semibold">{checklistCreatedDate}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
         <CardContent className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              {/* Checklist Header - Technician info */}
-              <div className="flex items-center gap-2 mb-3 pb-3 border-b">
+          {/* Key Information Grid - Most Important Info */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Technician */}
+            <div className="flex items-start gap-3 p-3 bg-muted/40 rounded-lg border">
+              <div className="p-2 bg-primary/10 rounded-lg">
                 <Wrench className="h-4 w-4 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">
-                    Checklist gửi bởi
-                  </p>
-                  <p className="text-sm font-semibold text-primary">
-                    {technicianName}
-                  </p>
-                  {(technicianEmail !== "-" || technicianPhone !== "-") && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {technicianEmail !== "-" && technicianEmail}
-                      {technicianEmail !== "-" &&
-                        technicianPhone !== "-" &&
-                        " • "}
-                      {technicianPhone !== "-" && technicianPhone}
-                    </p>
-                  )}
-                </div>
-                {checklistCreatedDate && (
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Ngày gửi</p>
-                    <p className="text-xs font-medium">
-                      {checklistCreatedDate}
-                    </p>
-                  </div>
-                )}
               </div>
-
-              {/* Issue Type */}
-              <div className="mb-3">
-                <h4 className="font-semibold text-lg">
-                  {issueTypeText || "Vấn đề không xác định"}
-                </h4>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {issueDescription}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground mb-1">
+                  Kỹ thuật viên
                 </p>
-              </div>
-
-              {/* Solution Applied */}
-              {solutionApplied && solutionApplied !== "Chưa cập nhật" && (
-                <div className="mb-3">
-                  <p className="text-sm text-muted-foreground">
-                    Giải pháp áp dụng:
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {technicianName}
+                </p>
+                {technicianEmail !== "-" && (
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {technicianEmail}
                   </p>
-                  <p className="text-sm font-medium">{solutionApplied}</p>
-                </div>
-              )}
-
-              {/* Parts */}
-              {partsSummary.length > 0 && (
-                <div className="mb-3 p-2 bg-muted/30 rounded-md">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    Phụ tùng yêu cầu
-                  </p>
-                  <p className="text-sm font-medium">{partsSummary}</p>
-                </div>
-              )}
-
-              {/* Appointment basic info */}
-              <div className="mt-3 pt-3 border-t space-y-3">
-                {/* Vehicle Information */}
-                {vehicleDetails && (
-                  <div className="p-2 bg-muted/20 rounded-md">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      Thông tin xe
-                    </p>
-                    <p className="text-sm font-medium">
-                      {vehicleDetails.brand} {vehicleDetails.model}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mt-1">
-                      <p>Biển số: {vehicleDetails.licensePlate}</p>
-                      {vehicleDetails.year !== "-" && (
-                        <p>Năm: {vehicleDetails.year}</p>
-                      )}
-                      {vehicleDetails.vin !== "-" && (
-                        <p className="col-span-2">VIN: {vehicleDetails.vin}</p>
-                      )}
-                      {vehicleDetails.color !== "-" && (
-                        <p>Màu: {vehicleDetails.color}</p>
-                      )}
-                    </div>
-                  </div>
                 )}
+              </div>
+            </div>
 
-                {/* Customer Information */}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">
-                    Khách hàng
+            {/* Customer */}
+            <div className="flex items-start gap-3 p-3 bg-muted/40 rounded-lg border">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <User className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground mb-1">Khách hàng</p>
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {customerName}
+                </p>
+                {customerEmail !== "N/A" && (
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {customerEmail}
                   </p>
-                  <p className="text-sm font-medium">{customerName}</p>
-                  {(customerEmail !== "N/A" || customerPhone !== "N/A") && (
+                )}
+              </div>
+            </div>
+
+            {/* Vehicle Information */}
+            {vehicleDetails && (
+              <div className="flex items-start gap-3 p-3 bg-muted/40 rounded-lg border">
+                <div className="p-2 bg-emerald-500/10 rounded-lg">
+                  <Car className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground mb-1">Phương tiện</p>
+                  {(vehicleDetails.brand !== "-" || vehicleDetails.model !== "-") && (
+                    <p className="text-sm font-semibold text-foreground">
+                      {[
+                        vehicleDetails.brand !== "-" ? vehicleDetails.brand : null,
+                        vehicleDetails.model !== "-" ? vehicleDetails.model : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </p>
+                  )}
+                  {vehicleDetails.licensePlate !== "-" && (
+                    <p className="text-sm font-bold text-foreground mt-1">
+                      {vehicleDetails.licensePlate}
+                    </p>
+                  )}
+                  {vehicleDetails.color !== "-" && (
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {customerEmail !== "N/A" && customerEmail}
-                      {customerEmail !== "N/A" &&
-                        customerPhone !== "N/A" &&
-                        " • "}
-                      {customerPhone !== "N/A" && customerPhone}
+                      Màu: {vehicleDetails.color}
                     </p>
                   )}
                 </div>
+              </div>
+            )}
 
-                {/* Appointment Details */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Ngày hẹn</p>
-                    <p className="font-medium">{appointmentDate || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Giờ hẹn</p>
-                    <p className="font-medium">{appointmentTime}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Trung tâm</p>
-                    <p className="font-medium">{centerName}</p>
-                  </div>
-                </div>
+            {/* Total Cost */}
+            <div className="flex items-start gap-3 p-3 bg-muted/40 rounded-lg border">
+              <div className="p-2 bg-amber-500/10 rounded-lg">
+                <DollarSign className="h-4 w-4 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground mb-1">
+                  Tổng chi phí
+                </p>
+                <p className="text-sm font-bold text-foreground">
+                  {formattedCost}
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="flex gap-2 mt-4">
-            <Button variant="outline" size="sm" onClick={() => handleView(c)}>
-              <Eye className="h-4 w-4 mr-1" />
+          {/* Issue Type - Prominent */}
+          <div className="mb-4 p-4 bg-primary/5 rounded-lg border-l-4 border-primary">
+            <p className="text-xs text-muted-foreground mb-1">Loại vấn đề</p>
+            <h4 className="font-bold text-lg text-foreground">
+              {issueTypeText || "Vấn đề không xác định"}
+            </h4>
+            {issueDescription && issueDescription !== issueTypeText && (
+              <p className="text-sm text-muted-foreground mt-1.5">
+                {issueDescription}
+              </p>
+            )}
+          </div>
+
+          {/* Solution and Parts - Compact */}
+          <div className="space-y-2 mb-4">
+            {solutionApplied && solutionApplied !== "Chưa cập nhật" && (
+              <div className="flex items-start gap-2 text-sm">
+                <span className="text-muted-foreground min-w-[120px]">
+                  Giải pháp:
+                </span>
+                <span className="font-medium">{solutionApplied}</span>
+              </div>
+            )}
+
+            {partsSummary.length > 0 && (
+              <div className="flex items-start gap-2 text-sm">
+                <span className="text-muted-foreground min-w-[120px]">
+                  Phụ tùng:
+                </span>
+                <span className="font-medium">{partsSummary}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Additional Info - Compact Grid */}
+          <div className="pt-4 border-t space-y-2">
+            <div className="grid grid-cols-3 gap-3 text-xs">
+              {appointmentDate && (
+                <div>
+                  <p className="text-muted-foreground">Ngày hẹn</p>
+                  <p className="font-medium">{appointmentDate}</p>
+                </div>
+              )}
+              {appointmentTime !== "-" && (
+                <div>
+                  <p className="text-muted-foreground">Giờ hẹn</p>
+                  <p className="font-medium">{appointmentTime}</p>
+                </div>
+              )}
+              {centerName !== "-" && (
+                <div>
+                  <p className="text-muted-foreground">Trung tâm</p>
+                  <p className="font-medium truncate">{centerName}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <div className="flex gap-2 mt-6 pt-4 border-t">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => handleView(c)}
+              className="flex-1">
+              <Eye className="h-4 w-4 mr-2" />
               Xem chi tiết
             </Button>
           </div>

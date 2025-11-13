@@ -14,6 +14,13 @@ import {
   Search,
   CheckCircle,
   XCircle,
+  AlertTriangle,
+  Loader2,
+  Warehouse,
+  Hash,
+  Mail,
+  Phone,
+  Building2,
 } from "lucide-react";
 import {
   Checklist,
@@ -548,8 +555,17 @@ const ChecklistDetail = () => {
     | {
         brand?: string;
         model?: string;
+        model_name?: string;
+        model_id?:
+          | string
+          | {
+              brand?: string;
+              model_name?: string;
+            };
         license_plate?: string;
         vin?: string;
+        color?: string;
+        year?: number;
       }
     | undefined;
 
@@ -639,63 +655,60 @@ const ChecklistDetail = () => {
         {/* Main content - left side */}
         <div className="lg:col-span-2 space-y-6">
           {/* Appointment Information */}
-          <Card className="bg-gradient-card border border-border shadow-soft">
+          <Card className="bg-gradient-card border-2 border-border shadow-md">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Thông tin Appointment</h3>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Thông tin Appointment
+                </h3>
                 <Badge
-                  className={getStatusColor(
+                  className={`${getStatusColor(
                     appointmentData?.status || checklist.status
-                  )}>
+                  )} px-3 py-1.5 text-sm font-semibold`}>
                   {getStatusText(appointmentData?.status || checklist.status)}
                 </Badge>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-start gap-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Calendar className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Ngày hẹn</p>
-                    <p className="font-medium">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Ngày hẹn
+                    </p>
+                    <p className="font-bold text-base">
                       {formatDate(appointmentData?.appoinment_date) || "-"}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-start gap-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Clock className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Giờ hẹn</p>
-                    <p className="font-medium">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Giờ hẹn
+                    </p>
+                    <p className="font-bold text-base">
                       {appointmentData?.appoinment_time || "-"}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <DollarSign className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Chi phí dịch vụ
-                    </p>
-                    <p className="font-medium">
-                      {serviceType?.base_price
-                        ? `${serviceType.base_price.toLocaleString(
-                            "vi-VN"
-                          )} VNĐ`
-                        : "-"}
-                    </p>
-                  </div>
-                </div>
-
                 {serviceType?.estimated_duration && (
-                  <div className="flex items-center gap-3">
-                    <Wrench className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-start gap-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Wrench className="h-5 w-5 text-primary" />
+                    </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mb-1">
                         Thời gian dự kiến
                       </p>
-                      <p className="font-medium">
+                      <p className="font-bold text-base">
                         {serviceType.estimated_duration} giờ
                       </p>
                     </div>
@@ -704,9 +717,11 @@ const ChecklistDetail = () => {
               </div>
 
               {appointmentData?.notes && (
-                <div className="mt-4">
-                  <p className="text-sm text-muted-foreground mb-2">Ghi chú</p>
-                  <p className="text-sm bg-muted/50 p-3 rounded-lg">
+                <div className="mt-6 pt-4 border-t">
+                  <p className="text-sm font-semibold text-muted-foreground mb-2">
+                    Ghi chú
+                  </p>
+                  <p className="text-sm bg-muted/50 p-4 rounded-lg border">
                     {appointmentData.notes}
                   </p>
                 </div>
@@ -715,42 +730,109 @@ const ChecklistDetail = () => {
           </Card>
 
           {/* Customer + Vehicle Information */}
-          <Card className="bg-gradient-card border border-border shadow-soft">
+          <Card className="bg-gradient-card border-2 border-border shadow-md">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Thông tin khách hàng
+              <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Thông tin khách hàng & Phương tiện
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3">
-                  <User className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">
-                      {customer?.fullName || customer?.username || "Chưa rõ"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {customer?.email || "-"}
-                    </p>
-                    {customer?.phone && (
-                      <p className="text-sm text-muted-foreground">
-                        {customer.phone}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Customer Information */}
+                <div className="p-4 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg border border-blue-200/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <User className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <h4 className="font-semibold text-base">Khách hàng</h4>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Họ tên
                       </p>
+                      <p className="font-bold text-base">
+                        {customer?.fullName || customer?.username || "Chưa rõ"}
+                      </p>
+                    </div>
+                    {customer?.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          {customer.email}
+                        </p>
+                      </div>
+                    )}
+                    {customer?.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          {customer.phone}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Car className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">
-                      {(vehicle?.brand || "") + " " + (vehicle?.model || "")}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Biển số: {vehicle?.license_plate || "-"}
-                    </p>
+                {/* Vehicle Information */}
+                <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-emerald-500/10 rounded-lg">
+                      <Car className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <h4 className="font-semibold text-base">Phương tiện</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {(vehicle?.brand || vehicle?.model) && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Loại xe
+                        </p>
+                        <p className="font-bold text-base">
+                          {[
+                            vehicle?.brand,
+                            vehicle?.model_name ||
+                              (vehicle?.model_id &&
+                                typeof vehicle.model_id === "object" &&
+                                (vehicle.model_id as { model_name?: string })
+                                  ?.model_name) ||
+                              vehicle?.model,
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        </p>
+                      </div>
+                    )}
+                    {vehicle?.license_plate && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Biển số
+                        </p>
+                        <p className="font-bold text-lg text-emerald-700 dark:text-emerald-400">
+                          {vehicle.license_plate}
+                        </p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {vehicle?.color && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Màu</p>
+                          <p className="font-medium">{vehicle.color}</p>
+                        </div>
+                      )}
+                      {vehicle?.year && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Năm</p>
+                          <p className="font-medium">{vehicle.year}</p>
+                        </div>
+                      )}
+                    </div>
                     {vehicle?.vin && (
-                      <p className="text-sm text-muted-foreground">
-                        VIN: {vehicle.vin}
-                      </p>
+                      <div>
+                        <p className="text-xs text-muted-foreground">VIN</p>
+                        <p className="text-sm font-mono font-medium">
+                          {vehicle.vin}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -759,33 +841,60 @@ const ChecklistDetail = () => {
           </Card>
 
           {/* Service + Center Information */}
-          <Card className="bg-gradient-card border border-border shadow-soft">
+          <Card className="bg-gradient-card border-2 border-border shadow-md">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Thông tin dịch vụ</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="font-medium mb-2">
-                    {serviceType?.service_name || "Không xác định"}
-                  </p>
-                  {serviceType?.description && (
-                    <p className="text-sm text-muted-foreground">
-                      {serviceType.description}
+              <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-primary" />
+                Thông tin dịch vụ & Trung tâm
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Service Information */}
+                <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 rounded-lg border border-purple-200/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-purple-500/10 rounded-lg">
+                      <Wrench className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <h4 className="font-semibold text-base">Dịch vụ</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-bold text-base">
+                      {serviceType?.service_name || "Không xác định"}
                     </p>
-                  )}
+                    {serviceType?.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {serviceType.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-start gap-3 md:justify-end">
-                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="text-right md:text-left">
-                    <p className="font-medium">
+
+                {/* Center Information */}
+                <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-indigo-500/10 rounded-lg">
+                      <Building2 className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <h4 className="font-semibold text-base">Trung tâm</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-bold text-base">
                       {center?.center_name || center?.name || "Không xác định"}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {center?.address || "-"}
-                    </p>
+                    {center?.address && (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-muted-foreground">
+                          {center.address}
+                        </p>
+                      </div>
+                    )}
                     {center?.phone && (
-                      <p className="text-sm text-muted-foreground">
-                        Hotline: {center.phone}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Hotline: {center.phone}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -794,52 +903,76 @@ const ChecklistDetail = () => {
           </Card>
 
           {/* Issue Information */}
-          <Card className="bg-gradient-card border border-border shadow-soft">
+          <Card className="bg-gradient-card border-2 border-border shadow-md">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Thông tin vấn đề</h3>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">Loại vấn đề</p>
-                  <p className="font-medium">
+              <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-primary" />
+                Thông tin vấn đề
+              </h3>
+              <div className="space-y-4">
+                <div className="p-4 bg-primary/5 rounded-lg border-l-4 border-primary">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Loại vấn đề
+                  </p>
+                  <p className="font-bold text-lg">
                     {issueTypeLabel || "Không xác định"}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Mô tả vấn đề</p>
-                  <p className="font-medium">{issueDescriptionText}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Giải pháp áp dụng
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Mô tả vấn đề
                   </p>
-                  <p className="font-medium">
-                    {checklist.solution_applied || "Chưa cập nhật"}
+                  <p className="font-medium text-base">
+                    {issueDescriptionText}
                   </p>
                 </div>
+                {checklist.solution_applied && (
+                  <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200/50">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Giải pháp áp dụng
+                    </p>
+                    <p className="font-bold text-base text-emerald-700 dark:text-emerald-400">
+                      {checklist.solution_applied}
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
           {/* Parts Information */}
-          <Card className="bg-gradient-card border border-border shadow-soft">
+          <Card className="bg-gradient-card border-2 border-border shadow-md">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Phụ tùng sử dụng</h3>
-                {partsDetailList.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCheckInventory}
-                    disabled={checkingInventory || !center?._id}>
-                    <Search className="h-4 w-4 mr-2" />
-                    {checkingInventory
-                      ? "Đang kiểm tra..."
-                      : "Kiểm tra tồn kho"}
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">Phụ tùng sử dụng</h3>
+                </div>
+                {partsDetailList.length > 0 &&
+                  (checklist.status === "pending" ||
+                    checklist.status === "check_in") && (
+                    <Button
+                      variant={checkingInventory ? "secondary" : "default"}
+                      size="sm"
+                      onClick={handleCheckInventory}
+                      disabled={checkingInventory || !center?._id}
+                      className="gap-2">
+                      {checkingInventory ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Đang kiểm tra...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="h-4 w-4" />
+                          Kiểm tra tồn kho
+                        </>
+                      )}
+                    </Button>
+                  )}
               </div>
               {partsDetailList.length ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {partsDetailList.map((item, idx) => {
                     const detail = item.detail;
                     const label =
@@ -850,78 +983,175 @@ const ChecklistDetail = () => {
                     const unit = unitCostMap[item.id] || 0;
                     const total = unit * (item.quantity || 0);
                     const check = inventoryCheck[item.id];
+                    const isChecking = check?.checking;
+                    const isChecked = check && !isChecking;
+                    const isSufficient = check?.sufficient;
+
                     return (
-                      <div
+                      <Card
                         key={item.id || idx}
-                        className="rounded-md border border-border p-3 bg-background/60">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="font-medium">{label}</div>
-                            {check && (
-                              <div className="mt-2 flex items-center gap-2">
-                                {check.checking ? (
-                                  <div className="text-xs text-muted-foreground">
-                                    Đang kiểm tra...
-                                  </div>
-                                ) : (
-                                  <>
-                                    {check.sufficient ? (
-                                      <CheckCircle className="h-4 w-4 text-success" />
-                                    ) : (
-                                      <XCircle className="h-4 w-4 text-destructive" />
-                                    )}
-                                    <span
-                                      className={`text-xs ${
-                                        check.sufficient
-                                          ? "text-success"
-                                          : "text-destructive"
+                        className={`border-2 transition-all duration-200 ${
+                          isChecking
+                            ? "border-primary/50 bg-primary/5 animate-pulse"
+                            : isChecked
+                            ? isSufficient
+                              ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/20"
+                              : "border-red-500/50 bg-red-50/50 dark:bg-red-950/20"
+                            : "border-border bg-background/60"
+                        }`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-3">
+                              <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-lg bg-primary/10 mt-0.5">
+                                  <Package
+                                    className={`h-5 w-5 ${
+                                      isChecking
+                                        ? "text-primary animate-pulse"
+                                        : isChecked
+                                        ? isSufficient
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  />
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-base mb-1">
+                                    {label}
+                                  </h4>
+                                  {detail?.description && (
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                      {detail.description}
+                                    </p>
+                                  )}
+
+                                  {/* Inventory Status */}
+                                  {isChecking && (
+                                    <div className="flex items-center gap-2 mt-3 p-2 rounded-md bg-primary/10 border border-primary/20">
+                                      <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                                      <span className="text-sm text-primary font-medium">
+                                        Đang kiểm tra tồn kho...
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {isChecked && (
+                                    <div
+                                      className={`mt-3 p-3 rounded-lg border-2 ${
+                                        isSufficient
+                                          ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
+                                          : "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
                                       }`}>
-                                      Tồn kho: {check.available} / Cần:{" "}
-                                      {check.required}
-                                      {check.sufficient
-                                        ? " (Đủ)"
-                                        : " (Không đủ)"}
-                                    </span>
-                                  </>
-                                )}
+                                      <div className="flex items-center gap-2 mb-2">
+                                        {isSufficient ? (
+                                          <CheckCircle className="h-5 w-5 text-green-600" />
+                                        ) : (
+                                          <XCircle className="h-5 w-5 text-red-600" />
+                                        )}
+                                        <span
+                                          className={`font-semibold text-sm ${
+                                            isSufficient
+                                              ? "text-green-700 dark:text-green-400"
+                                              : "text-red-700 dark:text-red-400"
+                                          }`}>
+                                          {isSufficient
+                                            ? "Đủ tồn kho"
+                                            : "Không đủ tồn kho"}
+                                        </span>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-3 text-sm">
+                                        <div className="flex items-center gap-2">
+                                          <Warehouse className="h-4 w-4 text-muted-foreground" />
+                                          <span className="text-muted-foreground">
+                                            Tồn kho:
+                                          </span>
+                                          <span
+                                            className={`font-semibold ${
+                                              isSufficient
+                                                ? "text-green-700 dark:text-green-400"
+                                                : "text-red-700 dark:text-red-400"
+                                            }`}>
+                                            {check.available}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                                          <span className="text-muted-foreground">
+                                            Cần:
+                                          </span>
+                                          <span className="font-semibold">
+                                            {check.required}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      {!isSufficient && (
+                                        <div className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/50 p-2 rounded">
+                                          ⚠️ Cần bổ sung{" "}
+                                          {check.required - check.available} đơn
+                                          vị để đáp ứng yêu cầu
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm">
-                              Số lượng: {item.quantity}
                             </div>
-                            {unit ? (
-                              <div className="text-xs text-muted-foreground">
-                                Đơn giá: {unit.toLocaleString("vi-VN")} VNĐ
+
+                            {/* Right side - Quantity and Price */}
+                            <div className="text-right space-y-2 min-w-[120px]">
+                              <div className="p-2 rounded-md bg-muted/50">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  Số lượng
+                                </div>
+                                <div className="text-lg font-bold">
+                                  {item.quantity}
+                                </div>
                               </div>
-                            ) : null}
-                            {total ? (
-                              <div className="text-xs text-muted-foreground">
-                                Thành tiền: {total.toLocaleString("vi-VN")} VNĐ
-                              </div>
-                            ) : null}
+                              {unit > 0 && (
+                                <>
+                                  <div className="text-xs text-muted-foreground">
+                                    Đơn giá
+                                  </div>
+                                  <div className="text-sm font-medium">
+                                    {unit.toLocaleString("vi-VN")} VNĐ
+                                  </div>
+                                  {total > 0 && (
+                                    <>
+                                      <div className="text-xs text-muted-foreground mt-2">
+                                        Thành tiền
+                                      </div>
+                                      <div className="text-base font-semibold text-primary">
+                                        {total.toLocaleString("vi-VN")} VNĐ
+                                      </div>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        {detail?.description && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {detail.description}
-                          </p>
-                        )}
-                      </div>
+                        </CardContent>
+                      </Card>
                     );
                   })}
                   {totalPartsCost ? (
-                    <div className="text-right text-sm font-medium mt-3">
-                      Tổng chi phí phụ tùng:{" "}
-                      {totalPartsCost.toLocaleString("vi-VN")} VNĐ
+                    <div className="mt-4 p-4 rounded-lg bg-primary/5 border-2 border-primary/20">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">
+                          Tổng chi phí phụ tùng:
+                        </span>
+                        <span className="text-xl font-bold text-primary">
+                          {totalPartsCost.toLocaleString("vi-VN")} VNĐ
+                        </span>
+                      </div>
                     </div>
                   ) : null}
                 </div>
               ) : (
-                <p className="text-muted-foreground">
-                  Không có phụ tùng kèm theo.
-                </p>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Không có phụ tùng kèm theo.</p>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -930,37 +1160,87 @@ const ChecklistDetail = () => {
         {/* Sidebar - right side */}
         <div className="space-y-6">
           {/* Checklist Info */}
-          <Card className="bg-gradient-card border border-border shadow-soft">
+          <Card className="bg-gradient-card border-2 border-border shadow-md">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold">Thông tin checklist</h3>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  Thông tin checklist
+                </h3>
                 <Badge
                   className={`${getStatusColor(
                     checklist.status
-                  )} px-3 py-1 text-base`}>
+                  )} px-3 py-1.5 text-sm font-semibold`}>
                   {getStatusText(checklist.status)}
                 </Badge>
               </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Package className="h-4 w-4" />
-                  <span>ID: {checklist._id}</span>
+              <div className="space-y-4">
+                {/* Short ID */}
+                <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Hash className="h-4 w-4 text-primary" />
+                    <p className="text-xs text-muted-foreground">
+                      ID Checklist
+                    </p>
+                  </div>
+                  <p className="font-bold text-lg text-primary font-mono">
+                    {checklist._id
+                      ? checklist._id.slice(-4).toUpperCase()
+                      : "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 font-mono">
+                    {checklist._id}
+                  </p>
                 </div>
-                {(checklist as { createdAt?: string }).createdAt && (
-                  <p className="text-sm text-muted-foreground">
-                    Tạo lúc:{" "}
-                    {formatDate(
-                      (checklist as { createdAt?: string }).createdAt
-                    )}
-                  </p>
-                )}
-                {(checklist as { updatedAt?: string }).updatedAt && (
-                  <p className="text-sm text-muted-foreground">
-                    Cập nhật:{" "}
-                    {formatDate(
-                      (checklist as { updatedAt?: string }).updatedAt
-                    )}
-                  </p>
+
+                {/* Dates */}
+                <div className="space-y-3">
+                  {(checklist as { createdAt?: string }).createdAt && (
+                    <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Tạo lúc</p>
+                        <p className="text-sm font-semibold">
+                          {formatDate(
+                            (checklist as { createdAt?: string }).createdAt
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {(checklist as { updatedAt?: string }).updatedAt && (
+                    <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Cập nhật
+                        </p>
+                        <p className="text-sm font-semibold">
+                          {formatDate(
+                            (checklist as { updatedAt?: string }).updatedAt
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Total Cost */}
+                {(checklist as { total_cost?: number }).total_cost && (
+                  <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-200/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <DollarSign className="h-4 w-4 text-amber-600" />
+                      <p className="text-xs text-muted-foreground">
+                        Tổng chi phí
+                      </p>
+                    </div>
+                    <p className="font-bold text-lg text-amber-700 dark:text-amber-400">
+                      {(
+                        checklist as { total_cost?: number }
+                      ).total_cost?.toLocaleString("vi-VN")}{" "}
+                      VNĐ
+                    </p>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -969,7 +1249,7 @@ const ChecklistDetail = () => {
           {/* Actions - only show when pending/check_in */}
           {(checklist.status === "pending" ||
             checklist.status === "check_in") && (
-            <Card className="bg-gradient-card border border-border shadow-soft">
+            <Card className="bg-gradient-card border-2 border-border shadow-md">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Hành động</h3>
                 <div className="space-y-3">
