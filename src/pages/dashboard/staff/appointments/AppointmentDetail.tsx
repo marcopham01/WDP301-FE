@@ -61,8 +61,8 @@ export default function AppointmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string|null>(null);
-  const [appointment, setAppointment] = useState<Appointment|null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
@@ -87,7 +87,8 @@ export default function AppointmentDetail() {
 
   const handleCancel = () => {
     if (!appointment) return;
-    if (["canceled","cancelled","completed"].includes(appointment.status)) return;
+    if (["canceled", "cancelled", "completed"].includes(appointment.status))
+      return;
     setCancelDialogOpen(true);
   };
 
@@ -104,7 +105,8 @@ export default function AppointmentDetail() {
     } catch {
       alert("Lỗi hủy lịch hẹn");
     } finally {
-      setCancelling(false); setCancelDialogOpen(false);
+      setCancelling(false);
+      setCancelDialogOpen(false);
     }
   };
 
@@ -307,18 +309,6 @@ export default function AppointmentDetail() {
                 </label>
                 <p className="text-sm">
                   {appointment.service_type_id?.service_name || "—"}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">
-                  Giá cơ bản
-                </label>
-                <p className="text-sm">
-                  {appointment.service_type_id?.base_price
-                    ? `${appointment.service_type_id.base_price.toLocaleString(
-                        "vi-VN"
-                      )} VNĐ`
-                    : "—"}
                 </p>
               </div>
               <div>
@@ -532,15 +522,19 @@ export default function AppointmentDetail() {
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Bạn có chắc muốn hủy lịch hẹn này?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Bạn có chắc muốn hủy lịch hẹn này?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Lịch hẹn sẽ bị hủy và không thể khôi phục. 
-              Khách hàng sẽ được thông báo về việc hủy lịch.
+              Lịch hẹn sẽ bị hủy và không thể khôi phục. Khách hàng sẽ được
+              thông báo về việc hủy lịch.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Quay lại</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={confirmCancel}
+              className="bg-red-600 hover:bg-red-700">
               Hủy lịch hẹn
             </AlertDialogAction>
           </AlertDialogFooter>
