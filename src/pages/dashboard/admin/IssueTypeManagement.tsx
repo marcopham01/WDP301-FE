@@ -27,6 +27,16 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "react-toastify";
 import {
@@ -90,6 +100,7 @@ const IssueTypeManagement = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [seedDialogOpen, setSeedDialogOpen] = useState(false);
   const [current, setCurrent] = useState<IssueType | null>(null);
 
   // Form states
@@ -228,12 +239,13 @@ const IssueTypeManagement = () => {
     await loadData({ page: 1, filters: filterRef.current });
   };
 
-  const onSeedData = async () => {
-    if (!confirm("Bạn có chắc muốn thêm 30+ issue types mẫu vào hệ thống?\n\nLưu ý: Các issue type trùng lặp sẽ bị bỏ qua.")) {
-      return;
-    }
+  const onSeedData = () => {
+    setSeedDialogOpen(true);
+  };
 
+  const confirmSeedData = async () => {
     setSeeding(true);
+    setSeedDialogOpen(false);
     toast.info("Đang thêm data mẫu, vui lòng đợi...");
     
     try {
@@ -562,6 +574,26 @@ const IssueTypeManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Seed Data Confirmation Dialog */}
+      <AlertDialog open={seedDialogOpen} onOpenChange={setSeedDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Thêm dữ liệu mẫu vào hệ thống?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hệ thống sẽ thêm 30+ issue types mẫu vào database.
+              <br /><br />
+              <strong>Lưu ý:</strong> Các issue type trùng lặp sẽ bị bỏ qua.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSeedData}>
+              Thêm dữ liệu mẫu
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -8,6 +8,7 @@ import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { getMyAppointmentsApi, deleteAppointmentApi, Appointment } from "@/lib/appointmentApi";
 import { toast } from "react-toastify";
 import { format } from "date-fns";
@@ -72,6 +73,8 @@ export default function BookingHistoryPage() {
   // Dialog state
   const [selectedAppointment, setSelectedAppointment] = useState<MyAppointment | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(null);
   
   // Payment dialog state
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -199,15 +202,22 @@ export default function BookingHistoryPage() {
     fetchData({ resetPage: true });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Bạn có chắc muốn xóa lịch hẹn này? Chỉ xóa được khi trạng thái pending.")) return;
-    const res = await deleteAppointmentApi(id);
+  const handleDelete = (id: string) => {
+    setAppointmentToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!appointmentToDelete) return;
+    const res = await deleteAppointmentApi(appointmentToDelete);
     if (res.ok) {
       toast.success("Đã xóa lịch hẹn");
       fetchData();
     } else {
       toast.error(res.message || "Không thể xóa. Vui lòng thử lại");
     }
+    setDeleteDialogOpen(false);
+    setAppointmentToDelete(null);
   };
 
   const handleLogout = () => {
@@ -641,6 +651,25 @@ export default function BookingHistoryPage() {
           fetchData({ soft: true });
         }}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc muốn xóa lịch hẹn này?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Lịch hẹn chỉ có thể xóa được khi đang ở trạng thái pending. 
+              Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 }

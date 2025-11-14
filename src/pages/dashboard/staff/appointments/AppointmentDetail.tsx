@@ -8,6 +8,16 @@ import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { getAppointmentByIdApi, updateAppointmentStatusApi, type Appointment } from "@/lib/appointmentApi";
 import { ArrowLeft, User, Car, MapPin, Calendar, CreditCard, Wrench } from "lucide-react";
 
@@ -30,9 +40,10 @@ export default function AppointmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [error, setError] = useState<string|null>(null);
+  const [appointment, setAppointment] = useState<Appointment|null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -46,15 +57,19 @@ export default function AppointmentDetail() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleCancel = async () => {
+  const handleCancel = () => {
     if (!appointment) return;
     if (["canceled","cancelled","completed"].includes(appointment.status)) return;
-    if (!confirm("Bạn có chắc muốn hủy lịch hẹn này?")) return;
+    setCancelDialogOpen(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!appointment) return;
     try {
       setCancelling(true);
       const res = await updateAppointmentStatusApi({ appointment_id: appointment._id, status: "canceled" });
       if (res.ok && res.data?.success) await load(); else alert(res.message || "Không thể hủy lịch hẹn");
-    } catch { alert("Lỗi hủy lịch hẹn"); } finally { setCancelling(false); }
+    } catch { alert("Lỗi hủy lịch hẹn"); } finally { setCancelling(false); setCancelDialogOpen(false); }
   };
 
   if (loading) return (
@@ -135,6 +150,25 @@ export default function AppointmentDetail() {
           <Button variant="destructive" size="sm" onClick={handleCancel} disabled={cancelling || ["canceled","cancelled","completed"].includes(appointment.status)}>{cancelling ? "Đang hủy..." : "Hủy lịch hẹn"}</Button>
         </div><p className="text-xs text-muted-foreground mt-4">* Phân công kỹ thuật viên tự động dựa trên slot trống. Nhân viên chỉ xem thông tin.</p></CardContent></Card>
       </div>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc muốn hủy lịch hẹn này?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Lịch hẹn sẽ bị hủy và không thể khôi phục. 
+              Khách hàng sẽ được thông báo về việc hủy lịch.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Quay lại</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+              Hủy lịch hẹn
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
