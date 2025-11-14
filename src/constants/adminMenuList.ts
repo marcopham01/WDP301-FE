@@ -1,6 +1,6 @@
 import {
   Users,
-  Car,
+  Bike,
   Home,
   MapPin,
   Package,
@@ -45,7 +45,7 @@ export const adminMenuItems = [
   },
   {
     title: "Quản lý phương tiện",
-    icon: Car,
+    icon: Bike,
     items: [
       {
         title: "Mẫu xe",

@@ -1,4 +1,4 @@
-import { Car, ChevronRight, LogOut, Search } from "lucide-react";
+import { ChevronRight, LogOut, Search } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -33,6 +33,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import logo from "@/assets/logo.png";
 
 export function AdminSidebar() {
   const navigate = useNavigate();
@@ -92,8 +93,12 @@ export function AdminSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <a href="/dashboard/admin">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Car className="size-4" />
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-white shadow-sm overflow-hidden">
+                  <img
+                    src={logo}
+                    alt="EV Service Logo"
+                    className="h-full w-full object-contain"
+                  />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">EV Service</span>
@@ -134,16 +139,14 @@ export function AdminSidebar() {
                     {...(searchQuery && item.items && item.items.length > 0
                       ? { open: true }
                       : {})}
-                    className="group/collapsible"
-                  >
+                    className="group/collapsible">
                     <SidebarMenuItem>
                       {item.items && item.items.length > 0 ? (
                         <>
                           <CollapsibleTrigger asChild>
                             <SidebarMenuButton
                               tooltip={item.title}
-                              className="hover:bg-ev-green hover:text-white transition-colors duration-200 py-3 px-4 text-base"
-                            >
+                              className="hover:bg-ev-green hover:text-white transition-colors duration-200 py-3 px-4 text-base">
                               {item.icon && <item.icon className="h-5 w-5" />}
                               <span>
                                 {highlightText(item.title, searchQuery)}
@@ -166,8 +169,7 @@ export function AdminSidebar() {
                                           isSubActive
                                             ? "bg-ev-green text-white"
                                             : ""
-                                        }`}
-                                      >
+                                        }`}>
                                         <span>
                                           {highlightText(
                                             subItem.title,
@@ -188,8 +190,7 @@ export function AdminSidebar() {
                             to={item.href!}
                             className={`hover:bg-ev-green hover:text-white transition-colors duration-200 py-3 px-4 text-base flex items-center ${
                               isItemActive ? "bg-ev-green text-white" : ""
-                            }`}
-                          >
+                            }`}>
                             {item.icon && (
                               <item.icon className="h-5 w-5 mr-2" />
                             )}
@@ -229,8 +230,7 @@ export function AdminSidebar() {
                 <DialogFooter>
                   <Button
                     variant="outline"
-                    onClick={() => setIsDialogOpen(false)}
-                  >
+                    onClick={() => setIsDialogOpen(false)}>
                     Hủy
                   </Button>
                   <Button onClick={handleConfirmLogout}>Xác nhận</Button>

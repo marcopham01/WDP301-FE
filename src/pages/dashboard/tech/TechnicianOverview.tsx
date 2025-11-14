@@ -9,7 +9,7 @@ import {
   FileText,
   Hash,
   User,
-  Car,
+  Bike,
   Calendar,
   Building2,
   Eye,
@@ -311,7 +311,7 @@ export const TechnicianOverview = () => {
               task.vehicleInfo.licensePlate) && (
               <div className="flex items-start gap-3 p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200/50">
                 <div className="p-2 bg-emerald-500/10 rounded-lg">
-                  <Car className="h-4 w-4 text-emerald-600" />
+                  <Bike className="h-4 w-4 text-emerald-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground mb-1">

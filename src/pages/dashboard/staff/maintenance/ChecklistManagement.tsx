@@ -12,7 +12,7 @@ import {
   FileText,
   Wrench,
   User,
-  Car,
+  Bike,
   DollarSign,
   Hash,
 } from "lucide-react";
@@ -308,7 +308,7 @@ export default function ChecklistManagement() {
             {vehicleDetails && (
               <div className="flex items-start gap-3 p-3 bg-muted/40 rounded-lg border">
                 <div className="p-2 bg-emerald-500/10 rounded-lg">
-                  <Car className="h-4 w-4 text-emerald-600" />
+                  <Bike className="h-4 w-4 text-emerald-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground mb-1">Phương tiện</p>

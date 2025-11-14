@@ -1,4 +1,4 @@
-import { Wrench, Clock, Car, FileText, Home } from "lucide-react";
+import { Wrench, Clock, FileText, Home } from "lucide-react";
 
 import {
   Sidebar,
@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import logo from "@/assets/logo.png";
 
 const technicianMenuItems = [
   { title: "Tổng quan", icon: Home, isActive: true },
@@ -21,8 +22,8 @@ export function TechnicianSidebar() {
       <SidebarContent className="p-4 group-data-[collapsible=icon]:p-2">
         <div className="mb-6">
           <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
-            <div className="p-2 rounded-lg bg-primary text-primary-foreground">
-              <Car className="h-6 w-6" />
+            <div className="h-9 w-9 rounded-lg bg-white flex items-center justify-center shadow-sm overflow-hidden">
+              <img src={logo} alt="EV Service Logo" className="h-full w-full object-contain" />
             </div>
             <div className="group-data-[collapsible=icon]:hidden">
               <h2 className="font-semibold text-lg">EV Service</h2>

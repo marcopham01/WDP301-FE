@@ -8,7 +8,7 @@ import {
   DollarSign,
   Wrench,
   User,
-  Car,
+  Bike,
   MapPin,
   Package,
   Search,
@@ -777,7 +777,7 @@ const ChecklistDetail = () => {
                 <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200/50">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 bg-emerald-500/10 rounded-lg">
-                      <Car className="h-5 w-5 text-emerald-600" />
+                      <Bike className="h-5 w-5 text-emerald-600" />
                     </div>
                     <h4 className="font-semibold text-base">Phương tiện</h4>
                   </div>
