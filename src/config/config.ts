@@ -14,12 +14,12 @@ export const config = {
   // API Base URL
   API_BASE_URL: isDevelopment 
     ? "http://localhost:5000" // Backend local của bạn
-    : "https://wdp-cx4ay950n-huyphan1232203s-projects.vercel.app",
+    : "http://localhost:5000",
   
   // Socket.IO URL
   SOCKET_URL: isDevelopment
     ? "http://localhost:5000" // Backend local của bạn  
-    : "https://wdp-cx4ay950n-huyphan1232203s-projects.vercel.app",
+    : "http://localhost:5000",
   
   // Socket.IO config
   SOCKET_CONFIG: {
