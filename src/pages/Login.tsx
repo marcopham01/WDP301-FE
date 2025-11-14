@@ -16,10 +16,10 @@ import {
   FormMessage,
 } from "../components/ui/form";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
-import { FcAutomotive } from "react-icons/fc";
 import { toast } from "react-toastify";
 import { loginApi } from "@/lib/authApi";
 import { config } from "@/config/config";
+import logo from "@/assets/logo.png";
 
 const BASE_URL = config.API_BASE_URL;
 
@@ -168,8 +168,8 @@ const Login = () => {
       </div>
       <div className="w-full max-w-md mx-auto z-10">
         <div className="flex flex-col items-center">
-          <div className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center mb-4 mt-2 transition-all duration-500 hover:scale-110 hover:rotate-12">
-            <FcAutomotive className="w-8 h-8 transition-all duration-500 hover:scale-125 hover:rotate-[360deg]" />
+          <div className="w-20 h-20 rounded-full bg-white shadow-lg flex items-center justify-center mb-4 mt-2 transition-all duration-500 hover:scale-110">
+            <img src={logo} alt="EV Service Logo" className="w-14 h-14 object-contain transition-all duration-500 hover:scale-110" />
           </div>
         </div>
         <motion.div

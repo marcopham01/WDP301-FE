@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Vehicle } from "@/lib/vehicleApi";
 import {
-  Car,
   Calendar,
   Palette,
   Zap,
@@ -16,6 +15,7 @@ import {
   Gauge,
   Edit,
 } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 interface VehicleDetailDialogProps {
   open: boolean;
@@ -61,10 +61,10 @@ export function VehicleDetailDialog({
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-ev-green rounded-lg flex items-center justify-center shadow-sm">
+              <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm border-2 border-ev-green">
                 {" "}
                 {/* ev-green, bo góc vừa */}
-                <Car className="h-6 w-6 text-white" />
+                <img src={logo} alt="Logo" className="h-7 w-7 object-contain" />
               </div>
               <div>
                 <DialogTitle className="text-xl font-bold text-gray-900">

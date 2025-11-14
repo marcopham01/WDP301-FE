@@ -139,8 +139,9 @@ const PaymentHistoryPage = () => {
       PAID: { label: "Đã thanh toán", variant: "default", className: "bg-green-100 text-green-800 hover:bg-green-100" },
       FAILED: { label: "Thất bại", variant: "destructive", className: "bg-red-100 text-red-800 hover:bg-red-100" },
       CANCELLED: { label: "Đã hủy", variant: "destructive", className: "bg-red-100 text-red-800 hover:bg-red-100" },
-      EXPIRED: { label: "Hết hạn (link)\n", variant: "destructive", className: "bg-red-100 text-red-800 hover:bg-red-100" },
-      TIMEOUT: { label: "Quá thời gian", variant: "destructive", className: "bg-orange-100 text-orange-800 hover:bg-orange-100" },
+      EXPIRED: { label: "Hết hạn", variant: "destructive", className: "bg-red-100 text-red-800 hover:bg-red-100" },
+      TIMEOUT: { label: "Quá thời hạn", variant: "destructive", className: "bg-orange-100 text-orange-800 hover:bg-orange-100" },
+      UNKNOWN: { label: "Không xác định", variant: "secondary", className: "bg-gray-100 text-gray-800 hover:bg-gray-100" },
     };
     const cfg = map[status] || map.PENDING;
     return <Badge variant={cfg.variant} className={cfg.className}>{cfg.label}</Badge>;

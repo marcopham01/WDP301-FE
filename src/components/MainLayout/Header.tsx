@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Car, Zap, Menu, X, User, LogOut, Bell, Calendar, CreditCard, MessageCircle } from "lucide-react";
+import { Menu, X, User, LogOut, Bell, Calendar, CreditCard, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/logo.png";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -84,10 +85,7 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center space-x-2">
-            <div className="relative">
-              <Car className="h-8 w-8 text-primary" />
-              <Zap className="h-4 w-4 text-secondary absolute -top-1 -right-1" />
-            </div>
+            <img src={logo} alt="EV Service Logo" className="h-10 w-10 object-contain" />
             <div>
               <h1 className="text-xl font-bold gradient-primary bg-clip-text text-transparent">
                 EV Service
@@ -165,7 +163,7 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                     <span>Hồ sơ</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/customer/vehicles")}>
-                    <Car className="mr-2 h-4 w-4" />
+                    <Calendar className="mr-2 h-4 w-4" />
                     <span>Quản lý xe</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/customer/booking-history")}>
@@ -292,7 +290,7 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                       <span>Hồ sơ</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/vehicles"); }}>
-                      <Car className="mr-2 h-4 w-4" />
+                      <Calendar className="mr-2 h-4 w-4" />
                       <span>Quản lý xe</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { setIsMenuOpen(false); navigate("/customer/booking-history"); }}>

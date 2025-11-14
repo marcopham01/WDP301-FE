@@ -22,8 +22,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"; // Thêm import Popover
 import { Calendar } from "@/components/ui/calendar"; // Thêm import Calendar
-import { Car, Save, Loader2, X, CalendarIcon } from "lucide-react"; // Thêm CalendarIcon
+import { Save, Loader2, X, CalendarIcon } from "lucide-react"; // Thêm CalendarIcon
 import { toast } from "react-toastify";
+import logo from "@/assets/logo.png";
 import {
   Vehicle,
   updateVehicleApi,
@@ -122,8 +123,8 @@ export function EditVehicleDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-ev-green rounded-lg flex items-center justify-center shadow-sm">
-              <Car className="h-6 w-6 text-white" />
+            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm border-2 border-ev-green">
+              <img src={logo} alt="Logo" className="h-7 w-7 object-contain" />
             </div>
             <div>
               <DialogTitle className="text-xl font-bold text-gray-900">

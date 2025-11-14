@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Loader2, Search, Car } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, Search, Bike } from "lucide-react";
 import {
   getVehicleModelsApi,
   createVehicleModelApi,
@@ -263,7 +263,7 @@ const VehicleModelManagement = () => {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
-                    <Car className="h-5 w-5" />
+                    <Bike className="h-5 w-5" />
                     {model.brand} {model.model_name}
                   </span>
                   <Badge variant="secondary">{model.year}</Badge>
