@@ -25,8 +25,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"; // Thêm import Popover
 import { Calendar } from "@/components/ui/calendar"; // Thêm import Calendar
-import { Car, Loader2, Plus, CalendarIcon } from "lucide-react"; // Thêm CalendarIcon
+import { Loader2, Plus, CalendarIcon } from "lucide-react"; // Thêm CalendarIcon
 import { toast } from "react-toastify";
+import logo from "@/assets/logo.png";
 import {
   VehicleModel,
   getVehicleModelsApi,
@@ -146,10 +147,10 @@ export function AddVehicleDialog({
         {/* Trắng, border xám, shadow nhẹ */}
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-ev-green rounded-lg flex items-center justify-center shadow-sm">
+            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm border-2 border-ev-green">
               {" "}
               {/* ev-green, bo góc vừa */}
-              <Car className="h-6 w-6 text-white" />
+              <img src={logo} alt="Logo" className="h-7 w-7 object-contain" />
             </div>
             <div>
               <DialogTitle className="text-xl font-bold text-gray-900">

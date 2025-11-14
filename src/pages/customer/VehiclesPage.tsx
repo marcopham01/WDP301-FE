@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Car,
   Plus,
   Loader2,
   Edit,
@@ -13,7 +12,9 @@ import {
   Calendar,
   Palette,
   Battery,
+  Bike,
 } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import {
   getUserVehiclesApi,
@@ -139,7 +140,7 @@ const VehiclesPage = () => {
           <div className="bg-gradient-to-r from-ev-green to-teal-500 text-white rounded-xl p-6 flex items-center justify-between">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-                <Car className="w-6 h-6" /> Quản lý xe
+                <Bike className="w-7 h-7" /> Quản lý xe
               </h1>
               <p className="opacity-90 mt-1">
                 Bạn có <span className="font-semibold">{vehicles.length}</span>{" "}
@@ -166,7 +167,7 @@ const VehiclesPage = () => {
               <Card className="shadow-md border border-gray-200 bg-white rounded-lg">
                 <CardContent className="text-center py-16 px-6">
                   <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-lg mb-6 shadow-sm">
-                    <Car className="h-10 w-10 text-gray-400" />
+                    <img src={logo} alt="Logo" className="h-12 w-12 object-contain opacity-60" />
                   </div>
                   <h3 className="text-xl font-bold mb-3 text-gray-900">
                     Chưa có xe nào
@@ -208,8 +209,8 @@ const VehiclesPage = () => {
                         <CardContent className="p-6">
                           {/* Vehicle Header */}
                           <div className="flex items-start gap-4 mb-6">
-                            <div className="w-16 h-16 bg-ev-green rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-                              <Car className="h-8 w-8 text-white" />
+                            <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-ev-green">
+                              <img src={logo} alt="Logo" className="h-10 w-10 object-contain" />
                             </div>
                             <div className="flex-1">
                               <h3 className="font-bold text-xl text-gray-900 mb-1">
