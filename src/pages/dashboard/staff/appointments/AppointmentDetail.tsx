@@ -9,6 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   getAppointmentByIdApi,
   updateAppointmentStatusApi,
   type Appointment,
@@ -51,9 +61,10 @@ export default function AppointmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [error, setError] = useState<string|null>(null);
+  const [appointment, setAppointment] = useState<Appointment|null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -74,11 +85,14 @@ export default function AppointmentDetail() {
     load();
   }, [load]);
 
-  const handleCancel = async () => {
+  const handleCancel = () => {
     if (!appointment) return;
-    if (["canceled", "cancelled", "completed"].includes(appointment.status))
-      return;
-    if (!confirm("Bạn có chắc muốn hủy lịch hẹn này?")) return;
+    if (["canceled","cancelled","completed"].includes(appointment.status)) return;
+    setCancelDialogOpen(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!appointment) return;
     try {
       setCancelling(true);
       const res = await updateAppointmentStatusApi({
@@ -90,7 +104,7 @@ export default function AppointmentDetail() {
     } catch {
       alert("Lỗi hủy lịch hẹn");
     } finally {
-      setCancelling(false);
+      setCancelling(false); setCancelDialogOpen(false);
     }
   };
 
@@ -513,6 +527,25 @@ export default function AppointmentDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc muốn hủy lịch hẹn này?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Lịch hẹn sẽ bị hủy và không thể khôi phục. 
+              Khách hàng sẽ được thông báo về việc hủy lịch.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Quay lại</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCancel} className="bg-red-600 hover:bg-red-700">
+              Hủy lịch hẹn
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
