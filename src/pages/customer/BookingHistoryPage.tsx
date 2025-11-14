@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarIcon, Clock, MapPin, Eye, Trash2, RefreshCw, CheckCircle2, XCircle, PlayCircle, Wrench, FileText } from "lucide-react";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
@@ -26,16 +25,16 @@ const BASE_URL = config.API_BASE_URL;
 
 function statusLabel(s?: string) {
   switch (s) {
-    case "pending": return { text: "Đợi ứng tiền", variant: "secondary" as const };
-    case "assigned": return { text: "Đã sắp nhân viên", variant: "default" as const };
-    case "check_in": return { text: "Chờ báo giá", variant: "outline" as const };
-    case "in_progress": return { text: "Đang sửa chữa", variant: "default" as const };
-    case "repaired": return { text: "Đã sửa xong", variant: "default" as const };
-    case "completed": return { text: "Đơn hoàn thành", variant: "default" as const };
-    case "delay": return { text: "Trì hoãn", variant: "secondary" as const };
+    case "pending": return { text: "Đợi ứng tiền", className: "bg-amber-100 text-amber-800 border-amber-300" };
+    case "assigned": return { text: "Đã sắp nhân viên", className: "bg-blue-100 text-blue-800 border-blue-300" };
+    case "check_in": return { text: "Chờ báo giá", className: "bg-purple-100 text-purple-800 border-purple-300" };
+    case "in_progress": return { text: "Đang sửa chữa", className: "bg-cyan-100 text-cyan-800 border-cyan-300" };
+    case "repaired": return { text: "Đã sửa xong", className: "bg-teal-100 text-teal-800 border-teal-300" };
+    case "completed": return { text: "Đơn hoàn thành", className: "bg-emerald-100 text-emerald-800 border-emerald-300" };
+    case "delay": return { text: "Trì hoãn", className: "bg-orange-100 text-orange-800 border-orange-300" };
     case "canceled":
-    case "cancelled": return { text: "Đã hủy", variant: "destructive" as const };
-    default: return { text: s || "—", variant: "secondary" as const };
+    case "cancelled": return { text: "Đã hủy", className: "bg-red-100 text-red-800 border-red-300" };
+    default: return { text: s || "—", className: "bg-gray-100 text-gray-800 border-gray-300" };
   }
 }
 
@@ -469,7 +468,11 @@ export default function BookingHistoryPage() {
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{timeRange}</div>
                             </td>
-                            <td className="px-4 py-3"><Badge variant={st.variant}>{st.text}</Badge></td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${st.className}`}>
+                                {st.text}
+                              </span>
+                            </td>
                             <td className="px-4 py-3">
                               {(item.status === "repaired" && typeof item.final_cost === "number" && item.final_cost > 0)
                                 ? item.final_cost.toLocaleString("vi-VN", { style: "currency", currency: "VND" })
@@ -555,9 +558,9 @@ export default function BookingHistoryPage() {
               {/* Trạng thái */}
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
                 <span className="font-medium">Trạng thái:</span>
-                <Badge variant={statusLabel(selectedAppointment.status).variant}>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusLabel(selectedAppointment.status).className}`}>
                   {statusLabel(selectedAppointment.status).text}
-                </Badge>
+                </span>
               </div>
 
               {/* Ngày hẹn */}
