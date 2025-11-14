@@ -1,4 +1,5 @@
-import { Car, Zap, Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const Footer = () => {
   return (
@@ -8,10 +9,7 @@ const Footer = () => {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="relative">
-                <Car className="h-8 w-8 text-primary-glow" />
-                <Zap className="h-4 w-4 text-secondary absolute -top-1 -right-1" />
-              </div>
+              <img src={logo} alt="EV Service Logo" className="h-10 w-10 object-contain" />
               <div>
                 <h3 className="text-xl font-bold">EV Service</h3>
                 <p className="text-xs opacity-80">Management System</p>
@@ -55,11 +53,11 @@ const Footer = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4" />
-                <span>1900 1234</span>
+                <span>+84 (12) 345-6789</span>
               </div>
               <div className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4" />
-                <span>Hồ Chí Minh, Việt Nam</span>
+                <span>FPT University HCMC</span>
               </div>
             </div>
           </div>

@@ -1,21 +1,48 @@
-import { auth } from "@/firebase/firebase";
-import { onAuthStateChanged, User } from "firebase/auth";
 import { useEffect, useMemo, useState } from "react";
-import { AuthContext } from "./context";
+import { AuthContext, AppUser } from "./context";
+import { config } from "@/config/config";
+
+const BASE_URL = config.API_BASE_URL;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(
-    () =>
-      onAuthStateChanged(auth, (u) => {
-        setUser(u);
-        setLoading(false);
-      }),
-    []
-  );
-  const value = useMemo(() => ({ user, loading }), [user, loading]);
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+    fetch(`${BASE_URL}/api/users/getprofile`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Not authenticated");
+        const data = await res.json();
+        console.log('🔍 [AuthContext] Raw API response:', data);
+        console.log('🔍 [AuthContext] Avatar from API:', data.user?.avatar);
+        setUser({
+          id: data.user._id || data.user.id,
+          username: data.user.username,
+          email: data.user.email,
+          fullName: data.user.fullName,
+          role: data.user.role,
+          avatar: data.user.avatar,
+        });
+        console.log('✅ [AuthContext] User state set with avatar:', data.user.avatar);
+      })
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
+  }, []);
 
+  const logout = () => {
+    localStorage.removeItem("accessToken");
+    setUser(null);
+  };
+
+  const accessToken = localStorage.getItem("accessToken");
+  const value = useMemo(() => ({ user, loading, setUser, logout, accessToken }), [user, loading, accessToken]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

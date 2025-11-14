@@ -1,24 +1,40 @@
-import Header from "../components/Header";
-import HeroSection from "../components/HeroSection";
-import FeaturesSection from "../components/FeaturesSection";
+import Header from "../components/MainLayout/Header";
+import HeroSection from "../components/MainLayout/HeroSection";
+import FeaturesSection from "../components/HomePage/FeaturesSection";
 
-import FeedbackSection from "../components/FeedbackSection";
-import Footer from "../components/Footer";
+import FeedbackSection from "../components/HomePage/FeedbackSection";
+import Footer from "../components/MainLayout/Footer";
 import { useScrollReveal } from "../lib/useScrollReveal";
+import { useAuth } from "../context/AuthContext/useAuth";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import ChatWidget from "@/components/ChatWidget";
 
 const Index = () => {
   const heroRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
   const featuresRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
   const feedbackRef = useScrollReveal<HTMLDivElement>({ direction: "up" });
+  const navigate = useNavigate();
+
+  const { logout, user } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    toast.success("Đăng xuất thành công!");
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
+  };
 
   return (
     <div className="min-h-screen">
-      <Header />
+      <Header onLogout={handleLogout} />
       <main>
         <div ref={heroRef}>
           <HeroSection />
         </div>
-        <div ref={featuresRef}>
+        {user && <ChatWidget />}
+        <div ref={featuresRef} id="features-section">
           <FeaturesSection />
         </div>
         <div ref={feedbackRef}>
