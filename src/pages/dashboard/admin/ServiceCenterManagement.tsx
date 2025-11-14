@@ -21,6 +21,16 @@ import {
   DialogClose,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 // Select UI bị gỡ vì hiện chưa có API list users theo role
 import { Badge } from "@/components/ui/badge";
 import {
@@ -74,6 +84,8 @@ const ServiceCenterManagement = () => {
   const [loadingTechnicians, setLoadingTechnicians] = useState(false);
   const [addingTechnician, setAddingTechnician] = useState(false);
   const [removingTechnicianId, setRemovingTechnicianId] = useState<string | null>(null);
+  const [deleteTechnicianDialogOpen, setDeleteTechnicianDialogOpen] = useState(false);
+  const [technicianToDelete, setTechnicianToDelete] = useState<string | null>(null);
   // remove manual user id path as per request
 
   const navigate = useNavigate();
@@ -333,16 +345,18 @@ const ServiceCenterManagement = () => {
     }
   };
 
-  const handleRemoveTechnician = async (userId: string) => {
-    if (!currentServiceCenter) return;
-    if (!confirm("Bạn có chắc chắn muốn xóa kỹ thuật viên này khỏi trung tâm?")) {
-      return;
-    }
+  const handleRemoveTechnician = (userId: string) => {
+    setTechnicianToDelete(userId);
+    setDeleteTechnicianDialogOpen(true);
+  };
 
-    setRemovingTechnicianId(userId);
+  const confirmRemoveTechnician = async () => {
+    if (!currentServiceCenter || !technicianToDelete) return;
+
+    setRemovingTechnicianId(technicianToDelete);
     try {
       const response = await removeTechnicianFromServiceCenterApi({
-        user_id: userId,
+        user_id: technicianToDelete,
         center_id: currentServiceCenter._id,
       });
 
@@ -358,6 +372,8 @@ const ServiceCenterManagement = () => {
       toast.error("Đã xảy ra lỗi khi xóa kỹ thuật viên");
     } finally {
       setRemovingTechnicianId(null);
+      setDeleteTechnicianDialogOpen(false);
+      setTechnicianToDelete(null);
     }
   };
 
@@ -773,6 +789,25 @@ const ServiceCenterManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Technician Confirmation Dialog */}
+      <AlertDialog open={deleteTechnicianDialogOpen} onOpenChange={setDeleteTechnicianDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc chắn muốn xóa kỹ thuật viên này?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Kỹ thuật viên sẽ bị xóa khỏi trung tâm dịch vụ này. 
+              Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemoveTechnician} className="bg-red-600 hover:bg-red-700">
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
