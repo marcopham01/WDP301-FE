@@ -43,8 +43,6 @@ function statusLabel(s?: string) {
       return { text: "Chờ tiếp nhận", variant: "outline" as const };
     case "in_progress":
       return { text: "Đang sửa chữa", variant: "default" as const };
-    case "repaired":
-      return { text: "Đã sửa xong", variant: "default" as const };
     case "completed":
       return { text: "Hoàn thành", variant: "default" as const };
     case "delay":

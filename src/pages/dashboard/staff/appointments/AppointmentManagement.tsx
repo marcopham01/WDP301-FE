@@ -63,8 +63,6 @@ export default function AppointmentManagement() {
         return { text: "Đã check-in", variant: "outline" as const };
       case "in_progress":
         return { text: "Đang sửa chữa", variant: "default" as const };
-      case "repaired":
-        return { text: "Đã sửa xong", variant: "default" as const };
       case "completed":
         return { text: "Hoàn thành", variant: "default" as const };
       case "delay":
@@ -223,7 +221,6 @@ export default function AppointmentManagement() {
                   <SelectItem value="assigned">Đã phân công</SelectItem>
                   <SelectItem value="check_in">Đã check-in</SelectItem>
                   <SelectItem value="in_progress">Đang sửa chữa</SelectItem>
-                  <SelectItem value="repaired">Đã sửa xong</SelectItem>
                   <SelectItem value="completed">Hoàn thành</SelectItem>
                   <SelectItem value="canceled">Đã hủy</SelectItem>
                 </SelectContent>

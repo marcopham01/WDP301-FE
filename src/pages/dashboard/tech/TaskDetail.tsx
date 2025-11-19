@@ -33,6 +33,7 @@ import {
   getIssueTypesApi,
   getPartsApi,
   createChecklistApi,
+  createCheckinApi,
   IssueType,
   PartItem,
   getChecklistsApi,
@@ -86,6 +87,11 @@ export const TaskDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [showChecklistForm, setShowChecklistForm] = useState(false);
+  const [showCheckinDialog, setShowCheckinDialog] = useState(false);
+  const [initialVehicleCondition, setInitialVehicleCondition] = useState("");
+  const [showCustomerConfirmDialog, setShowCustomerConfirmDialog] =
+    useState(false);
+  const [customerConfirmed, setCustomerConfirmed] = useState(false);
   const [checklistCreated, setChecklistCreated] = useState(false);
   const [checklistMessage, setChecklistMessage] = useState<string | null>(null);
   const [issueTypes, setIssueTypes] = useState<IssueType[]>([]);
@@ -173,8 +179,7 @@ export const TaskDetail = () => {
         appointment.status === "in_progress" ||
         appointment.status === "working" ||
         appointment.status === "completed" ||
-        appointment.status === "done" ||
-        appointment.status === "repaired"
+        appointment.status === "done"
       ) {
         try {
           const res = await getChecklistsApi({ limit: 200 });
@@ -250,26 +255,106 @@ export const TaskDetail = () => {
     fetchChecklist();
   }, [appointmentId, appointment]);
 
-  // Function để bắt đầu công việc (đổi status thành in_progress)
+  // Function để bắt đầu công việc
   const handleStartWork = async () => {
     if (!appointmentId) return;
 
+    // Nếu status là "assigned", cần tạo checkin trước
+    if (appointment?.status === "assigned") {
+      setShowCheckinDialog(true);
+    } else if (appointment?.status === "check_in" && !customerConfirmed) {
+      // Nếu đã checkin nhưng chưa xác nhận với khách, mở dialog xác nhận
+      setShowCustomerConfirmDialog(true);
+    } else {
+      // Nếu đã checkin và đã xác nhận với khách, mở form checklist
+      try {
+        setShowChecklistForm(true);
+        const [issueRes, partsRes] = await Promise.all([
+          getIssueTypesApi(),
+          getPartsApi({ limit: 50 }),
+        ]);
+        if (issueRes.ok && issueRes.data?.success) {
+          setIssueTypes(issueRes.data.data.items || []);
+        }
+        if (partsRes.ok && partsRes.data?.success) {
+          setParts(partsRes.data.data.items || []);
+        }
+      } catch (err) {
+        setError("Có lỗi xảy ra khi bắt đầu công việc");
+        console.error("Error starting work:", err);
+      }
+    }
+  };
+
+  // Function để xác nhận với khách hàng sau khi kiểm tra xe
+  const handleCustomerConfirm = () => {
+    setCustomerConfirmed(true);
+    setShowCustomerConfirmDialog(false);
+
+    // Mở form checklist sau khi khách xác nhận
+    const loadChecklistData = async () => {
+      try {
+        const [issueRes, partsRes] = await Promise.all([
+          getIssueTypesApi(),
+          getPartsApi({ limit: 50 }),
+        ]);
+        if (issueRes.ok && issueRes.data?.success) {
+          setIssueTypes(issueRes.data.data.items || []);
+        }
+        if (partsRes.ok && partsRes.data?.success) {
+          setParts(partsRes.data.data.items || []);
+        }
+        setShowChecklistForm(true);
+      } catch (err) {
+        setError("Có lỗi xảy ra khi tải dữ liệu checklist");
+        console.error("Error loading checklist data:", err);
+      }
+    };
+    loadChecklistData();
+  };
+
+  // Function để tạo checkin
+  const handleCreateCheckin = async () => {
+    if (!appointmentId || !initialVehicleCondition.trim()) {
+      setError("Vui lòng nhập tình trạng ban đầu của xe");
+      return;
+    }
+
     try {
-      // Mở form checklist và nạp dữ liệu hỗ trợ
-      setShowChecklistForm(true);
-      const [issueRes, partsRes] = await Promise.all([
-        getIssueTypesApi(),
-        getPartsApi({ limit: 50 }),
-      ]);
-      if (issueRes.ok && issueRes.data?.success) {
-        setIssueTypes(issueRes.data.data.items || []);
+      setUpdating(true);
+      setError(null);
+
+      const checkinRes = await createCheckinApi({
+        appointment_id: appointmentId,
+        initial_vehicle_condition: initialVehicleCondition.trim(),
+      });
+
+      if (!checkinRes.ok || !checkinRes.data?.success) {
+        setError(checkinRes.message || "Tạo checkin thất bại");
+        setUpdating(false);
+        return;
       }
-      if (partsRes.ok && partsRes.data?.success) {
-        setParts(partsRes.data.data.items || []);
+
+      // Refetch appointment để có dữ liệu mới nhất
+      const apptRes = await getAppointmentByIdApi(appointmentId);
+      if (apptRes.ok && apptRes.data?.success) {
+        setAppointment(apptRes.data.data);
+      } else if (appointment) {
+        // Fallback: cập nhật local state nếu không refetch được
+        setAppointment({ ...appointment, status: "check_in" });
       }
+
+      // Đóng dialog checkin và mở dialog xác nhận với khách hàng
+      setShowCheckinDialog(false);
+      setInitialVehicleCondition("");
+
+      // Mở dialog để tech kiểm tra xe và tư vấn với khách hàng
+      setShowCustomerConfirmDialog(true);
     } catch (err) {
-      setError("Có lỗi xảy ra khi bắt đầu công việc");
-      console.error("Error starting work:", err);
+      setError("Có lỗi xảy ra khi tạo checkin");
+      console.error("Error creating checkin:", err);
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -290,17 +375,15 @@ export const TaskDetail = () => {
         setUpdating(false);
         return;
       }
-      // Sau khi tạo checklist, cập nhật trạng thái appointment -> check_in
-      const statusRes = await updateAppointmentStatusApi({
-        appointment_id: appointmentId,
-        status: "check_in",
-      });
-      if (statusRes.ok && statusRes.data?.success) {
-        if (appointment) setAppointment({ ...appointment, status: "check_in" });
+      // Sau khi tạo checklist, status vẫn là "check_in", chờ staff duyệt mới chuyển sang "in_progress"
+      // Refetch appointment để có dữ liệu mới nhất
+      const apptRes = await getAppointmentByIdApi(appointmentId);
+      if (apptRes.ok && apptRes.data?.success) {
+        setAppointment(apptRes.data.data);
       }
       setChecklistCreated(true);
       setChecklistMessage(
-        "Checklist đã gửi thành công. Trạng thái đã chuyển sang 'check_in'. Vui lòng chờ staff duyệt."
+        "Checklist đã gửi thành công. Trạng thái vẫn là 'check_in'. Vui lòng chờ staff duyệt để chuyển sang 'đang thực hiện'."
       );
       closeChecklistForm();
     } catch (err) {
@@ -319,12 +402,12 @@ export const TaskDetail = () => {
       setUpdating(true);
       const result = await updateAppointmentStatusApi({
         appointment_id: appointmentId,
-        status: "repaired",
+        status: "completed",
       });
 
       if (result.ok && result.data?.success) {
         if (appointment) {
-          setAppointment({ ...appointment, status: "repaired" });
+          setAppointment({ ...appointment, status: "completed" });
         }
         console.log("Đã hoàn thành công việc thành công");
       } else {
@@ -347,7 +430,6 @@ export const TaskDetail = () => {
       case "in_progress":
       case "working":
         return "bg-primary";
-      case "repaired":
       case "completed":
       case "done":
         return "bg-success";
@@ -371,8 +453,6 @@ export const TaskDetail = () => {
       case "in_progress":
       case "working":
         return "Đang thực hiện";
-      case "repaired":
-        return "Đã sửa xong";
       case "completed":
       case "done":
         return "Hoàn thành";
@@ -975,7 +1055,7 @@ export const TaskDetail = () => {
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold mb-4">Hành động</h3>
               <div className="space-y-3">
-                {checklistCreated || appointment.status === "check_in" ? (
+                {checklistCreated ? (
                   <div className="text-center">
                     <Badge className="bg-primary text-white">
                       Đã gửi checklist
@@ -986,9 +1066,11 @@ export const TaskDetail = () => {
                   </div>
                 ) : appointment.status === "assigned" ||
                   appointment.status === "pending" ? (
-                  showChecklistForm ? (
+                  showChecklistForm || showCheckinDialog ? (
                     <Button className="w-full" variant="outline" disabled>
-                      Đang tạo checklist - vui lòng gửi biểu mẫu bên trên
+                      {showCheckinDialog
+                        ? "Đang tạo checkin - vui lòng điền thông tin bên trên"
+                        : "Đang tạo checklist - vui lòng gửi biểu mẫu bên trên"}
                     </Button>
                   ) : (
                     <Button
@@ -996,6 +1078,28 @@ export const TaskDetail = () => {
                       onClick={handleStartWork}
                       disabled={updating}>
                       Bắt đầu công việc
+                    </Button>
+                  )
+                ) : appointment.status === "check_in" ? (
+                  showChecklistForm || showCustomerConfirmDialog ? (
+                    <Button className="w-full" variant="outline" disabled>
+                      {showCustomerConfirmDialog
+                        ? "Đang xác nhận với khách hàng..."
+                        : "Đang tạo checklist - vui lòng gửi biểu mẫu bên trên"}
+                    </Button>
+                  ) : customerConfirmed ? (
+                    <Button
+                      className="w-full bg-primary text-primary-foreground"
+                      onClick={handleStartWork}
+                      disabled={updating}>
+                      Tạo checklist
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full bg-primary text-primary-foreground"
+                      onClick={handleStartWork}
+                      disabled={updating}>
+                      Kiểm tra xe & Xác nhận với khách hàng
                     </Button>
                   )
                 ) : appointment.status === "in_progress" ||
@@ -1019,6 +1123,125 @@ export const TaskDetail = () => {
         </div>
       </div>
 
+      {/* Dialog tạo checkin */}
+      <Dialog
+        open={showCheckinDialog}
+        onOpenChange={(open) => {
+          if (!open && !updating) {
+            setShowCheckinDialog(false);
+            setInitialVehicleCondition("");
+            setError(null);
+          }
+        }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <FileText className="h-5 w-5 text-primary" />
+              Tạo checkin - Ghi nhận tình trạng ban đầu của xe
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              Khi customer đem xe tới, technician tạo checkin trước để ghi nhận
+              tình trạng ban đầu của xe.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                Tình trạng ban đầu của xe
+              </Label>
+              <Textarea
+                rows={6}
+                value={initialVehicleCondition}
+                onChange={(e) => {
+                  setInitialVehicleCondition(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder="Ví dụ: Xe có vết xước nhẹ ở đầu xe, bánh xe còn tốt, đèn pha hoạt động bình thường..."
+                className="resize-none"
+                disabled={updating}
+              />
+              {error && <p className="text-sm text-destructive">{error}</p>}
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-end sm:space-x-2 border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCheckinDialog(false);
+                setInitialVehicleCondition("");
+                setError(null);
+              }}
+              disabled={updating}>
+              Hủy
+            </Button>
+            <Button
+              className="bg-primary text-primary-foreground"
+              disabled={updating || !initialVehicleCondition.trim()}
+              onClick={handleCreateCheckin}>
+              {updating ? "Đang tạo..." : "Tạo checkin & Tiếp tục"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog xác nhận với khách hàng */}
+      <Dialog
+        open={showCustomerConfirmDialog}
+        onOpenChange={(open) => {
+          if (!open && !updating) {
+            setShowCustomerConfirmDialog(false);
+          }
+        }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <User className="h-5 w-5 text-primary" />
+              Kiểm tra xe & Xác nhận với khách hàng
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              Sau khi checkin, vui lòng kiểm tra xe trực tiếp và tư vấn cho
+              khách hàng. Chỉ khi khách hàng đồng ý thì mới tiếp tục tạo
+              checklist.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200">
+              <p className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">
+                📋 Các bước cần thực hiện:
+              </p>
+              <ol className="text-sm text-blue-800 dark:text-blue-300 space-y-1 list-decimal list-inside">
+                <li>Kiểm tra tình trạng xe chi tiết</li>
+                <li>Tư vấn cho khách hàng về các vấn đề phát hiện</li>
+                <li>Thảo luận về giải pháp và chi phí dự kiến</li>
+                <li>Xác nhận khách hàng đồng ý với phương án sửa chữa</li>
+              </ol>
+            </div>
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                ⚠️ Chỉ nhấn "Khách hàng đã đồng ý" khi khách hàng đã xác nhận
+                chấp nhận phương án sửa chữa và chi phí.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-end sm:space-x-2 border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowCustomerConfirmDialog(false)}
+              disabled={updating}>
+              Hủy
+            </Button>
+            <Button
+              className="bg-success text-success-foreground"
+              onClick={handleCustomerConfirm}
+              disabled={updating}>
+              Khách hàng đã đồng ý
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog tạo checklist */}
       <Dialog
         open={showChecklistForm}
         onOpenChange={(open) => {

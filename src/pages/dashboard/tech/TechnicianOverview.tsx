@@ -136,7 +136,6 @@ export const TechnicianOverview = () => {
           text: "Đang thực hiện",
           className: "bg-blue-100 text-blue-800 border-blue-200",
         };
-      case "repaired":
       case "completed":
       case "done":
         return {
@@ -216,10 +215,7 @@ export const TechnicianOverview = () => {
     });
 
   const completedTasks = appointments
-    .filter(
-      (appointment) =>
-        appointment.status === "completed" || appointment.status === "repaired"
-    )
+    .filter((appointment) => appointment.status === "completed")
     .map((appointment) => {
       const vehicleInfo = getVehicleInfo(appointment.vehicle_id);
       return {
