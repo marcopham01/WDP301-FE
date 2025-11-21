@@ -32,7 +32,7 @@ async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
   } as ApiResult<T>;
 }
 
-// Issue Types
+// Kho phụ tùng
 export interface IssueType {
   _id: string;
   category: string;

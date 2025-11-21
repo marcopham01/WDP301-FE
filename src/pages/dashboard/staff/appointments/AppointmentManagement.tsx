@@ -176,13 +176,7 @@ export default function AppointmentManagement() {
             Tổng: {pagination.totalDocs} lịch hẹn
           </p>
         </div>
-        <Button 
-          onClick={loadAppointments}
-          variant="outline"
-          disabled={loading}
-        >
-          {loading ? "Đang tải..." : "🔄 Làm mới"}
-        </Button>
+       
       </div>
 
       {/* Filter Section */}
@@ -253,11 +247,21 @@ export default function AppointmentManagement() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Danh sách lịch hẹn</CardTitle>
+        <CardHeader className="grid grid-cols-[4fr_auto]">
+        
+          <div>
+            <CardTitle>Danh sách lịch hẹn</CardTitle>
           <CardDescription>
             Trang {pagination.page} / {pagination.totalPages} - Tổng {pagination.totalDocs} lịch hẹn
           </CardDescription>
+          </div>
+             <Button 
+          onClick={loadAppointments}
+          variant="outline"
+          disabled={loading}
+        >
+          {loading ? "Đang tải..." : "Làm mới"}
+        </Button>
         </CardHeader>
         <CardContent>
           <Table>

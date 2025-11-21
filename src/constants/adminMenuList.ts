@@ -36,10 +36,10 @@ export const adminMenuItems = [
         title: "Khách hàng",
         href: "/dashboard/admin/customers",
       },
-      {
-        title: "Kỹ thuật viên",
-        href: "/dashboard/admin/technicians",
-      },
+      // {
+      //   title: "Kỹ thuật viên",
+      //   href: "/dashboard/admin/technicians",
+      // },
     ],
   },
   {
@@ -50,10 +50,10 @@ export const adminMenuItems = [
         title: "Mẫu xe",
         href: "/dashboard/admin/vehicle-models",
       },
-      {
-        title: "Danh sách phương tiện",
-        href: "/dashboard/admin/vehicles",
-      },
+      // {
+      //   title: "Danh sách phương tiện",
+      //   href: "/dashboard/admin/vehicles",
+      // },
     ],
   },
   {
@@ -75,11 +75,11 @@ export const adminMenuItems = [
         href: "/dashboard/admin/parts",
       },
       {
-        title: "Inventory",
+        title: "Kho phụ tùng",
         href: "/dashboard/admin/inventory",
       },
       {
-        title: "Issue Types",
+        title: "Loại sự cố",
         href: "/dashboard/admin/issue-types",
       },
     ],

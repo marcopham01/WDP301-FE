@@ -1,5 +1,5 @@
 // utils/seedIssueTypes.ts
-// Script để thêm data mẫu cho Issue Types
+// Script để thêm data mẫu cho Kho phụ tùng
 // Chỉ chạy một lần để seed data
 
 import { createIssueTypeApi, IssueCategory, IssueSeverity } from "@/lib/issueTypeApi";
@@ -191,7 +191,7 @@ const sampleIssueTypes: SeedIssueType[] = [
 ];
 
 export async function seedIssueTypes() {
-  console.log("🌱 Bắt đầu seed Issue Types data...");
+  console.log("🌱 Bắt đầu seed Kho phụ tùng data...");
   
   let successCount = 0;
   let errorCount = 0;

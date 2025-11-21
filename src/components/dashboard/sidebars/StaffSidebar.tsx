@@ -21,7 +21,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.png";
 
 const items: Array<{ title: string; icon: LucideIcon; href: string }> = [
-  { title: "Tổng quan", icon: ClipboardList, href: "/dashboard/staff" },
+  // { title: "Tổng quan", icon: ClipboardList, href: "/dashboard/staff" },
   {
     title: "Quản lý lịch hẹn",
     icon: Calendar,

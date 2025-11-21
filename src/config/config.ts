@@ -13,13 +13,13 @@ const isDevelopment = import.meta.env.DEV;
 export const config = {
   // API Base URL
   API_BASE_URL: isDevelopment 
-    ? "http://localhost:5000" // Backend local của bạn
-    : "http://localhost:5000",
+    ? "http://localhost:5002" // Backend local của bạn
+    : "http://localhost:5002",
   
   // Socket.IO URL
   SOCKET_URL: isDevelopment
-    ? "http://localhost:5000" // Backend local của bạn  
-    : "http://localhost:5000",
+    ? "http://localhost:5002" // Backend local của bạn  
+    : "http://localhost:5002",
   
   // Socket.IO config
   SOCKET_CONFIG: {
