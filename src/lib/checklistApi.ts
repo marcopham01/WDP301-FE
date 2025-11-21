@@ -274,4 +274,36 @@ export async function createChecklistApi(payload: CreateChecklistPayload): Promi
   return parseResponse(response);
 }
 
+// Create Checkin
+export interface CreateCheckinPayload {
+  appointment_id: string;
+  initial_vehicle_condition: string;
+}
+
+export interface CreateCheckinResponse {
+  success: boolean;
+  message: string;
+  data: {
+    appointment: {
+      _id: string;
+      status: string;
+      initial_vehicle_condition: string;
+      checkin_datetime: string;
+      checkin_by: unknown;
+    };
+  };
+}
+
+export async function createCheckinApi(payload: CreateCheckinPayload): Promise<ApiResult<CreateCheckinResponse>> {
+  const response = await fetch(`${BASE_URL}/api/checklist/checkin`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify(payload),
+  });
+  return parseResponse(response);
+}
+
 

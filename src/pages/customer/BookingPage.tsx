@@ -274,7 +274,6 @@ export default function BookingPage() {
             "assigned",
             "check_in",
             "in_progress",
-            "repaired",
           ]);
           const times = new Set<string>();
           res.data.data.appointments.forEach((a) => {
@@ -335,7 +334,6 @@ export default function BookingPage() {
             "assigned",
             "check_in",
             "in_progress",
-            "repaired",
           ]);
           // Determine service duration (minutes) from selected service or fallback 60
           const serviceDurationMin = Number(
