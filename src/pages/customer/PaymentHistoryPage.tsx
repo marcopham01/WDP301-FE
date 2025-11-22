@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, CreditCard, Eye, Clock, RefreshCw, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { getMyTransactionsApi, getAllMyTransactionsApi, retryPaymentApi, cancelPaymentApi, Transaction, Pagination, normalizeTransaction, RetryPaymentResponse } from "@/lib/paymentApi";
@@ -33,7 +34,9 @@ const PaymentHistoryPage = () => {
   const [retrying, setRetrying] = useState(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
-  const [showDetailDialog, setShowDetailDialog] = useState(false);  // Fetch all transactions for statistics
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [txnToCancel, setTxnToCancel] = useState<Transaction | null>(null);  // Fetch all transactions for statistics
   async function fetchAllTransactions() {
     try {
       const res = await getAllMyTransactionsApi();
@@ -198,16 +201,22 @@ const PaymentHistoryPage = () => {
     }
   };
 
-  const handleCancelPayment = async (txn: Transaction) => {
+  const handleCancelPayment = (txn: Transaction) => {
+    setTxnToCancel(txn);
+    setCancelDialogOpen(true);
+  };
+
+  const confirmCancelPayment = async () => {
+    if (!txnToCancel) return;
     try {
       setCancelling(true);
-  const order = txn.order_code || txn.orderCode;
+      const order = txnToCancel.order_code || txnToCancel.orderCode;
       if (!order) return;
       const res = await cancelPaymentApi(order);
       if (res.ok) {
         toast.success("Đã hủy giao dịch");
         fetchData({ soft: true });
-        if (selectedTxn?._id === txn._id) {
+        if (selectedTxn?._id === txnToCancel._id) {
           setSelectedTxn({ ...selectedTxn, status: "CANCELLED" } as Transaction);
         }
       } else {
@@ -218,6 +227,8 @@ const PaymentHistoryPage = () => {
       toast.error("Lỗi hủy giao dịch");
     } finally {
       setCancelling(false);
+      setCancelDialogOpen(false);
+      setTxnToCancel(null);
     }
   };
 
@@ -703,6 +714,30 @@ const PaymentHistoryPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Payment Confirmation */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận hủy giao dịch</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn hủy giao dịch #{txnToCancel?.orderCode || txnToCancel?.order_code}?
+              <br />
+              Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Hủy</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmCancelPayment} 
+              disabled={cancelling}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {cancelling ? "Đang hủy..." : "Xác nhận hủy"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 };

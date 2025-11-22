@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const ResetPasswordPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -21,16 +22,17 @@ const ResetPasswordPage: React.FC = () => {
     setError('');
     try {
       await axios.post(`/api/users/resetpassword?token=${token}`, { newPassword });
+      toast.success('Đặt lại mật khẩu thành công!');
       setMessage('Đặt lại mật khẩu thành công!');
       setTimeout(() => {
         navigate('/login');
       }, 700);
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || 'Token không hợp lệ hoặc đã hết hạn.');
-      } else {
-        setError('Token không hợp lệ hoặc đã hết hạn.');
-      }
+      const errorMsg = axios.isAxiosError(err)
+        ? (err.response?.data?.message || 'Token không hợp lệ hoặc đã hết hạn.')
+        : 'Token không hợp lệ hoặc đã hết hạn.';
+      toast.error(errorMsg);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

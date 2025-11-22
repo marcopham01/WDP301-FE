@@ -174,7 +174,7 @@ export default function BookingPage() {
         setServiceCenters([]);
         // Show user-friendly error message
         if (centers.status === 500) {
-          alert(
+          toast.error(
             "Không thể tải danh sách trung tâm bảo dưỡng. Vui lòng thử lại hoặc liên hệ hỗ trợ."
           );
         }

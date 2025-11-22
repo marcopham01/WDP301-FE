@@ -34,6 +34,7 @@ import {
   type Appointment,
 } from "@/lib/appointmentApi";
 import { Eye, X } from "lucide-react";
+import { toast } from "react-toastify";
 
 // Sử dụng type Appointment từ API thay vì định nghĩa lại
 type AppointmentItem = Appointment;
@@ -138,10 +139,10 @@ export default function AppointmentManagement() {
         // Reload danh sách sau khi cập nhật thành công
         await loadAppointments();
       } else {
-        alert(result.message || "Không thể cập nhật trạng thái");
+        toast.error(result.message || "Không thể cập nhật trạng thái");
       }
     } catch (err) {
-      alert("Có lỗi xảy ra khi cập nhật trạng thái");
+      toast.error("Có lỗi xảy ra khi cập nhật trạng thái");
       console.error("Error updating appointment status:", err);
     }
   };

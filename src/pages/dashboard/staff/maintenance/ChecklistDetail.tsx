@@ -55,7 +55,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "react-toastify";
 
 type IssueTypeRef =
   | string
@@ -180,6 +191,7 @@ const ChecklistDetail = () => {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [creatingPayment, setCreatingPayment] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
 
   // Compute derived data (must be before early returns)
   const appointmentData =
@@ -311,7 +323,7 @@ const ChecklistDetail = () => {
   // Function to create payment after approving checklist
   const createPaymentAfterApprove = async (): Promise<boolean> => {
     if (!appointmentData || !appointmentData.user_id) {
-      alert("Không tìm thấy thông tin khách hàng");
+      toast.error("Không tìm thấy thông tin khách hàng");
       return false;
     }
 
@@ -363,7 +375,7 @@ const ChecklistDetail = () => {
           ? err.message
           : "Có lỗi xảy ra khi tạo link thanh toán";
       setPaymentError(message);
-      alert(message);
+      toast.error(message);
       console.error("Error creating payment:", err);
       return false;
     } finally {
@@ -395,7 +407,7 @@ const ChecklistDetail = () => {
             }));
 
             if (newStatus === "PAID") {
-              alert("Thanh toán thành công!");
+              toast.success("Thanh toán thành công!");
             }
           }
         }
@@ -410,7 +422,7 @@ const ChecklistDetail = () => {
   // Function to check inventory for all parts
   const handleCheckInventory = async () => {
     if (!center?._id || !partsDetailList.length) {
-      alert(
+      toast.error(
         "Không thể kiểm tra tồn kho: thiếu thông tin trung tâm hoặc phụ tùng"
       );
       return;
@@ -566,10 +578,65 @@ const ChecklistDetail = () => {
       // Update state with all results at once
       setInventoryCheck({ ...results });
     } catch (err) {
-      alert("Có lỗi xảy ra khi kiểm tra tồn kho");
+      toast.error("Có lỗi xảy ra khi kiểm tra tồn kho");
       console.error("Error checking inventory:", err);
     } finally {
       setCheckingInventory(false);
+    }
+  };
+
+  // Function to confirm approve checklist
+  const confirmApproveChecklist = async () => {
+    if (!checklist) return;
+    
+    try {
+      setWorkingId(checklist._id);
+
+      // Backend sẽ tự cập nhật (trừ) inventory khi duyệt checklist.
+      // Ở FE chỉ gọi accept để tránh trừ 2 lần.
+      const res = await acceptChecklistApi(checklist._id);
+      if (!res.ok) {
+        toast.error(res.message || "Duyệt checklist thất bại");
+      } else {
+        // Cập nhật status appointment thành "in_progress" sau khi duyệt checklist
+        const appointmentId =
+          typeof checklist.appointment_id === "string"
+            ? checklist.appointment_id
+            : (checklist.appointment_id as { _id?: string })
+                ?._id;
+
+        if (appointmentId) {
+          try {
+            await updateAppointmentStatusApi({
+              appointment_id: appointmentId,
+              status: "in_progress",
+            });
+          } catch (statusErr) {
+            console.error(
+              "Error updating appointment status:",
+              statusErr
+            );
+            // Không block nếu cập nhật status thất bại
+          }
+        }
+
+        // Tự động tạo payment và hiển thị QR code sau khi duyệt thành công
+        const paymentCreated = await createPaymentAfterApprove();
+        if (!paymentCreated) {
+          toast.warning(
+            "Tạo link thanh toán thất bại. Vui lòng thử lại bằng nút 'Tạo link thanh toán' bên dưới."
+          );
+        }
+        setApproveDialogOpen(false);
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Có lỗi xảy ra khi duyệt checklist";
+      toast.error(errorMessage);
+    } finally {
+      setWorkingId(null);
     }
   };
 
@@ -1609,62 +1676,14 @@ const ChecklistDetail = () => {
                       !allPartsSufficient ||
                       partsDetailList.length === 0
                     }
-                    onClick={async () => {
+                    onClick={() => {
                       if (!allPartsSufficient) {
-                        alert(
+                        toast.warning(
                           "Vui lòng kiểm tra tồn kho và đảm bảo tất cả phụ tùng đều đủ trước khi duyệt"
                         );
                         return;
                       }
-                      try {
-                        setWorkingId(checklist._id);
-
-                        // Backend sẽ tự cập nhật (trừ) inventory khi duyệt checklist.
-                        // Ở FE chỉ gọi accept để tránh trừ 2 lần.
-                        const res = await acceptChecklistApi(checklist._id);
-                        if (!res.ok) {
-                          alert(res.message || "Duyệt checklist thất bại");
-                        } else {
-                          // Cập nhật status appointment thành "in_progress" sau khi duyệt checklist
-                          const appointmentId =
-                            typeof checklist.appointment_id === "string"
-                              ? checklist.appointment_id
-                              : (checklist.appointment_id as { _id?: string })
-                                  ?._id;
-
-                          if (appointmentId) {
-                            try {
-                              await updateAppointmentStatusApi({
-                                appointment_id: appointmentId,
-                                status: "in_progress",
-                              });
-                            } catch (statusErr) {
-                              console.error(
-                                "Error updating appointment status:",
-                                statusErr
-                              );
-                              // Không block nếu cập nhật status thất bại
-                            }
-                          }
-
-                          // Tự động tạo payment và hiển thị QR code sau khi duyệt thành công
-                          const paymentCreated =
-                            await createPaymentAfterApprove();
-                          if (!paymentCreated) {
-                            alert(
-                              "Tạo link thanh toán thất bại. Vui lòng thử lại bằng nút 'Tạo link thanh toán' bên dưới."
-                            );
-                          }
-                        }
-                      } catch (err) {
-                        const errorMessage =
-                          err instanceof Error
-                            ? err.message
-                            : "Có lỗi xảy ra khi duyệt checklist";
-                        alert(errorMessage);
-                      } finally {
-                        setWorkingId(null);
-                      }
+                      setApproveDialogOpen(true);
                     }}>
                     Duyệt checklist
                     {!allPartsSufficient && partsDetailList.length > 0 && (
@@ -1849,13 +1868,13 @@ const ChecklistDetail = () => {
                     rejectReason.trim()
                   );
                   if (!res.ok) {
-                    alert(res.message || "Từ chối checklist thất bại");
+                    toast.error(res.message || "Từ chối checklist thất bại");
                   } else {
                     setRejectDialogOpen(false);
                     window.location.reload();
                   }
                 } catch {
-                  alert("Có lỗi xảy ra khi từ chối checklist");
+                  toast.error("Có lỗi xảy ra khi từ chối checklist");
                 } finally {
                   setSubmittingReject(false);
                   setWorkingId(null);
@@ -1866,6 +1885,37 @@ const ChecklistDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Approve Checklist Confirmation */}
+      <AlertDialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận duyệt checklist</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn duyệt checklist này không?
+              <br />
+              <br />
+              <strong>Lưu ý:</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Số lượng phụ tùng sẽ được trừ từ kho</li>
+                <li>Trạng thái lịch hẹn sẽ chuyển thành "Đang thực hiện"</li>
+                <li>Link thanh toán sẽ được tạo cho khách hàng</li>
+                <li>Hành động này không thể hoàn tác</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={workingId !== null}>Hủy</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmApproveChecklist} 
+              disabled={workingId !== null}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {workingId !== null ? "Đang xử lý..." : "Xác nhận duyệt"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 };

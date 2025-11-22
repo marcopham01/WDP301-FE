@@ -29,6 +29,7 @@ import {
   Appointment,
   getAppointmentsApi,
 } from "@/lib/appointmentApi";
+import { toast } from "react-toastify";
 import {
   getIssueTypesApi,
   getPartsApi,
@@ -59,6 +60,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type ChecklistFormState = {
   issue_type_id: string;
@@ -94,6 +105,7 @@ export const TaskDetail = () => {
   const [customerConfirmed, setCustomerConfirmed] = useState(false);
   const [checklistCreated, setChecklistCreated] = useState(false);
   const [checklistMessage, setChecklistMessage] = useState<string | null>(null);
+  const [completeWorkDialogOpen, setCompleteWorkDialogOpen] = useState(false);
   const [issueTypes, setIssueTypes] = useState<IssueType[]>([]);
   const [parts, setParts] = useState<PartItem[]>([]);
   const createEmptyChecklistForm = (): ChecklistFormState => ({
@@ -395,7 +407,11 @@ export const TaskDetail = () => {
   };
 
   // Function để hoàn thành công việc
-  const handleCompleteWork = async () => {
+  const handleCompleteWork = () => {
+    setCompleteWorkDialogOpen(true);
+  };
+
+  const confirmCompleteWork = async () => {
     if (!appointmentId) return;
 
     try {
@@ -409,7 +425,8 @@ export const TaskDetail = () => {
         if (appointment) {
           setAppointment({ ...appointment, status: "completed" });
         }
-        console.log("Đã hoàn thành công việc thành công");
+        toast.success("Đã hoàn thành công việc thành công");
+        setCompleteWorkDialogOpen(false);
       } else {
         setError(result.message || "Không thể hoàn thành công việc");
       }
@@ -1454,6 +1471,31 @@ export const TaskDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Complete Work Confirmation */}
+      <AlertDialog open={completeWorkDialogOpen} onOpenChange={setCompleteWorkDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận hoàn thành công việc</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn đánh dấu công việc này là đã hoàn thành?
+              <br />
+              <br />
+              Hành động này sẽ cập nhật trạng thái lịch hẹn thành "Hoàn thành" và không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updating}>Hủy</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmCompleteWork} 
+              disabled={updating}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {updating ? "Đang xử lý..." : "Xác nhận hoàn thành"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 };
