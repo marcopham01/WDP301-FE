@@ -9,6 +9,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { NotificationDropdown } from "@/components/ui/notification-dropdown";
 import { config } from "@/config/config";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const BASE_URL = config.API_BASE_URL;
 
@@ -27,6 +37,7 @@ interface HeaderProps {
 const Header = ({ navItems, onLogout }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const lastScrollY = useRef(window.scrollY);
   const navigate = useNavigate();
   const location = useLocation();
@@ -78,6 +89,15 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
     { label: "Liên hệ", href: "/contact", active: location.pathname.startsWith("/contact") },
   ];
   const menuItems = navItems || defaultNavItems;
+
+  const handleLogoutClick = () => {
+    setLogoutDialogOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setLogoutDialogOpen(false);
+    onLogout?.();
+  };
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b transition-transform duration-500 ${showHeader ? "translate-y-0" : "-translate-y-full"}`}>
@@ -175,7 +195,7 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                     <span>Lịch sử thanh toán</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onLogout}>
+                  <DropdownMenuItem onClick={handleLogoutClick}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
@@ -302,7 +322,7 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
                       <span>Lịch sử thanh toán</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); onLogout?.(); }}>
+                    <DropdownMenuItem onClick={() => { setIsMenuOpen(false); handleLogoutClick(); }}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
@@ -330,6 +350,24 @@ const Header = ({ navItems, onLogout }: HeaderProps) => {
           </nav>
         </div>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận đăng xuất</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn đăng xuất khỏi hệ thống không?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLogout}>
+              Đăng xuất
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   );
 };

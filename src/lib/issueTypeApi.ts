@@ -104,7 +104,7 @@ export const getIssueTypesApi = async (
     return {
       ok: false,
       status: 500,
-      message: error instanceof Error ? error.message : "Lỗi khi lấy danh sách issue types",
+      message: error instanceof Error ? error.message : "Lỗi khi lấy danh sách Kho phụ tùng",
     };
   }
 };

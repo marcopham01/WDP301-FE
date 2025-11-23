@@ -34,6 +34,7 @@ import {
   type Appointment,
 } from "@/lib/appointmentApi";
 import { Eye, X } from "lucide-react";
+import { toast } from "react-toastify";
 
 // Sử dụng type Appointment từ API thay vì định nghĩa lại
 type AppointmentItem = Appointment;
@@ -63,8 +64,6 @@ export default function AppointmentManagement() {
         return { text: "Đã check-in", variant: "outline" as const };
       case "in_progress":
         return { text: "Đang sửa chữa", variant: "default" as const };
-      case "repaired":
-        return { text: "Đã sửa xong", variant: "default" as const };
       case "completed":
         return { text: "Hoàn thành", variant: "default" as const };
       case "delay":
@@ -140,10 +139,10 @@ export default function AppointmentManagement() {
         // Reload danh sách sau khi cập nhật thành công
         await loadAppointments();
       } else {
-        alert(result.message || "Không thể cập nhật trạng thái");
+        toast.error(result.message || "Không thể cập nhật trạng thái");
       }
     } catch (err) {
-      alert("Có lỗi xảy ra khi cập nhật trạng thái");
+      toast.error("Có lỗi xảy ra khi cập nhật trạng thái");
       console.error("Error updating appointment status:", err);
     }
   };
@@ -178,13 +177,7 @@ export default function AppointmentManagement() {
             Tổng: {pagination.totalDocs} lịch hẹn
           </p>
         </div>
-        <Button 
-          onClick={loadAppointments}
-          variant="outline"
-          disabled={loading}
-        >
-          {loading ? "Đang tải..." : "🔄 Làm mới"}
-        </Button>
+       
       </div>
 
       {/* Filter Section */}
@@ -223,7 +216,6 @@ export default function AppointmentManagement() {
                   <SelectItem value="assigned">Đã phân công</SelectItem>
                   <SelectItem value="check_in">Đã check-in</SelectItem>
                   <SelectItem value="in_progress">Đang sửa chữa</SelectItem>
-                  <SelectItem value="repaired">Đã sửa xong</SelectItem>
                   <SelectItem value="completed">Hoàn thành</SelectItem>
                   <SelectItem value="canceled">Đã hủy</SelectItem>
                 </SelectContent>
@@ -256,11 +248,21 @@ export default function AppointmentManagement() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Danh sách lịch hẹn</CardTitle>
+        <CardHeader className="grid grid-cols-[4fr_auto]">
+        
+          <div>
+            <CardTitle>Danh sách lịch hẹn</CardTitle>
           <CardDescription>
             Trang {pagination.page} / {pagination.totalPages} - Tổng {pagination.totalDocs} lịch hẹn
           </CardDescription>
+          </div>
+             <Button 
+          onClick={loadAppointments}
+          variant="outline"
+          disabled={loading}
+        >
+          {loading ? "Đang tải..." : "Làm mới"}
+        </Button>
         </CardHeader>
         <CardContent>
           <Table>

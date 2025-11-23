@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -17,13 +18,14 @@ const ForgotPasswordPage: React.FC = () => {
     setError('');
     try {
       await axios.post('/api/users/forgotPassword', { email });
+      toast.success('Vui lòng kiểm tra email để đặt lại mật khẩu.');
       setMessage('Vui lòng kiểm tra email để đặt lại mật khẩu.');
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || 'Email không tồn tại hoặc có lỗi xảy ra.');
-      } else {
-        setError('Email không tồn tại hoặc có lỗi xảy ra.');
-      }
+      const errorMsg = axios.isAxiosError(err) 
+        ? (err.response?.data?.message || 'Email không tồn tại hoặc có lỗi xảy ra.')
+        : 'Email không tồn tại hoặc có lỗi xảy ra.';
+      toast.error(errorMsg);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

@@ -64,7 +64,6 @@ const AppointmentManagement = () => {
     assigned: "hsl(217, 91%, 60%)", // secondary - xanh dương
     check_in: "hsl(142, 76%, 50%)", // primary glow - xanh lá sáng
     in_progress: "hsl(35, 95%, 58%)", // charging-orange - cam
-    repaired: "hsl(120, 100%, 35%)", // battery-green - xanh lá đậm
     completed: "hsl(142, 76%, 36%)", // success/primary - xanh lá
     delay: "hsl(0, 84%, 60%)", // destructive - đỏ
     canceled: "hsl(0, 84%, 60%)", // destructive - đỏ (đã đổi từ xám)
@@ -76,7 +75,6 @@ const AppointmentManagement = () => {
     if (statusName === "Đã phân công") return COLORS.assigned;
     if (statusName === "Đã check-in") return COLORS.check_in;
     if (statusName === "Đang thực hiện") return COLORS.in_progress;
-    if (statusName === "Đã sửa chữa") return COLORS.repaired;
     if (statusName === "Hoàn thành") return COLORS.completed;
     if (statusName === "Trễ hạn") return COLORS.delay;
     if (statusName === "Đã hủy") return COLORS.canceled;
@@ -167,11 +165,6 @@ const AppointmentManagement = () => {
           color: COLORS.in_progress,
         },
         {
-          name: "Đã sửa chữa",
-          value: data.appointmentRate.breakdown.repaired,
-          color: COLORS.repaired,
-        },
-        {
           name: "Hoàn thành",
           value: data.appointmentRate.breakdown.completed,
           color: COLORS.completed,
@@ -211,11 +204,6 @@ const AppointmentManagement = () => {
           name: "Đang thực hiện",
           rate: data.appointmentRate.breakdown.rates.in_progress,
           count: data.appointmentRate.breakdown.in_progress,
-        },
-        {
-          name: "Đã sửa chữa",
-          rate: data.appointmentRate.breakdown.rates.repaired,
-          count: data.appointmentRate.breakdown.repaired,
         },
         {
           name: "Hoàn thành",

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { CalendarDays, Bike, Users, Wrench } from "lucide-react";
+import { toast } from "react-toastify";
 import {
   Card,
   CardContent,
@@ -97,7 +98,7 @@ export default function StaffOverview() {
     // API appointment chưa sẵn sàng
     // const res = await updateAppointmentStatusApi({ appointment_id: id, status });
     // if (res.ok) load();
-    alert("Chức năng quản lý lịch hẹn đang được phát triển");
+    toast.info("Chức năng quản lý lịch hẹn đang được phát triển");
   };
 
   return (

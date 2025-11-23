@@ -6,7 +6,6 @@ import {
   Package,
   Calendar,
   TrendingUp,
-  CreditCard,
 } from "lucide-react";
 
 export const adminMenuItems = [
@@ -37,10 +36,10 @@ export const adminMenuItems = [
         title: "Khách hàng",
         href: "/dashboard/admin/customers",
       },
-      {
-        title: "Kỹ thuật viên",
-        href: "/dashboard/admin/technicians",
-      },
+      // {
+      //   title: "Kỹ thuật viên",
+      //   href: "/dashboard/admin/technicians",
+      // },
     ],
   },
   {
@@ -51,10 +50,10 @@ export const adminMenuItems = [
         title: "Mẫu xe",
         href: "/dashboard/admin/vehicle-models",
       },
-      {
-        title: "Danh sách phương tiện",
-        href: "/dashboard/admin/vehicles",
-      },
+      // {
+      //   title: "Danh sách phương tiện",
+      //   href: "/dashboard/admin/vehicles",
+      // },
     ],
   },
   {
@@ -76,11 +75,11 @@ export const adminMenuItems = [
         href: "/dashboard/admin/parts",
       },
       {
-        title: "Inventory",
+        title: "Kho phụ tùng",
         href: "/dashboard/admin/inventory",
       },
       {
-        title: "Issue Types",
+        title: "Loại sự cố",
         href: "/dashboard/admin/issue-types",
       },
     ],
@@ -92,32 +91,6 @@ export const adminMenuItems = [
       {
         title: "Tổng quan doanh thu",
         href: "/dashboard/admin/reports/revenue",
-      },
-      {
-        title: "Thống kê dịch vụ",
-        href: "/dashboard/admin/reports/services",
-      },
-      {
-        title: "Báo cáo khách hàng",
-        href: "/dashboard/admin/reports/customers",
-      },
-    ],
-  },
-  {
-    title: "Quản lý tài chính",
-    icon: CreditCard,
-    items: [
-      {
-        title: "Thanh toán",
-        href: "/dashboard/admin/payments",
-      },
-      {
-        title: "Hóa đơn",
-        href: "/dashboard/admin/invoices",
-      },
-      {
-        title: "Báo cáo tài chính",
-        href: "/dashboard/admin/financial-reports",
       },
     ],
   },

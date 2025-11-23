@@ -21,12 +21,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.png";
 
 const items: Array<{ title: string; icon: LucideIcon; href: string }> = [
-  { title: "Tổng quan", icon: ClipboardList, href: "/dashboard/staff" },
-  {
-    title: "Quản lý khách hàng",
-    icon: Users,
-    href: "/dashboard/staff/customers",
-  },
+  // { title: "Tổng quan", icon: ClipboardList, href: "/dashboard/staff" },
   {
     title: "Quản lý lịch hẹn",
     icon: Calendar,
@@ -36,11 +31,6 @@ const items: Array<{ title: string; icon: LucideIcon; href: string }> = [
     title: "Điều phối KTV",
     icon: Wrench,
     href: "/dashboard/staff/maintenance",
-  },
-  {
-    title: "Hàng chờ",
-    icon: Clock,
-    href: "/dashboard/staff/queue",
   },
   {
     title: "Chat",
