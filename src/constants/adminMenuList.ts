@@ -72,6 +72,10 @@ export const adminMenuItems = [
         title: "Tổng quan lịch hẹn",
         href: "/dashboard/admin/appointments/overview",
       },
+      {
+        title: "Quản lý lịch làm việc",
+        href: "/dashboard/admin/technician-schedules",
+      },
     ],
   },
   {
