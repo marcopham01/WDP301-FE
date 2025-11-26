@@ -62,8 +62,12 @@ export const adminMenuItems = [
     icon: Calendar,
     items: [
       {
-        title: "Tổng quan lịch hẹn",
+        title: "Thống kê lịch hẹn",
         href: "/dashboard/admin/appointments",
+      },
+      {
+        title: "Tổng quan lịch hẹn",
+        href: "/dashboard/admin/appointments/overview",
       },
     ],
   },

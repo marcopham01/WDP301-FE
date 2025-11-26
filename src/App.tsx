@@ -34,6 +34,7 @@ import InventoryManagement from "./pages/dashboard/admin/InventoryManagement";
 import IssueTypeManagement from "./pages/dashboard/admin/IssueTypeManagement";
 import CustomerManagement from "./pages/dashboard/admin/CustomerManagement";
 import AdminAppointmentManagement from "./pages/dashboard/admin/AppointmentManagement";
+import AppointmentOverview from "./pages/dashboard/admin/AppointmentOverview";
 import RevenueManagement from "./pages/dashboard/admin/RevenueManagement";
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 import { TechnicianOverview } from "./pages/dashboard/tech/TechnicianOverview";
@@ -95,6 +96,7 @@ const AppRoutes = () => {
         <Route path="inventory" element={<InventoryManagement />} />
         <Route path="issue-types" element={<IssueTypeManagement />} />
         <Route path="appointments" element={<AdminAppointmentManagement />} />
+        <Route path="appointments/overview" element={<AppointmentOverview />} />
         <Route path="reports/revenue" element={<RevenueManagement />} />
         <Route
           path="/dashboard/admin/service-center/:centerId/working-hours"

@@ -256,7 +256,7 @@ const AppointmentManagement = () => {
             onClick={() => navigate("/dashboard/admin")}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
           </Button>
-          <h1 className="text-2xl font-bold">Tổng quan lịch hẹn</h1>
+          <h1 className="text-2xl font-bold">Thống kê lịch hẹn</h1>
         </div>
       </div>
 
