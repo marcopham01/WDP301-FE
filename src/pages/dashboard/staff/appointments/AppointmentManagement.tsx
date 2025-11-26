@@ -313,6 +313,7 @@ export default function AppointmentManagement() {
                 <TableHead>Khách Hàng</TableHead>
                 <TableHead>Phương Tiện</TableHead>
                 <TableHead>Dịch Vụ</TableHead>
+                <TableHead>Trung Tâm</TableHead>
                 <TableHead>Ngày Hẹn</TableHead>
                 <TableHead>Ngày Tạo</TableHead>
                 <TableHead>Trạng Thái</TableHead>
@@ -323,7 +324,7 @@ export default function AppointmentManagement() {
               {loading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center text-muted-foreground py-8">
                     Đang tải dữ liệu...
                   </TableCell>
@@ -331,7 +332,7 @@ export default function AppointmentManagement() {
               ) : error ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center text-red-500 py-8">
                     {error}
                     <Button
@@ -346,7 +347,7 @@ export default function AppointmentManagement() {
               ) : !bookings || bookings.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center text-muted-foreground py-8">
                     Không có lịch hẹn nào
                   </TableCell>
@@ -380,6 +381,16 @@ export default function AppointmentManagement() {
                         booking.center_id?.name ||
                         booking.center_id?.center_name ||
                         "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">
+                          {booking.center_id?.center_name || booking.center_id?.name || "N/A"}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {booking.center_id?.address || "-"}
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div>

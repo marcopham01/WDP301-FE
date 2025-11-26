@@ -74,6 +74,10 @@ const ServiceCenterManagement = () => {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [isActive, setIsActive] = useState(true);
+  // Staff selection (one staff per center)
+  const [staffList, setStaffList] = useState<{ _id: string; fullName: string; email: string }[]>([]);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>("");
+  const [loadingStaff, setLoadingStaff] = useState(false);
 
   // ✨ Technician Management States
   const [isTechnicianDialogOpen, setIsTechnicianDialogOpen] = useState(false);
@@ -117,10 +121,15 @@ const ServiceCenterManagement = () => {
     setPhone("");
     setEmail("");
     setIsActive(true);
+    setSelectedStaffId("");
   };
 
   const handleOpenCreateDialog = () => {
     resetForm();
+    // Load staff list lazily on open if empty
+    if (staffList.length === 0) {
+      loadStaffUsers();
+    }
     setIsCreateDialogOpen(true);
   };
 
@@ -131,6 +140,18 @@ const ServiceCenterManagement = () => {
     setPhone(serviceCenter.phone || "");
     setEmail(serviceCenter.email || "");
     setIsActive(serviceCenter.is_active !== false);
+    // Preselect current staff (user_id) if present
+    const scUser: any = (serviceCenter as any).user_id;
+    if (scUser && typeof scUser === 'object') {
+      setSelectedStaffId(scUser._id || "");
+    } else if (typeof scUser === 'string') {
+      setSelectedStaffId(scUser);
+    } else {
+      setSelectedStaffId("");
+    }
+    if (staffList.length === 0) {
+      loadStaffUsers();
+    }
     setIsEditDialogOpen(true);
   };
 
@@ -144,6 +165,10 @@ const ServiceCenterManagement = () => {
       toast.error("Vui lòng nhập tên trung tâm dịch vụ");
       return;
     }
+    if (!selectedStaffId) {
+      toast.error("Vui lòng chọn nhân viên (staff) phụ trách trung tâm");
+      return;
+    }
 
     const payload: CreateServiceCenterPayload = {
       center_name: centerName.trim(),
@@ -151,6 +176,7 @@ const ServiceCenterManagement = () => {
       phone: phone.trim() || undefined,
       email: email.trim() || undefined,
       is_active: isActive,
+      user_id: selectedStaffId,
     };
 
     try {
@@ -176,6 +202,10 @@ const ServiceCenterManagement = () => {
       toast.error("Vui lòng nhập tên trung tâm dịch vụ");
       return;
     }
+    if (!selectedStaffId) {
+      toast.error("Vui lòng chọn nhân viên (staff) phụ trách trung tâm");
+      return;
+    }
 
     const payload: UpdateServiceCenterPayload = {
       center_name: centerName.trim(),
@@ -183,6 +213,7 @@ const ServiceCenterManagement = () => {
       phone: phone.trim() || undefined,
       email: email.trim() || undefined,
       is_active: isActive,
+      user_id: selectedStaffId,
     };
 
     try {
@@ -291,6 +322,45 @@ const ServiceCenterManagement = () => {
     } catch (error) {
       console.error("Error loadAllUsers:", error);
       toast.error("Không thể tải danh sách người dùng");
+    }
+  };
+
+  // Load staff users (role = staff)
+  const loadStaffUsers = async () => {
+    setLoadingStaff(true);
+    try {
+      const pageSize = 50;
+      let page = 1;
+      const acc: UserProfileItem[] = [];
+      while (true) {
+        const res = await getAllProfilesApi({ page, limit: pageSize, role: 'staff' });
+        if (!res.ok) {
+          toast.error(res.message || 'Không thể tải danh sách staff');
+          break;
+        }
+        type Paged = { items?: UserProfileItem[]; users?: UserProfileItem[]; pagination?: { total_pages?: number; current_page?: number } };
+        const raw = res.data as { success?: boolean; data?: Paged } | null | undefined;
+        const container: Paged | undefined = raw?.data ?? (raw as unknown as Paged);
+        const items = (container?.items ?? container?.users ?? (Array.isArray(container) ? (container as unknown as UserProfileItem[]) : undefined)) as UserProfileItem[] | undefined;
+        const pagination = container?.pagination as { total_pages?: number; current_page?: number } | undefined;
+        if (Array.isArray(items)) acc.push(...items);
+        const totalPages = pagination?.total_pages ?? 1;
+        const currentPage = pagination?.current_page ?? page;
+        if (currentPage >= totalPages) break;
+        page += 1;
+        if (page > 20) break;
+      }
+      const staffOnly = acc.filter(u => (u.role || '').toLowerCase() === 'staff');
+      const mapped = staffOnly.map(u => ({ _id: u._id, fullName: u.fullName, email: u.email }));
+      setStaffList(mapped);
+      if (mapped.length === 0) {
+        toast.info("Không tìm thấy user có role 'staff'");
+      }
+    } catch (e) {
+      console.error('Error loadStaffUsers:', e);
+      toast.error('Không thể tải danh sách staff');
+    } finally {
+      setLoadingStaff(false);
     }
   };
 
@@ -407,15 +477,14 @@ const ServiceCenterManagement = () => {
                   <TableHead>Tên trung tâm</TableHead>
                   <TableHead>Địa chỉ</TableHead>
                   <TableHead>Số điện thoại</TableHead>
-                  <TableHead>Email</TableHead>
                   <TableHead>Trạng thái</TableHead>
-                  <TableHead className="text-right">Thao tác</TableHead>
+                  <TableHead className="text-center">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {serviceCenters.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={5} className="text-center">
                       Không có trung tâm dịch vụ nào
                     </TableCell>
                   </TableRow>
@@ -427,7 +496,6 @@ const ServiceCenterManagement = () => {
                       </TableCell>
                       <TableCell>{center.address || "-"}</TableCell>
                       <TableCell>{center.phone || "-"}</TableCell>
-                      <TableCell>{center.email || "-"}</TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
@@ -440,7 +508,8 @@ const ServiceCenterManagement = () => {
                             : "Không hoạt động"}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -470,6 +539,7 @@ const ServiceCenterManagement = () => {
                           title="Xóa">
                           <Trash2 className="h-4 w-4" />
                         </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -515,14 +585,23 @@ const ServiceCenterManagement = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Nhập email"
-              />
+              <Label>Nhân viên phụ trách *</Label>
+              <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingStaff ? 'Đang tải...' : '-- Chọn staff --'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {loadingStaff ? (
+                    <div className="p-2 text-center text-sm text-muted-foreground">Đang tải...</div>
+                  ) : staffList.length === 0 ? (
+                    <div className="p-2 text-center text-sm text-muted-foreground">Không có staff</div>
+                  ) : (
+                    staffList.map(s => (
+                      <SelectItem key={s._id} value={s._id}>{s.fullName} - {s.email}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center space-x-2">
               <input
@@ -579,14 +658,23 @@ const ServiceCenterManagement = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="editEmail">Email</Label>
-              <Input
-                id="editEmail"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Nhập email"
-              />
+              <Label>Nhân viên phụ trách *</Label>
+              <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingStaff ? 'Đang tải...' : '-- Chọn staff --'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {loadingStaff ? (
+                    <div className="p-2 text-center text-sm text-muted-foreground">Đang tải...</div>
+                  ) : staffList.length === 0 ? (
+                    <div className="p-2 text-center text-sm text-muted-foreground">Không có staff</div>
+                  ) : (
+                    staffList.map(s => (
+                      <SelectItem key={s._id} value={s._id}>{s.fullName} - {s.email}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center space-x-2">
               <input

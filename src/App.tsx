@@ -47,7 +47,6 @@ import PaymentCancelPage from "./pages/PaymentCancelPage";
 import AppointmentManagement from "./pages/dashboard/staff/appointments/AppointmentManagement";
 import AppointmentDetail from "./pages/dashboard/staff/appointments/AppointmentDetail";
 import CustomersPage from "./pages/dashboard/staff/customers/CustomersPage";
-import TechnicianSchedulePage from "./pages/dashboard/staff/TechnicianSchedulePage";
 import QueuePage from "./pages/dashboard/staff/QueuePage";
 import StaffChatPage from "./pages/dashboard/staff/StaffChatPage";
 import SocketTestPage from "./pages/customer/SocketTestPage";

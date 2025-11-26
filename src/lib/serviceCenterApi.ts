@@ -49,6 +49,7 @@ export interface ServiceCenter {
   email?: string;
   is_active?: boolean;
   working_hours?: WorkingHour[];
+  user_id?: string | { _id: string; fullName?: string; email?: string }; // staff (single)
 }
 
 export interface CreateServiceCenterPayload {
@@ -58,6 +59,7 @@ export interface CreateServiceCenterPayload {
   email?: string;
   is_active?: boolean;
   working_hours?: WorkingHour[];
+  user_id?: string; // staff id
 }
 
 export interface UpdateServiceCenterPayload {
@@ -66,6 +68,7 @@ export interface UpdateServiceCenterPayload {
   phone?: string;
   email?: string;
   is_active?: boolean;
+  user_id?: string; // staff id
 }
 
 export interface CreateSchedulePayload {
