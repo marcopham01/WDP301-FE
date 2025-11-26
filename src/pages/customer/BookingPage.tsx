@@ -50,15 +50,11 @@ import { getAllServicesApi, ServiceType } from "@/lib/serviceApi";
 import {
   getServiceCentersApi,
   ServiceCenter,
-  getTechniciansApi,
-  Technician,
 } from "@/lib/serviceCenterApi";
 import { getProfileApi } from "@/lib/authApi";
 import {
   createAppointmentApi,
   getAppointmentByIdApi,
-  getTechnicianScheduleApi,
-  TechnicianScheduleResponse,
 } from "@/lib/appointmentApi";
 import { createPaymentLinkApi } from "@/lib/paymentApi";
 import { PaymentDialog } from "@/components/customer/PaymentDialog";
@@ -105,20 +101,12 @@ export default function BookingPage() {
   } | null>(null);
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [vehicleModels, setVehicleModels] = useState<VehicleModel[]>([]);
-  const [centerTechnicians, setCenterTechnicians] = useState<Technician[]>([]);
   const [assignedTechnician, setAssignedTechnician] = useState<{
     fullName?: string;
     phone?: string;
     email?: string;
   } | null>(null);
   const [purchaseDate, setPurchaseDate] = useState<Date | undefined>(undefined);
-  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string>(""); // user_id of technician; "" means auto
-  const [techScheduleBusyTimes, setTechScheduleBusyTimes] = useState<
-    Set<string>
-  >(new Set());
-  const [techDayBookedCount, setTechDayBookedCount] = useState<number>(0);
-  const [loadingTechSchedule, setLoadingTechSchedule] =
-    useState<boolean>(false);
   // Times the current user already booked at this center/date
   const [userBusyTimes, setUserBusyTimes] = useState<Set<string>>(new Set());
 
@@ -183,28 +171,7 @@ export default function BookingPage() {
     load();
   }, []);
 
-  // Load technicians for the optional selector in step 4
-  useEffect(() => {
-    const loadTechs = async () => {
-      if (!selectedCenter) {
-        setCenterTechnicians([]);
-        setSelectedTechnicianId("");
-        return;
-      }
-      try {
-        const res = await getTechniciansApi(selectedCenter);
-        if (res.ok && res.data?.data) {
-          setCenterTechnicians(res.data.data);
-        } else {
-          setCenterTechnicians([]);
-        }
-      } catch (e) {
-        console.error("loadTechnicians error", e);
-        setCenterTechnicians([]);
-      }
-    };
-    loadTechs();
-  }, [selectedCenter]);
+
 
   // Load available time slots from backend when center and date are selected
   useEffect(() => {
@@ -297,108 +264,7 @@ export default function BookingPage() {
     load();
   }, [currentUser?.id, selectedCenter, bookingDate]);
 
-  // Load technician availability for the selected date when a technician is chosen
-  useEffect(() => {
-    const fetchTechSchedule = async () => {
-      if (!selectedTechnicianId || !bookingDate) {
-        setTechScheduleBusyTimes(new Set());
-        setTechDayBookedCount(0);
-        return;
-      }
-      setLoadingTechSchedule(true);
-      try {
-        const dayStr = format(bookingDate, "yyyy-MM-dd");
-        const res = await getTechnicianScheduleApi({
-          technician_id: selectedTechnicianId,
-          date_from: dayStr,
-          date_to: dayStr,
-        });
-        if (res.ok && res.data && res.data.data) {
-          const dataUnion = res.data.data as
-            | TechnicianScheduleResponse
-            | { items: unknown[] };
-          if (!("technician" in dataUnion)) {
-            // Unexpected shape for this call with technician_id; reset
-            setTechScheduleBusyTimes(new Set());
-            setTechDayBookedCount(0);
-            setLoadingTechSchedule(false);
-            return;
-          }
-          const payload = dataUnion as TechnicianScheduleResponse;
-          const schedules = payload.schedules || [];
-          // Build a set of busy time slots considering estimated durations
-          const busy = new Set<string>();
-          // Active statuses that block the slot
-          const blockStatuses = new Set([
-            "pending",
-            "assigned",
-            "check_in",
-            "in_progress",
-          ]);
-          // Determine service duration (minutes) from selected service or fallback 60
-          const serviceDurationMin = Number(
-            (selectedServiceType &&
-              serviceTypes.find((s) => s._id === selectedServiceType)
-                ?.estimated_duration) ||
-              60
-          );
 
-          // Helper to convert HH:mm to minutes since 00:00
-          const toMin = (t: string) => {
-            const [h, m] = t.split(":").map(Number);
-            return h * 60 + m;
-          };
-
-          // For each existing appointment on that day, mark overlapping start times as busy
-          schedules
-            .filter(
-              (s) =>
-                s.appoinment_date?.startsWith(dayStr) &&
-                blockStatuses.has(s.status)
-            )
-            .forEach((s) => {
-              const existStart = toMin(s.appoinment_time);
-              const existEnd =
-                s.estimated_end_time &&
-                /^\d{2}:\d{2}$/.test(s.estimated_end_time)
-                  ? toMin(s.estimated_end_time)
-                  : existStart +
-                    Number(s.service_type_id?.estimated_duration ?? 60);
-
-              availableTimeSlots.forEach((slot) => {
-                const slotStart = toMin(slot);
-                const slotEnd = slotStart + serviceDurationMin;
-                const overlap =
-                  (slotStart >= existStart && slotStart < existEnd) ||
-                  (slotEnd > existStart && slotEnd <= existEnd) ||
-                  (slotStart <= existStart && slotEnd >= existEnd);
-                if (overlap) busy.add(slot);
-              });
-            });
-
-          setTechScheduleBusyTimes(busy);
-          setTechDayBookedCount(
-            schedules.filter(
-              (s) =>
-                s.appoinment_date?.startsWith(dayStr) &&
-                blockStatuses.has(s.status)
-            ).length
-          );
-        } else {
-          setTechScheduleBusyTimes(new Set());
-          setTechDayBookedCount(0);
-        }
-      } catch (e) {
-        console.error("getTechnicianScheduleApi error", e);
-        setTechScheduleBusyTimes(new Set());
-        setTechDayBookedCount(0);
-      } finally {
-        setLoadingTechSchedule(false);
-      }
-    };
-    fetchTechSchedule();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTechnicianId, bookingDate, selectedServiceType, availableTimeSlots]);
 
   const handleSubmit = async () => {
     if (
@@ -429,9 +295,6 @@ export default function BookingPage() {
         vehicle_id: selectedVehicle,
         center_id: selectedCenter,
         service_type_id: selectedServiceType,
-        ...(selectedTechnicianId
-          ? { technician_id: selectedTechnicianId }
-          : {}),
       };
 
       const res = await createAppointmentApi(payload);
@@ -1455,44 +1318,6 @@ export default function BookingPage() {
                 <div className="grid md:grid-cols-2 gap-8">
                   {/* Left: Date and Notes */}
                   <div className="space-y-5">
-                    {/* Technician selection (optional) */}
-                    <div>
-                      <Label className="text-sm font-medium mb-3 block">
-                        Chọn kỹ thuật viên (tùy chọn)
-                      </Label>
-                      <Select
-                        value={selectedTechnicianId || "auto"}
-                        onValueChange={(v) =>
-                          setSelectedTechnicianId(v === "auto" ? "" : v)
-                        }
-                      >
-                        <SelectTrigger className="border-gray-300">
-                          <SelectValue placeholder="Tự động (hệ thống phân công)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="auto">
-                            Tự động (hệ thống phân công)
-                          </SelectItem>
-                          {centerTechnicians
-                            .filter((t) => t.status === "on")
-                            .map((t) => (
-                              <SelectItem key={t._id} value={t.user._id}>
-                                {t.user.fullName}
-                                {t.user.phone ? ` — ${t.user.phone}` : ""}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                      {!selectedTechnicianId ? (
-                        <div className="text-xs text-muted-foreground mt-2 bg-gray-50 p-2.5 rounded leading-relaxed">
-                          💡 Bạn đang để hệ thống tự động phân công KTV. Chọn một KTV cụ thể để xem lịch rảnh/bận chi tiết theo giờ.
-                        </div>
-                      ) : (
-                        <div className="text-xs text-ev-green bg-ev-green/10 rounded p-2.5 mt-2 leading-relaxed">
-                          ✓ Đã chọn KTV cụ thể. Các khung giờ bận sẽ được đánh dấu màu xám và không thể chọn.
-                        </div>
-                      )}
-                    </div>
 
                     <div>
                       <Label className="text-sm font-medium mb-3 block">
@@ -1604,38 +1429,30 @@ export default function BookingPage() {
                                 <div className="space-y-1">
                                   {availableTimeSlots.map((time) => {
                                   const isBusyUser = userBusyTimes.has(time);
-                                  const isBusyTech = selectedTechnicianId
-                                    ? techScheduleBusyTimes.has(time)
-                                    : false;
-                                  const isBusy = isBusyUser || isBusyTech;
                                   return (
                                     <button
                                       key={time}
                                       onClick={() => {
-                                        if (isBusy) {
+                                        if (isBusyUser) {
                                           toast.warn(
-                                            isBusyUser
-                                              ? "⏰ Bạn đã có lịch hẹn trùng thời gian tại trung tâm này."
-                                              : "⏰ Khung giờ này KTV đã có lịch. Vui lòng chọn giờ khác hoặc để hệ thống tự động phân công.",
+                                            "⏰ Bạn đã có lịch hẹn trùng thời gian tại trung tâm này.",
                                             { autoClose: 3000 }
                                           );
                                           return;
                                         }
                                         setBookingTime(time);
                                       }}
-                                      disabled={isBusy}
+                                      disabled={isBusyUser}
                                       title={
-                                        isBusy
-                                          ? isBusyUser
-                                            ? `${time} - Bạn đã có lịch hẹn trùng giờ tại trung tâm này.`
-                                            : `${time} - Khung giờ này KTV đã có lịch hẹn. Không thể chọn.`
+                                        isBusyUser
+                                          ? `${time} - Bạn đã có lịch hẹn trùng giờ tại trung tâm này.`
                                           : `${time} - Click để chọn giờ hẹn.`
                                       }
                                       className={cn(
                                         "w-full text-left px-3 py-2 rounded-md transition-colors",
                                         bookingTime === time
-                                          ? "bg-ev-green text-white font-medium border-2 border-ev-green" // ev-green
-                                          : isBusy
+                                          ? "bg-ev-green text-white font-medium border-2 border-ev-green"
+                                          : isBusyUser
                                           ? "text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
                                           : "text-gray-700 hover:bg-gray-100 hover:border hover:border-gray-300"
                                       )}
@@ -1650,16 +1467,11 @@ export default function BookingPage() {
                                         >
                                           {time}
                                         </span>
-                                        {(selectedTechnicianId || isBusyUser) && (
+                                        {isBusyUser && (
                                           <Badge
-                                            className={cn(
-                                              "text-xs",
-                                              isBusy
-                                                ? "bg-red-100 text-red-700"
-                                                : "bg-ev-green/10 text-ev-green" // ev-green nhạt
-                                            )}
+                                            className="text-xs bg-red-100 text-red-700"
                                           >
-                                            {isBusy ? "🚫 Bận" : "✓ Rảnh"}
+                                            🚫 Đã đặt
                                           </Badge>
                                         )}
                                       </div>
@@ -1679,35 +1491,6 @@ export default function BookingPage() {
                             </div>
                           </PopoverContent>
                         </Popover>
-                        {selectedTechnicianId && bookingDate && (
-                          <div className="mt-3 text-xs">
-                            {loadingTechSchedule ? (
-                              <span className="text-muted-foreground bg-gray-50 p-2.5 rounded block">
-                                ⏳ Đang tải lịch của KTV...
-                              </span>
-                            ) : (
-                              <div className="space-y-2">
-                                <div className="text-muted-foreground bg-gray-50 p-2.5 rounded leading-relaxed">
-                                  📅 Đã đặt trong ngày:{" "}
-                                  <span className="font-medium text-foreground">
-                                    {techDayBookedCount}/4 slot
-                                  </span>{" "}
-                                  (tối đa 4 slot/ngày)
-                                </div>
-                                {techScheduleBusyTimes.size > 0 && (
-                                  <div className="text-amber-700 bg-amber-50 rounded p-2.5 leading-relaxed">
-                                    ⚠️ {techScheduleBusyTimes.size} khung giờ không khả dụng (màu xám)
-                                  </div>
-                                )}
-                                {techDayBookedCount >= 4 && (
-                                  <div className="text-red-700 bg-red-50 rounded p-2.5 font-medium leading-relaxed">
-                                    🚫 KTV đã đủ 4 slot. Vui lòng chọn ngày khác hoặc KTV khác.
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
                     )}
 
@@ -1825,28 +1608,12 @@ export default function BookingPage() {
                           <div className="text-xs text-muted-foreground mb-2">
                             Kỹ thuật viên:
                           </div>
-                          {selectedTechnicianId ? (
-                            <div className="text-sm font-medium">
-                              Đã chọn:{" "}
-                              {centerTechnicians.find(
-                                (t) => t.user._id === selectedTechnicianId
-                              )?.user.fullName || "KTV"}
-                            </div>
-                          ) : (
-                            <div className="text-sm">
-                              <span className="font-medium">Sẽ được tự động phân công</span>
-                              {centerTechnicians.length > 0 && (
-                                <span className="text-muted-foreground block mt-1">
-                                  {
-                                    centerTechnicians.filter(
-                                      (t) => t.status === "on"
-                                    ).length
-                                  }
-                                  /{centerTechnicians.length} đang hoạt động
-                                </span>
-                              )}
-                            </div>
-                          )}
+                          <div className="text-sm">
+                            <span className="font-medium">Sẽ được tự động phân công</span>
+                            <span className="text-muted-foreground block mt-1">
+                              Hệ thống sẽ tự động chọn kỹ thuật viên phù hợp nhất
+                            </span>
+                          </div>
                           {assignedTechnician && (
                             <div className="text-xs text-ev-green mt-2 bg-ev-green/5 p-2 rounded">
                               Dự kiến phụ trách: {assignedTechnician.fullName}
