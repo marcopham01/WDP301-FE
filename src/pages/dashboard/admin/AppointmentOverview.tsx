@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { toast } from "react-toastify";
 import { getAppointmentsApi, Appointment, Pagination } from "@/lib/appointmentApi";
 import { getServiceCentersApi, ServiceCenter } from "@/lib/serviceCenterApi";
@@ -234,6 +234,7 @@ const AppointmentOverview = () => {
                       <th className="text-left p-3">Dịch vụ</th>
                       <th className="text-left p-3">Trạng thái</th>
                       <th className="text-left p-3">Kỹ thuật viên</th>
+                      <th className="text-center p-3">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -302,6 +303,15 @@ const AppointmentOverview = () => {
                              appointment.assigned?.fullName || 
                              "Chưa phân công"}
                           </span>
+                        </td>
+                        <td className="p-3 text-center">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => navigate(`/dashboard/admin/appointments/${appointment._id}`)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </td>
                       </tr>
                     ))}

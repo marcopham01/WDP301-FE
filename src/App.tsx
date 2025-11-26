@@ -33,8 +33,11 @@ import PartManagement from "./pages/dashboard/admin/PartManagement";
 import InventoryManagement from "./pages/dashboard/admin/InventoryManagement";
 import IssueTypeManagement from "./pages/dashboard/admin/IssueTypeManagement";
 import CustomerManagement from "./pages/dashboard/admin/CustomerManagement";
+import StaffManagement from "./pages/dashboard/admin/StaffManagement";
+import TechnicianManagement from "./pages/dashboard/admin/TechnicianManagement";
 import AdminAppointmentManagement from "./pages/dashboard/admin/AppointmentManagement";
 import AppointmentOverview from "./pages/dashboard/admin/AppointmentOverview";
+import AdminAppointmentDetail from "./pages/dashboard/admin/AppointmentDetail";
 import RevenueManagement from "./pages/dashboard/admin/RevenueManagement";
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 import { TechnicianOverview } from "./pages/dashboard/tech/TechnicianOverview";
@@ -91,12 +94,15 @@ const AppRoutes = () => {
         <Route path="services" element={<ServiceManagement />} />
         <Route path="service-centers" element={<ServiceCenterManagement />} />
         <Route path="customers" element={<CustomerManagement />} />
+        <Route path="staff" element={<StaffManagement />} />
+        <Route path="technicians" element={<TechnicianManagement />} />
         <Route path="vehicle-models" element={<VehicleModelManagement />} />
         <Route path="parts" element={<PartManagement />} />
         <Route path="inventory" element={<InventoryManagement />} />
         <Route path="issue-types" element={<IssueTypeManagement />} />
         <Route path="appointments" element={<AdminAppointmentManagement />} />
         <Route path="appointments/overview" element={<AppointmentOverview />} />
+        <Route path="appointments/:id" element={<AdminAppointmentDetail />} />
         <Route path="reports/revenue" element={<RevenueManagement />} />
         <Route
           path="/dashboard/admin/service-center/:centerId/working-hours"

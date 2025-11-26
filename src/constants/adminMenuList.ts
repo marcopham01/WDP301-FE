@@ -36,10 +36,14 @@ export const adminMenuItems = [
         title: "Khách hàng",
         href: "/dashboard/admin/customers",
       },
-      // {
-      //   title: "Kỹ thuật viên",
-      //   href: "/dashboard/admin/technicians",
-      // },
+      {
+        title: "Nhân viên",
+        href: "/dashboard/admin/staff",
+      },
+      {
+        title: "Kỹ thuật viên",
+        href: "/dashboard/admin/technicians",
+      },
     ],
   },
   {

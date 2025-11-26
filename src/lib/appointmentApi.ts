@@ -112,6 +112,7 @@ export type Appointment = {
   estimated_end_time?: string;
   notes?: string;
   estimated_cost?: number;
+  final_cost?: number;
   reason?: string;
   user_id?: { 
     _id?: string; 
@@ -119,6 +120,7 @@ export type Appointment = {
     fullName?: string; 
     email?: string;
     phone?: string;
+    phoneNumber?: string;
   };
   vehicle_id?: { 
     _id?: string; 
@@ -126,6 +128,7 @@ export type Appointment = {
     model?: string; 
     license_plate?: string;
     vin?: string;
+    color?: string;
   };
   center_id?: { 
     _id?: string; 

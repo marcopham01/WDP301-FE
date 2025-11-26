@@ -62,7 +62,6 @@ const CustomerManagement = () => {
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
   // Dialog states
@@ -79,7 +78,7 @@ const CustomerManagement = () => {
   useEffect(() => {
     filterCustomers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, roleFilter, statusFilter, customers]);
+  }, [searchTerm, statusFilter, customers]);
 
   const loadCustomers = async () => {
     setLoading(true);
@@ -158,11 +157,6 @@ const CustomerManagement = () => {
           customer.username?.toLowerCase().includes(term) ||
           customer.phoneNumber?.includes(term)
       );
-    }
-
-    // Role filter
-    if (roleFilter !== "all") {
-      filtered = filtered.filter((customer) => customer.role === roleFilter);
     }
 
     // Status filter
@@ -368,7 +362,7 @@ const CustomerManagement = () => {
           <CardTitle className="text-lg">Bộ lọc và tìm kiếm</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="search" className="flex items-center gap-2">
                 <Search className="h-4 w-4" />
@@ -396,25 +390,6 @@ const CustomerManagement = () => {
                   <SelectItem value="active">Hoạt động</SelectItem>
                   <SelectItem value="inactive">Không hoạt động</SelectItem>
                   <SelectItem value="banned">Bị khóa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="role-filter" className="flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                Vai trò
-              </Label>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger id="role-filter">
-                  <SelectValue placeholder="Tất cả vai trò" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="customer">Khách hàng</SelectItem>
-                  <SelectItem value="staff">Nhân viên</SelectItem>
-                  <SelectItem value="technician">Kỹ thuật viên</SelectItem>
-                  <SelectItem value="admin">Quản trị viên</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -515,12 +490,10 @@ const CustomerManagement = () => {
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={() => handleViewCustomer(customer)}
-                          className="gap-2"
                         >
                           <Eye className="h-4 w-4" />
-                          Xem chi tiết
                         </Button>
                       </TableCell>
                     </TableRow>
