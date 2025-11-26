@@ -398,7 +398,7 @@ const InventoryManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Phụ tùng</TableHead>
-                    <TableHead>Số part</TableHead>
+                    <TableHead>Mã phụ tùng</TableHead>
                     <TableHead>Trung tâm</TableHead>
                     <TableHead>Tồn kho</TableHead>
                     <TableHead>Tồn tối thiểu</TableHead>
