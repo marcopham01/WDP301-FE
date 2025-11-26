@@ -20,10 +20,11 @@ const Index = () => {
 
   const handleLogout = () => {
     logout();
-    toast.success("Đăng xuất thành công!");
     setTimeout(() => {
       navigate("/login");
     }, 1000);
+    toast.success("Đăng xuất thành công!");
+
   };
 
   return (

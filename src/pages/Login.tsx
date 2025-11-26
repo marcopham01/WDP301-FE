@@ -75,7 +75,6 @@ const Login = () => {
             avatar: profileData.user.avatar, // ✅ Thêm avatar
           });
           console.log('✅ [Login - Google] Set user with avatar:', profileData.user.avatar);
-          toast.success("Đăng nhập thành công! Chào mừng bạn quay trở lại.");
           if (userRole === "staff") {
             navigate("/dashboard/staff");
           } else if (userRole === "admin") {
@@ -123,11 +122,9 @@ const Login = () => {
             role: userRole,
             avatar: data.user.avatar, // ✅ Thêm avatar
           });
-          console.log('✅ [Login - Normal] Set user with avatar:', data.user.avatar);
-          toast.success("Đăng nhập thành công! Chào mừng bạn quay trở lại.");
           setTimeout(() => {
             if (userRole === "staff") {
-              navigate("/dashboard/staff");
+              navigate("/dashboard/staff/appointments");
             } else if (userRole === "admin") {
               navigate("/dashboard/admin");
             } else if (userRole === "technician") {
