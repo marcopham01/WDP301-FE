@@ -191,6 +191,7 @@ export type Appointment = {
 // Types cho Technician Schedule
 export interface TechnicianScheduleParams {
   technician_id?: string;
+  center_id?: string;
   date_from: string;
   date_to: string;
   page?: number;
@@ -412,6 +413,7 @@ export async function getTechnicianScheduleApi(
 ): Promise<ApiResult<{ success: boolean; data: TechnicianScheduleListResponse | TechnicianScheduleResponse }>> {
   const query = new URLSearchParams();
   if (params.technician_id) query.set("technician_id", params.technician_id);
+  if (params.center_id) query.set("center_id", params.center_id);
   query.set("date_from", params.date_from);
   query.set("date_to", params.date_to);
   if (params.page) query.set("page", String(params.page));

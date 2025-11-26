@@ -49,6 +49,7 @@ export interface ServiceCenter {
   email?: string;
   is_active?: boolean;
   working_hours?: WorkingHour[];
+  user_id?: string | { _id: string } | any; // ID của staff quản lý trung tâm
 }
 
 export interface CreateServiceCenterPayload {

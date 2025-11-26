@@ -48,6 +48,8 @@ import AppointmentManagement from "./pages/dashboard/staff/appointments/Appointm
 import AppointmentDetail from "./pages/dashboard/staff/appointments/AppointmentDetail";
 import CustomersPage from "./pages/dashboard/staff/customers/CustomersPage";
 import TechnicianSchedulePage from "./pages/dashboard/staff/TechnicianSchedulePage";
+import TechSchedule from "./pages/dashboard/staff/TechSchedule";
+import TechSchedules from "./pages/dashboard/admin/TechSchedules";
 import QueuePage from "./pages/dashboard/staff/QueuePage";
 import StaffChatPage from "./pages/dashboard/staff/StaffChatPage";
 import SocketTestPage from "./pages/customer/SocketTestPage";
@@ -103,6 +105,7 @@ const AppRoutes = () => {
         <Route path="appointments" element={<AdminAppointmentManagement />} />
         <Route path="appointments/overview" element={<AppointmentOverview />} />
         <Route path="appointments/:id" element={<AdminAppointmentDetail />} />
+        <Route path="technician-schedules" element={<TechSchedules />} />
         <Route path="reports/revenue" element={<RevenueManagement />} />
         <Route
           path="/dashboard/admin/service-center/:centerId/working-hours"
@@ -123,6 +126,7 @@ const AppRoutes = () => {
         <Route path="appointments" element={<AppointmentManagement />} />
         <Route path="appointments/:id" element={<AppointmentDetail />} />
         <Route path="customers" element={<CustomersPage />} />
+        <Route path="technician-schedules" element={<TechSchedule />} />
         <Route path="queue" element={<QueuePage />} />
         <Route path="chat" element={<StaffChatPage />} />
         <Route path="maintenance" element={<ChecklistManagement />} />

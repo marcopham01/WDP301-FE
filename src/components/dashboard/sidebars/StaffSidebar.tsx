@@ -28,6 +28,11 @@ const items: Array<{ title: string; icon: LucideIcon; href: string }> = [
     href: "/dashboard/staff/appointments",
   },
   {
+    title: "Quản lý lịch làm việc",
+    icon: Calendar,
+    href: "/dashboard/staff/technician-schedules",
+  },
+  {
     title: "Điều phối KTV",
     icon: Wrench,
     href: "/dashboard/staff/maintenance",
