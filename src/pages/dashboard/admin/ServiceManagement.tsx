@@ -261,7 +261,6 @@ const ServiceManagement = () => {
                 <TableRow>
                   <TableHead>Tên dịch vụ</TableHead>
                   <TableHead>Mô tả</TableHead>
-                  <TableHead>Giá cơ bản</TableHead>
                   <TableHead>Thời gian ước tính</TableHead>
                   <TableHead>Trạng thái</TableHead>
                   <TableHead className="text-right">Thao tác</TableHead>
@@ -281,12 +280,8 @@ const ServiceManagement = () => {
                         {service.service_name}
                       </TableCell>
                       <TableCell>{service.description || "-"}</TableCell>
-                      <TableCell>
-                        {service.base_price
-                          ? `${service.base_price.toLocaleString("vi-VN")} VNĐ`
-                          : "-"}
-                      </TableCell>
-                      <TableCell>{service.estimated_duration || "-"}</TableCell>
+                      
+                      <TableCell>{service.estimated_duration +" giờ" || "-"}</TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${

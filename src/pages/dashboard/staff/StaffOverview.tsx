@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { CalendarDays, Car, Users, Wrench } from "lucide-react";
+import { CalendarDays, Bike, Users, Wrench } from "lucide-react";
+import { toast } from "react-toastify";
 import {
   Card,
   CardContent,
@@ -97,7 +98,7 @@ export default function StaffOverview() {
     // API appointment chưa sẵn sàng
     // const res = await updateAppointmentStatusApi({ appointment_id: id, status });
     // if (res.ok) load();
-    alert("Chức năng quản lý lịch hẹn đang được phát triển");
+    toast.info("Chức năng quản lý lịch hẹn đang được phát triển");
   };
 
   return (
@@ -151,7 +152,7 @@ export default function StaffOverview() {
           onClick={() => navigate("/dashboard/staff/vehicles")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Phương Tiện</CardTitle>
-            <Car className="h-4 w-4 text-muted-foreground" />
+            <Bike className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalVehicles}</div>

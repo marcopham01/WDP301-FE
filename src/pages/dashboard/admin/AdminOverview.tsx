@@ -3,15 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Users,
-  Car,
-  Calendar,
-  Clock,
-  DollarSign,
-  Activity,
-  FileText,
-} from "lucide-react";
+import { Users, Bike, Calendar, DollarSign, Activity } from "lucide-react";
 import {
   getDashboardOverviewApi,
   getTopTechniciansAppointmentsApi,
@@ -19,6 +11,8 @@ import {
   TechnicianAppointment,
   TechnicianRevenue,
 } from "@/lib/dashboardApi";
+import { getAllProfilesApi } from "@/lib/authApi";
+import { format } from "date-fns";
 import { toast } from "react-toastify";
 
 const AdminOverview = () => {
@@ -29,6 +23,7 @@ const AdminOverview = () => {
     TechnicianAppointment[]
   >([]);
   const [topRevenue, setTopRevenue] = useState<TechnicianRevenue[]>([]);
+  const [totalCustomers, setTotalCustomers] = useState<number>(0);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -45,10 +40,74 @@ const AdminOverview = () => {
         setTopAppointments(appointmentsRes.data.data.technicians || []);
       }
 
-      // Load top technicians by revenue
-      const revenueRes = await getTopTechniciansRevenueApi();
+      // Load top technicians by revenue - filter theo năm hiện tại (từ 01/01 đến 31/12)
+      const now = new Date();
+      const firstDayOfYear = new Date(now.getFullYear(), 0, 1); // Tháng 0 = tháng 1 (January)
+      const lastDayOfYear = new Date(now.getFullYear(), 11, 31); // Tháng 11 = tháng 12 (December)
+      const revenueParams = {
+        date_from: format(firstDayOfYear, "yyyy-MM-dd"),
+        date_to: format(lastDayOfYear, "yyyy-MM-dd"),
+      };
+      const revenueRes = await getTopTechniciansRevenueApi(revenueParams);
       if (revenueRes.ok && revenueRes.data?.data) {
         setTopRevenue(revenueRes.data.data.technicians || []);
+      }
+
+      // Load total customers count
+      try {
+        const pageSize = 50;
+        let page = 1;
+        let totalCount = 0;
+
+        while (true) {
+          const customersRes = await getAllProfilesApi({
+            page,
+            limit: pageSize,
+            role: "customer",
+          });
+
+          if (!customersRes.ok) break;
+
+          // Handle nested response structure
+          type Paged = {
+            items?: any[];
+            users?: any[];
+            pagination?: { total_pages?: number; current_page?: number };
+          };
+          const raw = customersRes.data as
+            | { success?: boolean; data?: Paged }
+            | null
+            | undefined;
+          const container: Paged | undefined =
+            raw?.data ?? (raw as unknown as Paged);
+          const items = (container?.items ??
+            container?.users ??
+            (Array.isArray(container)
+              ? (container as unknown as any[])
+              : undefined)) as any[] | undefined;
+          const pagination = container?.pagination as
+            | { total_pages?: number; current_page?: number }
+            | undefined;
+
+          if (Array.isArray(items)) {
+            // Filter customers only
+            const customersOnly = items.filter(
+              (u) => (u.role || "").toLowerCase() === "customer"
+            );
+            totalCount += customersOnly.length;
+          }
+
+          const totalPages = pagination?.total_pages ?? 1;
+          const currentPage = pagination?.current_page ?? page;
+          if (currentPage >= totalPages) break;
+          page += 1;
+          if (page > 20) break; // safety cap
+        }
+
+        setTotalCustomers(totalCount);
+      } catch (e) {
+        console.error("Error loading customers count:", e);
+        // Không hiển thị error toast vì đây là thông tin phụ
       }
     } catch (e) {
       console.error(e);
@@ -80,7 +139,7 @@ const AdminOverview = () => {
     ? [
         {
           title: "Tổng khách hàng",
-          value: "2,847 đang là số giả nha", // TODO: Cần API riêng cho số khách hàng
+          value: formatNumber(totalCustomers),
           change: "+12%",
           changeType: "increase" as const,
           icon: Users,
@@ -93,7 +152,7 @@ const AdminOverview = () => {
           ),
           change: "-5%",
           changeType: "decrease" as const,
-          icon: Car,
+          icon: Bike,
           color: "bg-warning",
         },
         {

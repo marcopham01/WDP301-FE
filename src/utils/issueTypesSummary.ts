@@ -1,7 +1,7 @@
 /**
- * QUICK REFERENCE - Issue Types Data Mẫu
+ * QUICK REFERENCE - Kho phụ tùng Data Mẫu
  * 
- * Tổng số: 30+ issue types
+ * Tổng số: 30+ Kho phụ tùng
  * 
  * Cách thêm nhanh:
  * 1. Vào /dashboard/admin/issue-types

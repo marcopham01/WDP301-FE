@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -11,7 +10,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, DollarSign, TrendingUp } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, DollarSign, TrendingUp, CalendarIcon } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -45,8 +53,8 @@ const RevenueManagement = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardOverviewData | null>(null);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [centerId, setCenterId] = useState("all");
   const [serviceCenters, setServiceCenters] = useState<ServiceCenter[]>([]);
 
@@ -81,8 +89,8 @@ const RevenueManagement = () => {
         date_to?: string;
         center_id?: string;
       } = {};
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
+      if (dateFrom) params.date_from = format(dateFrom, "yyyy-MM-dd");
+      if (dateTo) params.date_to = format(dateTo, "yyyy-MM-dd");
       if (centerId && centerId !== "all") params.center_id = centerId;
 
       const res = await getDashboardOverviewApi(params);
@@ -97,8 +105,7 @@ const RevenueManagement = () => {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [dateFrom, dateTo, centerId]);
 
   useEffect(() => {
     loadServiceCenters();
@@ -115,12 +122,9 @@ const RevenueManagement = () => {
   };
 
   const handleReset = () => {
-    setDateFrom("");
-    setDateTo("");
+    setDateFrom(undefined);
+    setDateTo(undefined);
     setCenterId("all");
-    setTimeout(() => {
-      loadData();
-    }, 100);
   };
 
   // Format số tiền
@@ -222,7 +226,11 @@ const RevenueManagement = () => {
           <p className="font-medium">{payload[0].name}</p>
           <p className="text-sm text-muted-foreground">
             {payload[0].value}{" "}
-            {payload[0].dataKey === "rate" ? "%" : "giao dịch"}
+            {payload[0].dataKey === "rate"
+              ? "%"
+              : payload[0].dataKey === "count"
+              ? "giao dịch"
+              : "giao dịch"}
           </p>
         </div>
       );
@@ -255,21 +263,58 @@ const RevenueManagement = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="dateFrom">Từ ngày</Label>
-              <Input
-                id="dateFrom"
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="dateFrom"
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal border-gray-300",
+                      !dateFrom && "text-muted-foreground"
+                    )}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFrom
+                      ? format(dateFrom, "PPP", { locale: vi })
+                      : "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-white border border-gray-200 rounded-lg shadow-lg">
+                  <Calendar
+                    mode="single"
+                    selected={dateFrom}
+                    onSelect={setDateFrom}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label htmlFor="dateTo">Đến ngày</Label>
-              <Input
-                id="dateTo"
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="dateTo"
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal border-gray-300",
+                      !dateTo && "text-muted-foreground"
+                    )}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateTo
+                      ? format(dateTo, "PPP", { locale: vi })
+                      : "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-white border border-gray-200 rounded-lg shadow-lg">
+                  <Calendar
+                    mode="single"
+                    selected={dateTo}
+                    onSelect={setDateTo}
+                    disabled={(date) => (dateFrom ? date < dateFrom : false)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label htmlFor="centerId">Trung tâm dịch vụ</Label>
@@ -326,10 +371,10 @@ const RevenueManagement = () => {
                   <TrendingUp className="h-5 w-5 text-success" />
                 </div>
                 <p className="text-sm text-muted-foreground mb-1">
-                  Tổng giao dịch
+                  Tất cả các giao dịch
                 </p>
                 <p className="text-3xl font-bold text-success">
-                  {data.revenue.totalTransactions}
+                  {data.paymentRate.total}
                 </p>
               </CardContent>
             </Card>
@@ -353,7 +398,7 @@ const RevenueManagement = () => {
             {/* Payment Status Pie Chart */}
             <Card className="bg-gradient-card border-0 shadow-soft">
               <CardHeader>
-                <CardTitle>Phân bố trạng thái thanh toán</CardTitle>
+                <CardTitle>Phân bố tỷ lệ thanh toán</CardTitle>
               </CardHeader>
               <CardContent>
                 {paymentPieData.length > 0 ? (
@@ -395,7 +440,7 @@ const RevenueManagement = () => {
             {/* Payment Rates Bar Chart */}
             <Card className="bg-gradient-card border-0 shadow-soft">
               <CardHeader>
-                <CardTitle>Tỷ lệ trạng thái thanh toán (%)</CardTitle>
+                <CardTitle>Số lượng đơn thanh toán</CardTitle>
               </CardHeader>
               <CardContent>
                 {paymentBarData.length > 0 ? (
@@ -415,7 +460,7 @@ const RevenueManagement = () => {
                       <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} />
                       <Tooltip content={<CustomTooltip />} />
                       <Bar
-                        dataKey="rate"
+                        dataKey="count"
                         fill="hsl(var(--primary))"
                         radius={[8, 8, 0, 0]}>
                         {paymentBarData.map((entry, index) => {

@@ -238,7 +238,7 @@ const PartManagement = () => {
               <div className="flex gap-2">
                 <Input
                   id="search"
-                  placeholder="Theo tên, số part, mô tả..."
+                  placeholder="Theo tên, Mã phụ tùng, mô tả..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -274,12 +274,11 @@ const PartManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Số part</TableHead>
+                    <TableHead>Mã phụ tùng</TableHead>
                     <TableHead>Tên</TableHead>
                     <TableHead>Mô tả</TableHead>
                     <TableHead>Nhà cung cấp</TableHead>
                     <TableHead>Bảo hành (tháng)</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -300,7 +299,6 @@ const PartManagement = () => {
                         </TableCell>
                         <TableCell>{it.supplier || "-"}</TableCell>
                         <TableCell>{typeof it.warranty_month === "number" ? it.warranty_month : "-"}</TableCell>
-                        <TableCell>{it.createdAt ? new Date(it.createdAt).toLocaleString("vi-VN") : "-"}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(it)}>
                             <Pencil className="h-4 w-4" />
@@ -358,8 +356,8 @@ const PartManagement = () => {
               <Input id="partName" value={partName} onChange={(e) => setPartName(e.target.value)} placeholder="Nhập tên phụ tùng" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="partNumber">Số part</Label>
-              <Input id="partNumber" value={partNumber} onChange={(e) => setPartNumber(e.target.value)} placeholder="Nhập số part" />
+              <Label htmlFor="partNumber">Mã phụ tùng</Label>
+              <Input id="partNumber" value={partNumber} onChange={(e) => setPartNumber(e.target.value)} placeholder="Nhập Mã phụ tùng" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="supplier">Nhà cung cấp</Label>
@@ -395,7 +393,7 @@ const PartManagement = () => {
               <Input id="editPartName" value={partName} onChange={(e) => setPartName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="editPartNumber">Số part</Label>
+              <Label htmlFor="editPartNumber">Mã phụ tùng</Label>
               <Input id="editPartNumber" value={partNumber} onChange={(e) => setPartNumber(e.target.value)} />
             </div>
             <div className="space-y-2">

@@ -28,12 +28,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarDays } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   getAppointmentsApi,
   updateAppointmentStatusApi,
   type Appointment,
 } from "@/lib/appointmentApi";
 import { Eye, X } from "lucide-react";
+import { toast } from "react-toastify";
 
 // Sử dụng type Appointment từ API thay vì định nghĩa lại
 type AppointmentItem = Appointment;
@@ -63,8 +72,6 @@ export default function AppointmentManagement() {
         return { text: "Đã check-in", variant: "outline" as const };
       case "in_progress":
         return { text: "Đang sửa chữa", variant: "default" as const };
-      case "repaired":
-        return { text: "Đã sửa xong", variant: "default" as const };
       case "completed":
         return { text: "Hoàn thành", variant: "default" as const };
       case "delay":
@@ -140,10 +147,10 @@ export default function AppointmentManagement() {
         // Reload danh sách sau khi cập nhật thành công
         await loadAppointments();
       } else {
-        alert(result.message || "Không thể cập nhật trạng thái");
+        toast.error(result.message || "Không thể cập nhật trạng thái");
       }
     } catch (err) {
-      alert("Có lỗi xảy ra khi cập nhật trạng thái");
+      toast.error("Có lỗi xảy ra khi cập nhật trạng thái");
       console.error("Error updating appointment status:", err);
     }
   };
@@ -178,13 +185,7 @@ export default function AppointmentManagement() {
             Tổng: {pagination.totalDocs} lịch hẹn
           </p>
         </div>
-        <Button 
-          onClick={loadAppointments}
-          variant="outline"
-          disabled={loading}
-        >
-          {loading ? "Đang tải..." : "🔄 Làm mới"}
-        </Button>
+       
       </div>
 
       {/* Filter Section */}
@@ -223,7 +224,6 @@ export default function AppointmentManagement() {
                   <SelectItem value="assigned">Đã phân công</SelectItem>
                   <SelectItem value="check_in">Đã check-in</SelectItem>
                   <SelectItem value="in_progress">Đang sửa chữa</SelectItem>
-                  <SelectItem value="repaired">Đã sửa xong</SelectItem>
                   <SelectItem value="completed">Hoàn thành</SelectItem>
                   <SelectItem value="canceled">Đã hủy</SelectItem>
                 </SelectContent>
@@ -232,35 +232,79 @@ export default function AppointmentManagement() {
 
             {/* Appointment Date From */}
             <div className="space-y-2">
-              <Label htmlFor="date-from">Ngày hẹn từ</Label>
-              <Input
-                id="date-from"
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
+              <Label>Ngày hẹn từ</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dateFrom && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {dateFrom ? format(new Date(dateFrom), "dd/MM/yyyy") : "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateFrom ? new Date(dateFrom) : undefined}
+                    onSelect={(date) => setDateFrom(date ? format(date, "yyyy-MM-dd") : "")}
+                    disabled={(date) => dateTo ? date > new Date(dateTo) : false}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Appointment Date To */}
             <div className="space-y-2">
-              <Label htmlFor="date-to">Ngày hẹn đến</Label>
-              <Input
-                id="date-to"
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
+              <Label>Ngày hẹn đến</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dateTo && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {dateTo ? format(new Date(dateTo), "dd/MM/yyyy") : "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateTo ? new Date(dateTo) : undefined}
+                    onSelect={(date) => setDateTo(date ? format(date, "yyyy-MM-dd") : "")}
+                    disabled={(date) => dateFrom ? date < new Date(dateFrom) : false}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Danh sách lịch hẹn</CardTitle>
+        <CardHeader className="grid grid-cols-[4fr_auto]">
+        
+          <div>
+            <CardTitle>Danh sách lịch hẹn</CardTitle>
           <CardDescription>
             Trang {pagination.page} / {pagination.totalPages} - Tổng {pagination.totalDocs} lịch hẹn
           </CardDescription>
+          </div>
+             <Button 
+          onClick={loadAppointments}
+          variant="outline"
+          disabled={loading}
+        >
+          {loading ? "Đang tải..." : "Làm mới"}
+        </Button>
         </CardHeader>
         <CardContent>
           <Table>

@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -11,7 +10,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -45,8 +53,8 @@ const AppointmentManagement = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardOverviewData | null>(null);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [centerId, setCenterId] = useState("all");
   const [serviceCenters, setServiceCenters] = useState<ServiceCenter[]>([]);
 
@@ -56,7 +64,6 @@ const AppointmentManagement = () => {
     assigned: "hsl(217, 91%, 60%)", // secondary - xanh dương
     check_in: "hsl(142, 76%, 50%)", // primary glow - xanh lá sáng
     in_progress: "hsl(35, 95%, 58%)", // charging-orange - cam
-    repaired: "hsl(120, 100%, 35%)", // battery-green - xanh lá đậm
     completed: "hsl(142, 76%, 36%)", // success/primary - xanh lá
     delay: "hsl(0, 84%, 60%)", // destructive - đỏ
     canceled: "hsl(0, 84%, 60%)", // destructive - đỏ (đã đổi từ xám)
@@ -68,7 +75,6 @@ const AppointmentManagement = () => {
     if (statusName === "Đã phân công") return COLORS.assigned;
     if (statusName === "Đã check-in") return COLORS.check_in;
     if (statusName === "Đang thực hiện") return COLORS.in_progress;
-    if (statusName === "Đã sửa chữa") return COLORS.repaired;
     if (statusName === "Hoàn thành") return COLORS.completed;
     if (statusName === "Trễ hạn") return COLORS.delay;
     if (statusName === "Đã hủy") return COLORS.canceled;
@@ -97,8 +103,8 @@ const AppointmentManagement = () => {
         date_to?: string;
         center_id?: string;
       } = {};
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
+      if (dateFrom) params.date_from = format(dateFrom, "yyyy-MM-dd");
+      if (dateTo) params.date_to = format(dateTo, "yyyy-MM-dd");
       if (centerId && centerId !== "all") params.center_id = centerId;
 
       const res = await getDashboardOverviewApi(params);
@@ -113,8 +119,7 @@ const AppointmentManagement = () => {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [dateFrom, dateTo, centerId]);
 
   useEffect(() => {
     loadServiceCenters();
@@ -131,13 +136,9 @@ const AppointmentManagement = () => {
   };
 
   const handleReset = () => {
-    setDateFrom("");
-    setDateTo("");
+    setDateFrom(undefined);
+    setDateTo(undefined);
     setCenterId("all");
-    // Load data với giá trị reset
-    setTimeout(() => {
-      loadData();
-    }, 100);
   };
 
   // Chuẩn bị dữ liệu cho Pie Chart
@@ -162,11 +163,6 @@ const AppointmentManagement = () => {
           name: "Đang thực hiện",
           value: data.appointmentRate.breakdown.in_progress,
           color: COLORS.in_progress,
-        },
-        {
-          name: "Đã sửa chữa",
-          value: data.appointmentRate.breakdown.repaired,
-          color: COLORS.repaired,
         },
         {
           name: "Hoàn thành",
@@ -210,11 +206,6 @@ const AppointmentManagement = () => {
           count: data.appointmentRate.breakdown.in_progress,
         },
         {
-          name: "Đã sửa chữa",
-          rate: data.appointmentRate.breakdown.rates.repaired,
-          count: data.appointmentRate.breakdown.repaired,
-        },
-        {
           name: "Hoàn thành",
           rate: data.appointmentRate.breakdown.rates.completed,
           count: data.appointmentRate.breakdown.completed,
@@ -239,7 +230,11 @@ const AppointmentManagement = () => {
           <p className="font-medium">{payload[0].name}</p>
           <p className="text-sm text-muted-foreground">
             {payload[0].value}{" "}
-            {payload[0].dataKey === "rate" ? "%" : "lịch hẹn"}
+            {payload[0].dataKey === "rate"
+              ? "%"
+              : payload[0].dataKey === "count"
+              ? "lịch hẹn"
+              : "lịch hẹn"}
           </p>
         </div>
       );
@@ -264,7 +259,7 @@ const AppointmentManagement = () => {
       <Card className="mb-6 bg-gradient-card border-0 shadow-soft">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+            <CalendarIcon className="h-5 w-5" />
             Bộ lọc
           </CardTitle>
         </CardHeader>
@@ -272,21 +267,58 @@ const AppointmentManagement = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="dateFrom">Từ ngày</Label>
-              <Input
-                id="dateFrom"
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="dateFrom"
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal border-gray-300",
+                      !dateFrom && "text-muted-foreground"
+                    )}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFrom
+                      ? format(dateFrom, "PPP", { locale: vi })
+                      : "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-white border border-gray-200 rounded-lg shadow-lg">
+                  <Calendar
+                    mode="single"
+                    selected={dateFrom}
+                    onSelect={setDateFrom}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label htmlFor="dateTo">Đến ngày</Label>
-              <Input
-                id="dateTo"
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="dateTo"
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal border-gray-300",
+                      !dateTo && "text-muted-foreground"
+                    )}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateTo
+                      ? format(dateTo, "PPP", { locale: vi })
+                      : "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-white border border-gray-200 rounded-lg shadow-lg">
+                  <Calendar
+                    mode="single"
+                    selected={dateTo}
+                    onSelect={setDateTo}
+                    disabled={(date) => (dateFrom ? date < dateFrom : false)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label htmlFor="centerId">Trung tâm dịch vụ</Label>
@@ -361,7 +393,7 @@ const AppointmentManagement = () => {
             {/* Pie Chart */}
             <Card className="bg-gradient-card border-0 shadow-soft">
               <CardHeader>
-                <CardTitle>Phân bố trạng thái lịch hẹn</CardTitle>
+                <CardTitle>Phân bố tỷ lệ lịch hẹn</CardTitle>
               </CardHeader>
               <CardContent>
                 {pieData.length > 0 ? (
@@ -403,7 +435,7 @@ const AppointmentManagement = () => {
             {/* Bar Chart */}
             <Card className="bg-gradient-card border-0 shadow-soft">
               <CardHeader>
-                <CardTitle>Tỷ lệ trạng thái lịch hẹn (%)</CardTitle>
+                <CardTitle>Số lượng trạng thái lịch hẹn</CardTitle>
               </CardHeader>
               <CardContent>
                 {barData.length > 0 ? (
@@ -423,7 +455,7 @@ const AppointmentManagement = () => {
                       <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} />
                       <Tooltip content={<CustomTooltip />} />
                       <Bar
-                        dataKey="rate"
+                        dataKey="count"
                         fill="hsl(var(--primary))"
                         radius={[8, 8, 0, 0]}>
                         {barData.map((entry, index) => (

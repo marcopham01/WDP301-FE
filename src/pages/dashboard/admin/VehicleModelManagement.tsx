@@ -241,7 +241,7 @@ const VehicleModelManagement = () => {
       ) : filteredModels.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
-            <Car className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <Bike className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">
               {searchTerm ? "Không tìm thấy model nào" : "Chưa có model nào"}
             </h3>

@@ -70,7 +70,6 @@ export interface DashboardOverviewData {
       assigned: number;
       check_in: number;
       in_progress: number;
-      repaired: number;
       completed: number;
       delay: number;
       canceled: number;
@@ -79,7 +78,6 @@ export interface DashboardOverviewData {
         assigned: number;
         check_in: number;
         in_progress: number;
-        repaired: number;
         completed: number;
         delay: number;
         canceled: number;

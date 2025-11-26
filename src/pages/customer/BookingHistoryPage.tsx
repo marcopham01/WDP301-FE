@@ -25,13 +25,12 @@ const BASE_URL = config.API_BASE_URL;
 
 function statusLabel(s?: string) {
   switch (s) {
-    case "pending": return { text: "Đợi ứng tiền", className: "bg-amber-100 text-amber-800 border-amber-300" };
-    case "assigned": return { text: "Đã sắp nhân viên", className: "bg-blue-100 text-blue-800 border-blue-300" };
-    case "check_in": return { text: "Chờ báo giá", className: "bg-purple-100 text-purple-800 border-purple-300" };
-    case "in_progress": return { text: "Đang sửa chữa", className: "bg-cyan-100 text-cyan-800 border-cyan-300" };
-    case "repaired": return { text: "Đã sửa xong", className: "bg-teal-100 text-teal-800 border-teal-300" };
-    case "completed": return { text: "Đơn hoàn thành", className: "bg-emerald-100 text-emerald-800 border-emerald-300" };
-    case "delay": return { text: "Trì hoãn", className: "bg-orange-100 text-orange-800 border-orange-300" };
+    case "pending": return { text: "Đợi ứng tiền", variant: "secondary" as const };
+    case "assigned": return { text: "Đã sắp nhân viên", variant: "default" as const };
+    case "check_in": return { text: "Chờ báo giá", variant: "outline" as const };
+    case "in_progress": return { text: "Đang sửa chữa", variant: "default" as const };
+    case "completed": return { text: "Đơn hoàn thành", variant: "default" as const };
+    case "delay": return { text: "Trì hoãn", variant: "secondary" as const };
     case "canceled":
     case "cancelled": return { text: "Đã hủy", className: "bg-red-100 text-red-800 border-red-300" };
     default: return { text: s || "—", className: "bg-gray-100 text-gray-800 border-gray-300" };
@@ -163,10 +162,9 @@ export default function BookingHistoryPage() {
     const assigned = items.filter(i => i.status === "assigned").length;
     const checkIn = items.filter(i => i.status === "check_in").length;
     const inProgress = items.filter(i => i.status === "in_progress").length;
-    const repaired = items.filter(i => i.status === "repaired").length;
     const completed = items.filter(i => i.status === "completed").length;
     const canceled = items.filter(i => i.status === "canceled" || i.status === "cancelled").length;
-    return { all, pending, assigned, checkIn, inProgress, repaired, completed, canceled };
+    return { all, pending, assigned, checkIn, inProgress, completed, canceled };
   }, [items]);
 
   // Client-side filters: date range + sorting
@@ -379,7 +377,6 @@ export default function BookingHistoryPage() {
                       <SelectItem value="assigned">Đã sắp nhân viên</SelectItem>
                       <SelectItem value="check_in">Chờ báo giá</SelectItem>
                       <SelectItem value="in_progress">Đang sửa chữa</SelectItem>
-                      <SelectItem value="repaired">Đã sửa xong</SelectItem>
                       <SelectItem value="completed">Đơn hoàn thành</SelectItem>
                       <SelectItem value="canceled">Đã hủy</SelectItem>
                     </SelectContent>
@@ -474,7 +471,7 @@ export default function BookingHistoryPage() {
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              {(item.status === "repaired" && typeof item.final_cost === "number" && item.final_cost > 0)
+                              {(item.status === "completed" && typeof item.final_cost === "number" && item.final_cost > 0)
                                 ? item.final_cost.toLocaleString("vi-VN", { style: "currency", currency: "VND" })
                                 : "—"}
                             </td>
@@ -490,7 +487,7 @@ export default function BookingHistoryPage() {
                                   </Button>
                                 )}
                                 {/* Nút thanh toán cho lịch đã sửa xong */}
-                                {item.status === "repaired" && typeof item.final_cost === "number" && item.final_cost > 0 && (
+                                {item.status === "completed" && typeof item.final_cost === "number" && item.final_cost > 0 && (
                                   <Button size="sm" variant="default" className="h-8 px-3 text-white bg-emerald-600 hover:bg-emerald-700" onClick={() => handleFinalPayment(item)}>
                                     Thanh toán
                                   </Button>

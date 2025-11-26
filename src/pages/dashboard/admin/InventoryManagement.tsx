@@ -398,7 +398,7 @@ const InventoryManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Phụ tùng</TableHead>
-                    <TableHead>Số part</TableHead>
+                    <TableHead>Mã phụ tùng</TableHead>
                     <TableHead>Trung tâm</TableHead>
                     <TableHead>Tồn kho</TableHead>
                     <TableHead>Tồn tối thiểu</TableHead>
@@ -441,8 +441,8 @@ const InventoryManagement = () => {
                             : "-"}
                         </TableCell>
                         <TableCell>
-                          {typeof it.cost_per_unit === "number"
-                            ? `${it.cost_per_unit.toLocaleString("vi-VN")} VNĐ`
+                          {typeof it.part_id.sellPrice === "number"
+                            ? `${it.part_id.sellPrice.toLocaleString("vi-VN")} VNĐ`
                             : "-"}
                         </TableCell>
                         <TableCell>
@@ -566,7 +566,7 @@ const InventoryManagement = () => {
                 placeholder="VD: 10"
               />
             </div>
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label htmlFor="costPerUnit">Giá mỗi đơn vị (VNĐ)</Label>
               <Input
                 id="costPerUnit"
@@ -575,7 +575,7 @@ const InventoryManagement = () => {
                 onChange={(e) => setCostPerUnit(e.target.value)}
                 placeholder="VD: 50000"
               />
-            </div>
+            </div> */}
           </div>
           <DialogFooter>
             <DialogClose asChild>
@@ -625,7 +625,7 @@ const InventoryManagement = () => {
                 onChange={(e) => setMinimumStock(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label htmlFor="editCostPerUnit">Giá mỗi đơn vị (VNĐ)</Label>
               <Input
                 id="editCostPerUnit"
@@ -633,7 +633,7 @@ const InventoryManagement = () => {
                 value={costPerUnit}
                 onChange={(e) => setCostPerUnit(e.target.value)}
               />
-            </div>
+            </div> */}
           </div>
           <DialogFooter>
             <DialogClose asChild>

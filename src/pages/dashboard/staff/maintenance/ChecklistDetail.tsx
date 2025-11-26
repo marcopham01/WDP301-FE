@@ -5,10 +5,9 @@ import {
   ArrowLeft,
   Calendar,
   Clock,
-  DollarSign,
   Wrench,
   User,
-  Car,
+  Bike,
   MapPin,
   Package,
   Search,
@@ -21,6 +20,7 @@ import {
   Mail,
   Phone,
   Building2,
+  CheckCircle2,
 } from "lucide-react";
 import {
   Checklist,
@@ -34,8 +34,18 @@ import {
   acceptChecklistApi,
   cancelChecklistApi,
 } from "@/lib/checklistApi";
-import { Appointment, getAppointmentByIdApi } from "@/lib/appointmentApi";
-import { useEffect, useMemo, useState } from "react";
+import {
+  Appointment,
+  getAppointmentByIdApi,
+  updateAppointmentStatusApi,
+} from "@/lib/appointmentApi";
+import {
+  createPaymentLinkApi,
+  getPaymentTransactionApi,
+  normalizeTransaction,
+} from "@/lib/paymentApi";
+import { QRCodeSVG } from "qrcode.react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -45,7 +55,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "react-toastify";
 
 type IssueTypeRef =
   | string
@@ -71,20 +92,60 @@ function formatIssueTypeLabel(
   reference?: IssueTypeRef
 ): string {
   if (resolved) {
-    const pieces = [resolved.category, resolved.severity].filter(
-      (value): value is string => Boolean(value && value.trim())
-    );
-    if (pieces.length) return pieces.join(" • ");
+    if (resolved.category && resolved.category.trim()) return resolved.category;
+    if (resolved.severity && resolved.severity.trim()) return resolved.severity;
     if (resolved._id) return resolved._id;
   }
   if (!reference) return "";
   if (typeof reference === "string") return reference;
-  const pieces = [reference.category, reference.severity].filter(
-    (value): value is string => Boolean(value && value.trim())
-  );
-  if (pieces.length) return pieces.join(" • ");
+  if (reference.category && reference.category.trim())
+    return reference.category;
+  if (reference.severity && reference.severity.trim())
+    return reference.severity;
   return reference._id ?? "";
 }
+
+type SeverityBadgeConfig = {
+  label: string;
+  className: string;
+  dotClass: string;
+};
+
+const severityBadgeMap: Record<string, SeverityBadgeConfig> = {
+  minor: {
+    label: "Mức nhẹ",
+    className: "bg-emerald-50 text-emerald-700 border border-emerald-100",
+    dotClass: "bg-emerald-500",
+  },
+  moderate: {
+    label: "Trung bình",
+    className: "bg-amber-50 text-amber-700 border border-amber-100",
+    dotClass: "bg-amber-500",
+  },
+  major: {
+    label: "Nghiêm trọng",
+    className: "bg-orange-50 text-orange-700 border border-orange-100",
+    dotClass: "bg-orange-500",
+  },
+  critical: {
+    label: "Khẩn cấp",
+    className: "bg-red-50 text-red-700 border border-red-100",
+    dotClass: "bg-red-500",
+  },
+};
+
+const getSeverityBadge = (
+  severity?: string | null
+): SeverityBadgeConfig | null => {
+  if (!severity) return null;
+  const key = severity.toLowerCase();
+  if (severityBadgeMap[key]) return severityBadgeMap[key];
+  return {
+    label: severity,
+    className: "bg-muted text-muted-foreground border border-border",
+    dotClass: "bg-muted-foreground",
+  };
+};
 
 const ChecklistDetail = () => {
   const { checklistId } = useParams<{ checklistId: string }>();
@@ -117,6 +178,20 @@ const ChecklistDetail = () => {
     >
   >({});
   const [checkingInventory, setCheckingInventory] = useState(false);
+  // Payment workflow states
+  const [paymentInfo, setPaymentInfo] = useState<{
+    orderCode?: number;
+    qrCode?: string;
+    checkoutUrl?: string;
+    amount?: number;
+    status?: string;
+    timeoutAt?: string;
+  } | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [creatingPayment, setCreatingPayment] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
 
   // Compute derived data (must be before early returns)
   const appointmentData =
@@ -190,13 +265,31 @@ const ChecklistDetail = () => {
     fetchCosts();
   }, [partsDetailList, center?._id, checklist]);
 
+  const resolveUnitPrice = useCallback(
+    (partId: string, detail?: PartItem): number => {
+      const inventoryPrice = unitCostMap[partId];
+      if (inventoryPrice !== undefined) return inventoryPrice;
+      const extendedDetail = detail as PartItem & {
+        sellPrice?: number;
+        price?: number;
+      };
+      return (
+        detail?.unit_price ??
+        extendedDetail?.sellPrice ??
+        extendedDetail?.price ??
+        0
+      );
+    },
+    [unitCostMap]
+  );
+
   const totalPartsCost = useMemo(() => {
     if (!checklist) return 0;
     return partsDetailList.reduce((sum, p) => {
-      const unit = unitCostMap[p.id] || 0;
+      const unit = resolveUnitPrice(p.id, p.detail);
       return sum + unit * (p.quantity || 0);
     }, 0);
-  }, [partsDetailList, unitCostMap, checklist]);
+  }, [partsDetailList, checklist, resolveUnitPrice]);
 
   // Check if all parts have sufficient inventory
   const allPartsSufficient = useMemo(() => {
@@ -214,10 +307,122 @@ const ChecklistDetail = () => {
     });
   }, [partsDetailList, inventoryCheck]);
 
+  // Calculate total cost for payment (parts cost + service cost if any)
+  const totalPaymentAmount = useMemo(() => {
+    let total = totalPartsCost;
+    // Add service base price if available
+    const serviceType = appointmentData?.service_type_id as
+      | { base_price?: number }
+      | undefined;
+    if (serviceType?.base_price) {
+      total += serviceType.base_price;
+    }
+    return total;
+  }, [totalPartsCost, appointmentData]);
+
+  // Function to create payment after approving checklist
+  const createPaymentAfterApprove = async (): Promise<boolean> => {
+    if (!appointmentData || !appointmentData.user_id) {
+      toast.error("Không tìm thấy thông tin khách hàng");
+      return false;
+    }
+
+    try {
+      setCreatingPayment(true);
+      setPaymentError(null);
+      const customer = appointmentData.user_id as {
+        _id?: string;
+        fullName?: string;
+        email?: string;
+        phone?: string;
+        username?: string;
+      };
+
+      const paymentRes = await createPaymentLinkApi({
+        amount: totalPaymentAmount,
+        description: paymentDescription,
+        customer: {
+          username: customer.username || "",
+          fullName: customer.fullName || customer.username || "",
+          email: customer.email || "",
+          phone: customer.phone || "",
+        },
+      });
+
+      if (!paymentRes.ok || !paymentRes.data?.success) {
+        const message = paymentRes.message || "Tạo link thanh toán thất bại";
+        setPaymentError(message);
+        setCreatingPayment(false);
+        return false;
+      }
+
+      const paymentData = paymentRes.data.data;
+      setPaymentInfo({
+        orderCode: paymentData.orderCode,
+        qrCode: paymentData.qrCode,
+        checkoutUrl: paymentData.checkoutUrl,
+        amount: paymentData.amount,
+        status: "PENDING",
+        timeoutAt: paymentData.timeoutAt,
+      });
+      setPaymentError(null);
+      setPaymentStatus("PENDING");
+      setShowPaymentDialog(true);
+      return true;
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Có lỗi xảy ra khi tạo link thanh toán";
+      setPaymentError(message);
+      toast.error(message);
+      console.error("Error creating payment:", err);
+      return false;
+    } finally {
+      setCreatingPayment(false);
+    }
+  };
+
+  const isPaymentExpired = useMemo(() => {
+    if (!paymentInfo?.timeoutAt) return false;
+    return new Date(paymentInfo.timeoutAt).getTime() <= Date.now();
+  }, [paymentInfo?.timeoutAt]);
+
+  // Poll payment status
+  useEffect(() => {
+    if (!paymentInfo?.orderCode) return;
+    if (paymentStatus === "PAID") return; // Stop polling if paid
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await getPaymentTransactionApi(paymentInfo.orderCode!);
+        if (res.ok && res.data?.data) {
+          const transaction = normalizeTransaction(res.data.data);
+          const newStatus = transaction.status.toUpperCase();
+          if (newStatus !== paymentStatus) {
+            setPaymentStatus(newStatus);
+            setPaymentInfo((prev) => ({
+              ...prev,
+              status: newStatus,
+            }));
+
+            if (newStatus === "PAID") {
+              toast.success("Thanh toán thành công!");
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error polling payment status:", err);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [paymentInfo?.orderCode, paymentStatus]);
+
   // Function to check inventory for all parts
   const handleCheckInventory = async () => {
     if (!center?._id || !partsDetailList.length) {
-      alert(
+      toast.error(
         "Không thể kiểm tra tồn kho: thiếu thông tin trung tâm hoặc phụ tùng"
       );
       return;
@@ -373,10 +578,65 @@ const ChecklistDetail = () => {
       // Update state with all results at once
       setInventoryCheck({ ...results });
     } catch (err) {
-      alert("Có lỗi xảy ra khi kiểm tra tồn kho");
+      toast.error("Có lỗi xảy ra khi kiểm tra tồn kho");
       console.error("Error checking inventory:", err);
     } finally {
       setCheckingInventory(false);
+    }
+  };
+
+  // Function to confirm approve checklist
+  const confirmApproveChecklist = async () => {
+    if (!checklist) return;
+    
+    try {
+      setWorkingId(checklist._id);
+
+      // Backend sẽ tự cập nhật (trừ) inventory khi duyệt checklist.
+      // Ở FE chỉ gọi accept để tránh trừ 2 lần.
+      const res = await acceptChecklistApi(checklist._id);
+      if (!res.ok) {
+        toast.error(res.message || "Duyệt checklist thất bại");
+      } else {
+        // Cập nhật status appointment thành "in_progress" sau khi duyệt checklist
+        const appointmentId =
+          typeof checklist.appointment_id === "string"
+            ? checklist.appointment_id
+            : (checklist.appointment_id as { _id?: string })
+                ?._id;
+
+        if (appointmentId) {
+          try {
+            await updateAppointmentStatusApi({
+              appointment_id: appointmentId,
+              status: "in_progress",
+            });
+          } catch (statusErr) {
+            console.error(
+              "Error updating appointment status:",
+              statusErr
+            );
+            // Không block nếu cập nhật status thất bại
+          }
+        }
+
+        // Tự động tạo payment và hiển thị QR code sau khi duyệt thành công
+        const paymentCreated = await createPaymentAfterApprove();
+        if (!paymentCreated) {
+          toast.warning(
+            "Tạo link thanh toán thất bại. Vui lòng thử lại bằng nút 'Tạo link thanh toán' bên dưới."
+          );
+        }
+        setApproveDialogOpen(false);
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Có lỗi xảy ra khi duyệt checklist";
+      toast.error(errorMessage);
+    } finally {
+      setWorkingId(null);
     }
   };
 
@@ -572,11 +832,26 @@ const ChecklistDetail = () => {
   const issueTypeReference = (checklist as { issue_type_id?: IssueTypeRef })
     .issue_type_id;
   const issueTypeLabel = formatIssueTypeLabel(issueType, issueTypeReference);
+  const issueSeverityRaw =
+    issueType?.severity ||
+    (typeof issueTypeReference === "object"
+      ? issueTypeReference?.severity
+      : undefined);
+  const issueSeverityBadge = issueSeverityRaw
+    ? getSeverityBadge(issueSeverityRaw)
+    : null;
   const issueDescriptionText =
     typeof checklist.issue_description === "string" &&
     checklist.issue_description.trim()
       ? checklist.issue_description
       : issueTypeLabel || "Không có mô tả";
+
+  const shortChecklistId = checklist._id
+    ? checklist._id.slice(-4).toUpperCase()
+    : "";
+  const paymentDescription = shortChecklistId
+    ? `Checklist ${shortChecklistId}`
+    : "Checklist";
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -587,7 +862,6 @@ const ChecklistDetail = () => {
       case "in_progress":
       case "working":
         return "bg-primary text-white";
-      case "repaired":
       case "completed":
       case "done":
       case "accepted":
@@ -614,8 +888,6 @@ const ChecklistDetail = () => {
       case "in_progress":
       case "working":
         return "Đang thực hiện";
-      case "repaired":
-        return "Đã sửa xong";
       case "completed":
       case "done":
         return "Hoàn thành";
@@ -777,7 +1049,7 @@ const ChecklistDetail = () => {
                 <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200/50">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 bg-emerald-500/10 rounded-lg">
-                      <Car className="h-5 w-5 text-emerald-600" />
+                      <Bike className="h-5 w-5 text-emerald-600" />
                     </div>
                     <h4 className="font-semibold text-base">Phương tiện</h4>
                   </div>
@@ -911,10 +1183,19 @@ const ChecklistDetail = () => {
               </h3>
               <div className="space-y-4">
                 <div className="p-4 bg-primary/5 rounded-lg border-l-4 border-primary">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    Loại vấn đề
-                  </p>
-                  <p className="font-bold text-lg">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-xs text-muted-foreground">Loại vấn đề</p>
+                    {issueSeverityBadge && (
+                      <span
+                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${issueSeverityBadge.className}`}>
+                        <span
+                          className={`h-2 w-2 rounded-full ${issueSeverityBadge.dotClass}`}
+                        />
+                        {issueSeverityBadge.label}
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-bold text-lg mt-2">
                     {issueTypeLabel || "Không xác định"}
                   </p>
                 </div>
@@ -980,12 +1261,13 @@ const ChecklistDetail = () => {
                       detail?.part_number ||
                       item.id ||
                       `Phụ tùng ${idx + 1}`;
-                    const unit = unitCostMap[item.id] || 0;
+                    const unit = resolveUnitPrice(item.id, item.detail);
                     const total = unit * (item.quantity || 0);
                     const check = inventoryCheck[item.id];
                     const isChecking = check?.checking;
                     const isChecked = check && !isChecking;
                     const isSufficient = check?.sufficient;
+                    const hasPrice = unit > 0;
 
                     return (
                       <Card
@@ -1024,6 +1306,27 @@ const ChecklistDetail = () => {
                                     <p className="text-sm text-muted-foreground mb-2">
                                       {detail.description}
                                     </p>
+                                  )}
+
+                                  {hasPrice && (
+                                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                      <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20">
+                                        <p className="text-xs text-muted-foreground">
+                                          Đơn giá
+                                        </p>
+                                        <p className="text-base font-semibold text-emerald-700 dark:text-emerald-300">
+                                          {unit.toLocaleString("vi-VN")} VNĐ
+                                        </p>
+                                      </div>
+                                      <div className="p-3 rounded-lg border border-primary/30 bg-primary/5">
+                                        <p className="text-xs text-muted-foreground">
+                                          Thành tiền
+                                        </p>
+                                        <p className="text-base font-semibold text-primary">
+                                          {total.toLocaleString("vi-VN")} VNĐ
+                                        </p>
+                                      </div>
+                                    </div>
                                   )}
 
                                   {/* Inventory Status */}
@@ -1224,24 +1527,6 @@ const ChecklistDetail = () => {
                     </div>
                   )}
                 </div>
-
-                {/* Total Cost */}
-                {(checklist as { total_cost?: number }).total_cost && (
-                  <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-200/50">
-                    <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="h-4 w-4 text-amber-600" />
-                      <p className="text-xs text-muted-foreground">
-                        Tổng chi phí
-                      </p>
-                    </div>
-                    <p className="font-bold text-lg text-amber-700 dark:text-amber-400">
-                      {(
-                        checklist as { total_cost?: number }
-                      ).total_cost?.toLocaleString("vi-VN")}{" "}
-                      VNĐ
-                    </p>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -1253,6 +1538,137 @@ const ChecklistDetail = () => {
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Hành động</h3>
                 <div className="space-y-3">
+                  {/* Step 1: Check Inventory */}
+                  {!allPartsSufficient && partsDetailList.length > 0 && (
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+                        ⚠️ Vui lòng kiểm tra tồn kho phụ tùng trước
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Payment QR Code - hiển thị sau khi duyệt checklist */}
+                  {paymentInfo && (
+                    <Card className="border-2 border-primary/20 bg-gradient-card">
+                      <CardContent className="p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-base">
+                            Mã QR thanh toán cho khách hàng
+                          </h4>
+                          <div
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              paymentStatus === "PAID"
+                                ? "bg-green-100 text-green-700"
+                                : paymentStatus === "FAILED" ||
+                                  paymentStatus === "CANCELLED"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-blue-100 text-blue-700"
+                            }`}>
+                            {paymentStatus === "PAID"
+                              ? "Đã thanh toán"
+                              : paymentStatus === "FAILED"
+                              ? "Thất bại"
+                              : paymentStatus === "CANCELLED"
+                              ? "Đã hủy"
+                              : "Chờ thanh toán"}
+                          </div>
+                        </div>
+                        {isPaymentExpired && paymentStatus !== "PAID" && (
+                          <p className="text-xs text-red-600">
+                            Mã thanh toán đã hết hạn. Hãy tạo mã mới để khách
+                            hàng tiếp tục thanh toán.
+                          </p>
+                        )}
+
+                        {/* Payment Amount */}
+                        <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-muted-foreground">
+                              Số tiền:
+                            </span>
+                            <span className="text-xl font-bold text-primary">
+                              {paymentInfo.amount?.toLocaleString("vi-VN")} VNĐ
+                            </span>
+                          </div>
+                          {paymentInfo.orderCode && (
+                            <p className="text-xs text-muted-foreground">
+                              Mã đơn hàng: #{paymentInfo.orderCode}
+                            </p>
+                          )}
+                          {paymentInfo.timeoutAt &&
+                            paymentStatus !== "PAID" && (
+                              <p
+                                className={`text-xs font-medium ${
+                                  isPaymentExpired
+                                    ? "text-red-600"
+                                    : "text-muted-foreground"
+                                }`}>
+                                Hết hạn:{" "}
+                                {new Date(
+                                  paymentInfo.timeoutAt
+                                ).toLocaleTimeString("vi-VN", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            )}
+                        </div>
+
+                        {paymentStatus !== "PAID" && (
+                          <div className="space-y-2">
+                            {!isPaymentExpired ? (
+                              <Button
+                                variant="default"
+                                className="w-full"
+                                onClick={() => setShowPaymentDialog(true)}>
+                                Xem mã QR thanh toán
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={createPaymentAfterApprove}
+                                disabled={creatingPayment}>
+                                {creatingPayment
+                                  ? "Đang tạo lại mã..."
+                                  : "Tạo mã thanh toán mới"}
+                              </Button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Payment Success Message */}
+                        {paymentStatus === "PAID" && (
+                          <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="h-5 w-5 text-green-600" />
+                              <p className="text-sm font-semibold text-green-800 dark:text-green-200">
+                                ✅ Thanh toán thành công!
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {!paymentInfo && (
+                    <Card className="border border-dashed border-muted bg-muted/20">
+                      <CardContent className="p-4 space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          Link thanh toán sẽ được tạo tự động sau khi bạn duyệt
+                          checklist.
+                        </p>
+                        {paymentError && (
+                          <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
+                            {paymentError}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Approve Checklist */}
                   <Button
                     className="w-full bg-success text-success-foreground"
                     disabled={
@@ -1260,33 +1676,14 @@ const ChecklistDetail = () => {
                       !allPartsSufficient ||
                       partsDetailList.length === 0
                     }
-                    onClick={async () => {
+                    onClick={() => {
                       if (!allPartsSufficient) {
-                        alert(
+                        toast.warning(
                           "Vui lòng kiểm tra tồn kho và đảm bảo tất cả phụ tùng đều đủ trước khi duyệt"
                         );
                         return;
                       }
-                      try {
-                        setWorkingId(checklist._id);
-
-                        // Backend sẽ tự cập nhật (trừ) inventory khi duyệt checklist.
-                        // Ở FE chỉ gọi accept để tránh trừ 2 lần.
-                        const res = await acceptChecklistApi(checklist._id);
-                        if (!res.ok) {
-                          alert(res.message || "Duyệt checklist thất bại");
-                        } else {
-                          window.location.reload();
-                        }
-                      } catch (err) {
-                        const errorMessage =
-                          err instanceof Error
-                            ? err.message
-                            : "Có lỗi xảy ra khi duyệt checklist";
-                        alert(errorMessage);
-                      } finally {
-                        setWorkingId(null);
-                      }
+                      setApproveDialogOpen(true);
                     }}>
                     Duyệt checklist
                     {!allPartsSufficient && partsDetailList.length > 0 && (
@@ -1312,6 +1709,110 @@ const ChecklistDetail = () => {
           )}
         </div>
       </div>
+
+      {paymentInfo && (
+        <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Mã QR thanh toán</DialogTitle>
+              <DialogDescription>
+                Hiển thị mã QR này cho khách hàng để họ quét và thanh toán.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Số tiền:
+                  </span>
+                  <span className="text-xl font-bold text-primary">
+                    {paymentInfo.amount?.toLocaleString("vi-VN")} VNĐ
+                  </span>
+                </div>
+                {paymentInfo.orderCode && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Mã đơn hàng: #{paymentInfo.orderCode}
+                  </p>
+                )}
+                {paymentInfo.timeoutAt && paymentStatus !== "PAID" && (
+                  <p
+                    className={`text-xs font-medium ${
+                      isPaymentExpired
+                        ? "text-red-600"
+                        : "text-muted-foreground"
+                    }`}>
+                    Hết hạn:{" "}
+                    {new Date(paymentInfo.timeoutAt).toLocaleTimeString(
+                      "vi-VN",
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )}
+                  </p>
+                )}
+              </div>
+
+              {paymentInfo.qrCode && paymentStatus !== "PAID" && (
+                <div className="flex flex-col items-center gap-3 p-4 bg-white rounded-lg border-2 border-gray-200">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Quét mã QR để thanh toán
+                  </p>
+                  <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                    <QRCodeSVG
+                      value={paymentInfo.qrCode}
+                      size={220}
+                      level="H"
+                      includeMargin={true}
+                      bgColor="#ffffff"
+                      fgColor="#000000"
+                    />
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p className="text-xs text-gray-600 font-medium">
+                      Mở app ngân hàng và quét mã QR này
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Hỗ trợ tất cả ngân hàng tại Việt Nam
+                    </p>
+                  </div>
+                  {paymentInfo.checkoutUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        if (paymentInfo.checkoutUrl) {
+                          window.open(paymentInfo.checkoutUrl, "_blank");
+                        }
+                      }}>
+                      Mở trang thanh toán
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {paymentStatus === "PAID" && (
+                <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <p className="text-sm font-semibold text-green-800 dark:text-green-200">
+                      Thanh toán đã hoàn tất
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowPaymentDialog(false)}>
+                Đóng
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog
         open={rejectDialogOpen}
@@ -1367,13 +1868,13 @@ const ChecklistDetail = () => {
                     rejectReason.trim()
                   );
                   if (!res.ok) {
-                    alert(res.message || "Từ chối checklist thất bại");
+                    toast.error(res.message || "Từ chối checklist thất bại");
                   } else {
                     setRejectDialogOpen(false);
                     window.location.reload();
                   }
                 } catch {
-                  alert("Có lỗi xảy ra khi từ chối checklist");
+                  toast.error("Có lỗi xảy ra khi từ chối checklist");
                 } finally {
                   setSubmittingReject(false);
                   setWorkingId(null);
@@ -1384,6 +1885,37 @@ const ChecklistDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Approve Checklist Confirmation */}
+      <AlertDialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận duyệt checklist</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn duyệt checklist này không?
+              <br />
+              <br />
+              <strong>Lưu ý:</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Số lượng phụ tùng sẽ được trừ từ kho</li>
+                <li>Trạng thái lịch hẹn sẽ chuyển thành "Đang thực hiện"</li>
+                <li>Link thanh toán sẽ được tạo cho khách hàng</li>
+                <li>Hành động này không thể hoàn tác</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={workingId !== null}>Hủy</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmApproveChecklist} 
+              disabled={workingId !== null}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {workingId !== null ? "Đang xử lý..." : "Xác nhận duyệt"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 };

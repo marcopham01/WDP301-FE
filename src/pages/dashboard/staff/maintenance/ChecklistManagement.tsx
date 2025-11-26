@@ -12,8 +12,7 @@ import {
   FileText,
   Wrench,
   User,
-  Car,
-  DollarSign,
+  Bike,
   Hash,
 } from "lucide-react";
 import { getChecklistsApi, Checklist } from "@/lib/checklistApi";
@@ -29,6 +28,48 @@ function formatDate(date?: string) {
     day: "2-digit",
   });
 }
+
+type SeverityBadgeConfig = {
+  label: string;
+  className: string;
+  dotClass: string;
+};
+
+const severityBadgeMap: Record<string, SeverityBadgeConfig> = {
+  minor: {
+    label: "Mức nhẹ",
+    className: "bg-emerald-50 text-emerald-700 border border-emerald-100",
+    dotClass: "bg-emerald-500",
+  },
+  moderate: {
+    label: "Trung bình",
+    className: "bg-amber-50 text-amber-700 border border-amber-100",
+    dotClass: "bg-amber-500",
+  },
+  major: {
+    label: "Nghiêm trọng",
+    className: "bg-orange-50 text-orange-700 border border-orange-100",
+    dotClass: "bg-orange-500",
+  },
+  critical: {
+    label: "Khẩn cấp",
+    className: "bg-red-50 text-red-700 border border-red-100",
+    dotClass: "bg-red-500",
+  },
+};
+
+const getSeverityBadge = (
+  severity?: string | null
+): SeverityBadgeConfig | null => {
+  if (!severity) return null;
+  const key = severity.toLowerCase();
+  if (severityBadgeMap[key]) return severityBadgeMap[key];
+  return {
+    label: severity,
+    className: "bg-muted text-muted-foreground border border-border",
+    dotClass: "bg-muted-foreground",
+  };
+};
 
 export default function ChecklistManagement() {
   const navigate = useNavigate();
@@ -122,15 +163,14 @@ export default function ChecklistManagement() {
         : undefined;
 
     // Checklist information
-    const issueTypeText = issueTypeIdToText(
-      (
-        c as {
-          issue_type_id?:
-            | string
-            | { _id?: string; category?: string; severity?: string };
-        }
-      ).issue_type_id
-    );
+    const issueTypeField = (
+      c as {
+        issue_type_id?:
+          | string
+          | { _id?: string; category?: string; severity?: string };
+      }
+    ).issue_type_id;
+    const issueTypeText = issueTypeIdToText(issueTypeField);
     const issueDescription = (() => {
       const raw = c.issue_description as unknown;
       if (typeof raw === "string" && raw.trim()) return raw;
@@ -146,14 +186,12 @@ export default function ChecklistManagement() {
     const technicianName =
       technician?.fullName || technician?.username || "Không xác định";
     const technicianEmail = technician?.email || "-";
-    const technicianPhone = technician?.phone || "-";
 
     // User/Customer information
     const userRaw = appointmentData?.user_id;
     const user = typeof userRaw === "object" ? userRaw : undefined;
     const customerName = user?.fullName || user?.username || "N/A";
     const customerEmail = user?.email || "N/A";
-    const customerPhone = user?.phone || "N/A";
 
     // Vehicle information
     const vehicleRaw = appointmentData?.vehicle_id;
@@ -175,6 +213,11 @@ export default function ChecklistManagement() {
 
     // Checklist metadata
     const checklistCreatedDate = c.createdAt ? formatDate(c.createdAt) : null;
+    const issueSeverity =
+      typeof issueTypeField === "object" ? issueTypeField?.severity : undefined;
+    const severityBadge = issueSeverity
+      ? getSeverityBadge(issueSeverity)
+      : null;
 
     // Appointment information (basic)
     const appointmentDate = formatDate(appointmentData?.appoinment_date);
@@ -195,27 +238,31 @@ export default function ChecklistManagement() {
           return {
             text: "Chờ duyệt",
             variant: "default" as const,
-            className: "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100",
+            className:
+              "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100",
           };
         case "accepted":
         case "approved":
           return {
             text: "Đã duyệt",
             variant: "default" as const,
-            className: "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100",
+            className:
+              "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100",
           };
         case "in_progress":
           return {
             text: "Đang xử lý",
             variant: "default" as const,
-            className: "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100",
+            className:
+              "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100",
           };
         case "canceled":
         case "rejected":
           return {
             text: "Đã từ chối",
             variant: "destructive" as const,
-            className: "bg-red-100 text-red-800 border-red-200 hover:bg-red-100",
+            className:
+              "bg-red-100 text-red-800 border-red-200 hover:bg-red-100",
           };
         default:
           return {
@@ -227,12 +274,6 @@ export default function ChecklistManagement() {
     };
 
     const statusBadge = getStatusBadge(c.status);
-
-    // Format total cost
-    const totalCost = (c as { total_cost?: number }).total_cost;
-    const formattedCost = totalCost
-      ? totalCost.toLocaleString("vi-VN") + " VNĐ"
-      : "Chưa có";
 
     return (
       <Card
@@ -250,7 +291,9 @@ export default function ChecklistManagement() {
               </div>
               <Badge
                 variant={statusBadge.variant}
-                className={`text-xs px-2.5 py-1 font-semibold border ${statusBadge.className || ""}`}>
+                className={`text-xs px-2.5 py-1 font-semibold border ${
+                  statusBadge.className || ""
+                }`}>
                 {statusBadge.text}
               </Badge>
             </div>
@@ -308,15 +351,22 @@ export default function ChecklistManagement() {
             {vehicleDetails && (
               <div className="flex items-start gap-3 p-3 bg-muted/40 rounded-lg border">
                 <div className="p-2 bg-emerald-500/10 rounded-lg">
-                  <Car className="h-4 w-4 text-emerald-600" />
+                  <Bike className="h-4 w-4 text-emerald-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground mb-1">Phương tiện</p>
-                  {(vehicleDetails.brand !== "-" || vehicleDetails.model !== "-") && (
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Phương tiện
+                  </p>
+                  {(vehicleDetails.brand !== "-" ||
+                    vehicleDetails.model !== "-") && (
                     <p className="text-sm font-semibold text-foreground">
                       {[
-                        vehicleDetails.brand !== "-" ? vehicleDetails.brand : null,
-                        vehicleDetails.model !== "-" ? vehicleDetails.model : null,
+                        vehicleDetails.brand !== "-"
+                          ? vehicleDetails.brand
+                          : null,
+                        vehicleDetails.model !== "-"
+                          ? vehicleDetails.model
+                          : null,
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -335,27 +385,23 @@ export default function ChecklistManagement() {
                 </div>
               </div>
             )}
-
-            {/* Total Cost */}
-            <div className="flex items-start gap-3 p-3 bg-muted/40 rounded-lg border">
-              <div className="p-2 bg-amber-500/10 rounded-lg">
-                <DollarSign className="h-4 w-4 text-amber-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground mb-1">
-                  Tổng chi phí
-                </p>
-                <p className="text-sm font-bold text-foreground">
-                  {formattedCost}
-                </p>
-              </div>
-            </div>
           </div>
 
           {/* Issue Type - Prominent */}
           <div className="mb-4 p-4 bg-primary/5 rounded-lg border-l-4 border-primary">
-            <p className="text-xs text-muted-foreground mb-1">Loại vấn đề</p>
-            <h4 className="font-bold text-lg text-foreground">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-xs text-muted-foreground">Loại vấn đề</p>
+              {severityBadge && (
+                <span
+                  className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${severityBadge.className}`}>
+                  <span
+                    className={`h-2 w-2 rounded-full ${severityBadge.dotClass}`}
+                  />
+                  {severityBadge.label}
+                </span>
+              )}
+            </div>
+            <h4 className="font-bold text-lg text-foreground mt-2">
               {issueTypeText || "Vấn đề không xác định"}
             </h4>
             {issueDescription && issueDescription !== issueTypeText && (
@@ -629,10 +675,10 @@ function issueTypeIdToText(
 ) {
   if (!issueTypeId) return "";
   if (typeof issueTypeId === "string") return issueTypeId;
-  const pieces = [];
-  if (issueTypeId.category) pieces.push(issueTypeId.category);
-  if (issueTypeId.severity) pieces.push(issueTypeId.severity);
-  if (pieces.length) return pieces.join(" • ");
+  if (issueTypeId.category && issueTypeId.category.trim())
+    return issueTypeId.category;
+  if (issueTypeId.severity && issueTypeId.severity.trim())
+    return issueTypeId.severity;
   return issueTypeId._id ?? "";
 }
 

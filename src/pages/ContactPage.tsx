@@ -67,10 +67,11 @@ const ContactPage = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
-    toast.success("Đăng xuất thành công!");
     setTimeout(() => {
       window.location.href = "/login";
     }, 1000);
+    toast.success("Đăng xuất thành công!");
+
   };
 
   return (

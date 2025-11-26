@@ -123,11 +123,11 @@ const IssueTypeManagement = () => {
           setItems(res.data.data.items);
           setTotalPages(res.data.data.pagination.total_pages || 1);
         } else {
-          toast.error(res.message || "Không thể tải danh sách issue types");
+          toast.error(res.message || "Không thể tải danh sách Kho phụ tùng");
         }
       } catch (e) {
         console.error(e);
-        toast.error("Lỗi khi tải danh sách issue types");
+        toast.error("Lỗi khi tải danh sách Kho phụ tùng");
       } finally {
         setLoading(false);
       }
@@ -253,7 +253,7 @@ const IssueTypeManagement = () => {
       
       if (result.success > 0) {
         toast.success(
-          `✅ Đã thêm ${result.success}/${result.total} issue types!\n` +
+          `✅ Đã thêm ${result.success}/${result.total} Kho phụ tùng!\n` +
           (result.error > 0 ? `⚠️ ${result.error} lỗi (có thể do trùng lặp)` : "")
         );
         await loadData(); // Reload data
@@ -275,7 +275,7 @@ const IssueTypeManagement = () => {
           <Button variant="outline" onClick={() => navigate("/dashboard/admin")}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
           </Button>
-          <h1 className="text-2xl font-bold">Quản lý Issue Types</h1>
+          <h1 className="text-2xl font-bold">Quản lý Kho phụ tùng</h1>
         </div>
         <div className="flex gap-2">
           {items.length === 0 && (
@@ -335,7 +335,7 @@ const IssueTypeManagement = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách Issue Types</CardTitle>
+          <CardTitle>Danh sách Kho phụ tùng</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -581,7 +581,7 @@ const IssueTypeManagement = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Thêm dữ liệu mẫu vào hệ thống?</AlertDialogTitle>
             <AlertDialogDescription>
-              Hệ thống sẽ thêm 30+ issue types mẫu vào database.
+              Hệ thống sẽ thêm 30+ Kho phụ tùng mẫu vào database.
               <br /><br />
               <strong>Lưu ý:</strong> Các issue type trùng lặp sẽ bị bỏ qua.
             </AlertDialogDescription>

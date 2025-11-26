@@ -6,11 +6,10 @@ import {
   Wrench,
   Clock,
   CheckCircle,
-  Battery,
   FileText,
   Hash,
   User,
-  Car,
+  Bike,
   Calendar,
   Building2,
   Eye,
@@ -42,7 +41,7 @@ export const TechnicianOverview = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const fetchTechnicianAppointments = useCallback(async () => {
     if (!user?.id) return;
     try {
@@ -55,8 +54,13 @@ export const TechnicianOverview = () => {
       };
       const result = await getAppointmentsApi(params);
       if (result.ok && result.data?.success) {
-        const data = result.data.data as { items?: Appointment[]; appointments?: Appointment[] };
-        const appointmentsData = (data.items || data.appointments || []) as Appointment[];
+        const data = result.data.data as {
+          items?: Appointment[];
+          appointments?: Appointment[];
+        };
+        const appointmentsData = (data.items ||
+          data.appointments ||
+          []) as Appointment[];
         setAppointments(appointmentsData);
       } else {
         setError(result.message || "Không thể tải danh sách appointments");
@@ -79,7 +83,9 @@ export const TechnicianOverview = () => {
     let cleanup: (() => void) | undefined;
     (async () => {
       try {
-        const { initializeSocket, onAppointmentUpdated } = await import("@/lib/socket");
+        const { initializeSocket, onAppointmentUpdated } = await import(
+          "@/lib/socket"
+        );
         const socket = initializeSocket();
         if (user?.id) socket.emit("join", user.id);
         const handler = () => {
@@ -87,7 +93,9 @@ export const TechnicianOverview = () => {
         };
         onAppointmentUpdated(handler);
         cleanup = () => {
-          try { socket.off("appointment_updated", handler); } catch {}
+          try {
+            socket.off("appointment_updated", handler);
+          } catch {}
         };
       } catch (e) {
         console.error("Realtime subscribe error (TechnicianOverview):", e);
@@ -128,7 +136,6 @@ export const TechnicianOverview = () => {
           text: "Đang thực hiện",
           className: "bg-blue-100 text-blue-800 border-blue-200",
         };
-      case "repaired":
       case "completed":
       case "done":
         return {
@@ -208,10 +215,7 @@ export const TechnicianOverview = () => {
     });
 
   const completedTasks = appointments
-    .filter(
-      (appointment) =>
-        appointment.status === "completed" || appointment.status === "repaired"
-    )
+    .filter((appointment) => appointment.status === "completed")
     .map((appointment) => {
       const vehicleInfo = getVehicleInfo(appointment.vehicle_id);
       return {
@@ -303,10 +307,12 @@ export const TechnicianOverview = () => {
               task.vehicleInfo.licensePlate) && (
               <div className="flex items-start gap-3 p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200/50">
                 <div className="p-2 bg-emerald-500/10 rounded-lg">
-                  <Car className="h-4 w-4 text-emerald-600" />
+                  <Bike className="h-4 w-4 text-emerald-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground mb-1">Phương tiện</p>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Phương tiện
+                  </p>
                   {(task.vehicleInfo.brand || task.vehicleInfo.model) && (
                     <p className="text-sm font-semibold text-foreground">
                       {[task.vehicleInfo.brand, task.vehicleInfo.model]
@@ -353,7 +359,9 @@ export const TechnicianOverview = () => {
           {/* Service Description */}
           {task.serviceDescription && (
             <div className="mb-4 p-4 bg-primary/5 rounded-lg border-l-4 border-primary">
-              <p className="text-xs text-muted-foreground mb-1">Mô tả dịch vụ</p>
+              <p className="text-xs text-muted-foreground mb-1">
+                Mô tả dịch vụ
+              </p>
               <p className="text-sm font-medium">{task.serviceDescription}</p>
             </div>
           )}
@@ -361,11 +369,15 @@ export const TechnicianOverview = () => {
           {/* Additional Info */}
           <div className="pt-4 border-t space-y-2">
             <div className="grid grid-cols-3 gap-3 text-xs">
-              {(task.appointmentTime || task.startTime || task.completedTime) && (
+              {(task.appointmentTime ||
+                task.startTime ||
+                task.completedTime) && (
                 <div>
                   <p className="text-muted-foreground">Giờ</p>
                   <p className="font-medium">
-                    {task.appointmentTime || task.startTime || task.completedTime}
+                    {task.appointmentTime ||
+                      task.startTime ||
+                      task.completedTime}
                   </p>
                 </div>
               )}
@@ -457,7 +469,7 @@ export const TechnicianOverview = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
         <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -497,7 +509,7 @@ export const TechnicianOverview = () => {
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm">
+        {/* <Card className="border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Đánh giá trung bình
@@ -517,7 +529,7 @@ export const TechnicianOverview = () => {
               Từ phản hồi khách hàng
             </p>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       {/* Main Tabs */}
