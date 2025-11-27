@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Pencil, Plus, Trash2, Search } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +53,9 @@ const PartManagement = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const searchRef = useRef("");
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
 
   // Dialog states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -216,6 +219,87 @@ const PartManagement = () => {
     await loadData({ page: 1, q: search });
   };
 
+  const toggleRowExpansion = (id: string) => {
+    setExpandedRows((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortColumn(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortedItems = () => {
+    if (!sortColumn || !sortDirection) return items;
+
+    return [...items].sort((a, b) => {
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+
+      switch (sortColumn) {
+        case "part_number":
+          aVal = a.part_number || "";
+          bVal = b.part_number || "";
+          break;
+        case "part_name":
+          aVal = a.part_name || "";
+          bVal = b.part_name || "";
+          break;
+        case "description":
+          aVal = a.description || "";
+          bVal = b.description || "";
+          break;
+        case "supplier":
+          aVal = a.supplier || "";
+          bVal = b.supplier || "";
+          break;
+        case "warranty_month":
+          aVal = typeof a.warranty_month === "number" ? a.warranty_month : -1;
+          bVal = typeof b.warranty_month === "number" ? b.warranty_month : -1;
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        const comparison = aVal.localeCompare(bVal, "vi");
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      return 0;
+    });
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline opacity-50" />;
+    }
+    if (sortDirection === "asc") {
+      return <ArrowUp className="ml-2 h-4 w-4 inline text-primary" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 inline text-primary" />;
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -274,11 +358,41 @@ const PartManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Mã phụ tùng</TableHead>
-                    <TableHead>Tên</TableHead>
-                    <TableHead>Mô tả</TableHead>
-                    <TableHead>Nhà cung cấp</TableHead>
-                    <TableHead>Bảo hành (tháng)</TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("part_number")}
+                    >
+                      Mã phụ tùng
+                      <SortIcon column="part_number" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("part_name")}
+                    >
+                      Tên
+                      <SortIcon column="part_name" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("description")}
+                    >
+                      Mô tả
+                      <SortIcon column="description" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("supplier")}
+                    >
+                      Nhà cung cấp
+                      <SortIcon column="supplier" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("warranty_month")}
+                    >
+                      Bảo hành (tháng)
+                      <SortIcon column="warranty_month" />
+                    </TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -290,11 +404,18 @@ const PartManagement = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    items.map((it) => (
+                    getSortedItems().map((it) => {
+                      const isExpanded = expandedRows.has(it._id);
+                      const hasDescription = it.description && it.description.length > 0;
+                      return (
                       <TableRow key={it._id}>
                         <TableCell className="font-medium">{it.part_number || "-"}</TableCell>
                         <TableCell>{it.part_name}</TableCell>
-                        <TableCell className="max-w-[320px] truncate" title={it.description || ""}>
+                        <TableCell 
+                          className={`max-w-[320px] ${!isExpanded ? "truncate" : ""} ${hasDescription ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}`}
+                          onClick={() => hasDescription && toggleRowExpansion(it._id)}
+                          title={hasDescription ? (isExpanded ? "Nhấn để thu gọn" : "Nhấn để xem đầy đủ") : ""}
+                        >
                           {it.description || "-"}
                         </TableCell>
                         <TableCell>{it.supplier || "-"}</TableCell>
@@ -308,7 +429,8 @@ const PartManagement = () => {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

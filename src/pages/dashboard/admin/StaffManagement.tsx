@@ -22,9 +22,11 @@ import {
   User,
   Calendar,
   Filter,
-  Download,
   RefreshCw,
   Briefcase,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import {
   Dialog,
@@ -61,6 +63,8 @@ const StaffManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
   
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffData | null>(null);
@@ -157,9 +161,76 @@ const StaffManagement = () => {
     setIsViewDialogOpen(true);
   };
 
-  const handleExportData = () => {
-    toast.success("Xuất dữ liệu thành công!");
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortColumn(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
   };
+
+  const getSortedStaff = () => {
+    if (!sortColumn || !sortDirection) return filteredStaff;
+
+    return [...filteredStaff].sort((a, b) => {
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+
+      switch (sortColumn) {
+        case "fullName":
+          aVal = a.fullName || "";
+          bVal = b.fullName || "";
+          break;
+        case "email":
+          aVal = a.email || "";
+          bVal = b.email || "";
+          break;
+        case "phoneNumber":
+          aVal = a.phoneNumber || "";
+          bVal = b.phoneNumber || "";
+          break;
+        case "status":
+          aVal = a.status || "";
+          bVal = b.status || "";
+          break;
+        case "createdAt":
+          aVal = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          bVal = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        const comparison = aVal.localeCompare(bVal, "vi");
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      return 0;
+    });
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline opacity-50" />;
+    }
+    if (sortDirection === "asc") {
+      return <ArrowUp className="ml-2 h-4 w-4 inline text-primary" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 inline text-primary" />;
+  };
+
+
 
   const getStatusBadge = (status?: string) => {
     switch (status) {
@@ -222,15 +293,6 @@ const StaffManagement = () => {
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
             Làm mới
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportData}
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Xuất dữ liệu
           </Button>
         </div>
       </div>
@@ -366,15 +428,39 @@ const StaffManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nhân viên</TableHead>
-                    <TableHead>Liên hệ</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Ngày tham gia</TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("fullName")}
+                    >
+                      Nhân viên
+                      <SortIcon column="fullName" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("email")}
+                    >
+                      Liên hệ
+                      <SortIcon column="email" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("status")}
+                    >
+                      Trạng thái
+                      <SortIcon column="status" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("createdAt")}
+                    >
+                      Ngày tham gia
+                      <SortIcon column="createdAt" />
+                    </TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredStaff.map((staffMember) => (
+                  {getSortedStaff().map((staffMember) => (
                     <TableRow key={staffMember._id}>
                       <TableCell>
                         <div className="flex items-center gap-3">

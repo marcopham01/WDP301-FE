@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Loader2, Search, Bike } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, Search, Bike, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   getVehicleModelsApi,
   createVehicleModelApi,
@@ -13,6 +13,13 @@ import {
   CreateVehicleModelPayload
 } from "@/lib/vehicleApi";
 import { toast } from "react-toastify";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +45,8 @@ const VehicleModelManagement = () => {
   const [models, setModels] = useState<VehicleModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<string>("brand");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState<CreateVehicleModelPayload>({
@@ -96,6 +105,49 @@ const VehicleModelManagement = () => {
     model.model_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     model.battery_type?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getSortedModels = () => {
+    return [...filteredModels].sort((a, b) => {
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+
+      switch (sortBy) {
+        case "brand":
+          aVal = a.brand || "";
+          bVal = b.brand || "";
+          break;
+        case "model_name":
+          aVal = a.model_name || "";
+          bVal = b.model_name || "";
+          break;
+        case "year":
+          aVal = a.year || 0;
+          bVal = b.year || 0;
+          break;
+        case "battery_type":
+          aVal = a.battery_type || "";
+          bVal = b.battery_type || "";
+          break;
+        case "createdAt":
+          aVal = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          bVal = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        const comparison = aVal.localeCompare(bVal, "vi");
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      return 0;
+    });
+  };
 
   return (
     <motion.div
@@ -221,15 +273,37 @@ const VehicleModelManagement = () => {
         </Dialog>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          placeholder="Tìm kiếm model xe..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search and Sort */}
+      <div className="flex gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Tìm kiếm model xe..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Sắp xếp theo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="brand">Thương hiệu</SelectItem>
+            <SelectItem value="model_name">Tên model</SelectItem>
+            <SelectItem value="year">Năm</SelectItem>
+            <SelectItem value="battery_type">Loại pin</SelectItem>
+            <SelectItem value="createdAt">Ngày tạo</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setSortDirection(sortDirection === "asc" ? "desc" : "asc")}
+          title={sortDirection === "asc" ? "Tăng dần" : "Giảm dần"}
+        >
+          {sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+        </Button>
       </div>
 
       {/* Models Grid */}
@@ -258,7 +332,7 @@ const VehicleModelManagement = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredModels.map((model) => (
+          {getSortedModels().map((model) => (
             <Card key={model._id}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">

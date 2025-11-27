@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -89,6 +89,8 @@ const IssueTypeManagement = () => {
   const [deleting, setDeleting] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [items, setItems] = useState<IssueType[]>([]);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -147,6 +149,67 @@ const IssueTypeManagement = () => {
   const openCreate = () => {
     resetForm();
     setIsCreateOpen(true);
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortColumn(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortedItems = () => {
+    if (!sortColumn || !sortDirection) return items;
+
+    return [...items].sort((a, b) => {
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+
+      switch (sortColumn) {
+        case "category":
+          aVal = CATEGORY_LABELS[a.category] || "";
+          bVal = CATEGORY_LABELS[b.category] || "";
+          break;
+        case "severity":
+          aVal = SEVERITY_LABELS[a.severity] || "";
+          bVal = SEVERITY_LABELS[b.severity] || "";
+          break;
+        case "createdAt":
+          aVal = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          bVal = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        const comparison = aVal.localeCompare(bVal, "vi");
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      return 0;
+    });
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline opacity-50" />;
+    }
+    if (sortDirection === "asc") {
+      return <ArrowUp className="ml-2 h-4 w-4 inline text-primary" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 inline text-primary" />;
   };
 
   const openEdit = (item: IssueType) => {
@@ -345,9 +408,27 @@ const IssueTypeManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Danh mục</TableHead>
-                    <TableHead>Mức độ nghiêm trọng</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("category")}
+                    >
+                      Danh mục
+                      <SortIcon column="category" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("severity")}
+                    >
+                      Mức độ nghiêm trọng
+                      <SortIcon column="severity" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("createdAt")}
+                    >
+                      Ngày tạo
+                      <SortIcon column="createdAt" />
+                    </TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -359,7 +440,7 @@ const IssueTypeManagement = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    items.map((it) => (
+                    getSortedItems().map((it) => (
                       <TableRow key={it._id}>
                         <TableCell className="font-medium">
                           {CATEGORY_LABELS[it.category]}

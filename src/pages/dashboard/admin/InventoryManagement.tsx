@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Pencil, Plus, Trash2, Search, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2, Search, AlertTriangle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +48,8 @@ const InventoryManagement = () => {
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -150,6 +152,83 @@ const InventoryManagement = () => {
     resetForm();
     void loadDropdowns();
     setIsCreateOpen(true);
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortColumn(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortedItems = () => {
+    if (!sortColumn || !sortDirection) return items;
+
+    return [...items].sort((a, b) => {
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+
+      switch (sortColumn) {
+        case "part_name":
+          aVal = getPartName(a);
+          bVal = getPartName(b);
+          break;
+        case "part_number":
+          aVal = getPartNumber(a);
+          bVal = getPartNumber(b);
+          break;
+        case "center_name":
+          aVal = getCenterName(a);
+          bVal = getCenterName(b);
+          break;
+        case "quantity_avaiable":
+          aVal = a.quantity_avaiable || 0;
+          bVal = b.quantity_avaiable || 0;
+          break;
+        case "minimum_stock":
+          aVal = typeof a.minimum_stock === "number" ? a.minimum_stock : 0;
+          bVal = typeof b.minimum_stock === "number" ? b.minimum_stock : 0;
+          break;
+        case "cost_per_unit":
+          aVal = typeof a.part_id.sellPrice === "number" ? a.part_id.sellPrice : 0;
+          bVal = typeof b.part_id.sellPrice === "number" ? b.part_id.sellPrice : 0;
+          break;
+        case "last_restocked":
+          aVal = a.last_restocked ? new Date(a.last_restocked).getTime() : 0;
+          bVal = b.last_restocked ? new Date(b.last_restocked).getTime() : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        const comparison = aVal.localeCompare(bVal, "vi");
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      return 0;
+    });
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline opacity-50" />;
+    }
+    if (sortDirection === "asc") {
+      return <ArrowUp className="ml-2 h-4 w-4 inline text-primary" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 inline text-primary" />;
   };
 
   const openEdit = (item: InventoryItem) => {
@@ -397,13 +476,55 @@ const InventoryManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Phụ tùng</TableHead>
-                    <TableHead>Mã phụ tùng</TableHead>
-                    <TableHead>Trung tâm</TableHead>
-                    <TableHead>Tồn kho</TableHead>
-                    <TableHead>Tồn tối thiểu</TableHead>
-                    <TableHead>Giá/đơn vị</TableHead>
-                    <TableHead>Nhập kho lần cuối</TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("part_name")}
+                    >
+                      Phụ tùng
+                      <SortIcon column="part_name" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("part_number")}
+                    >
+                      Mã phụ tùng
+                      <SortIcon column="part_number" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("center_name")}
+                    >
+                      Trung tâm
+                      <SortIcon column="center_name" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("quantity_avaiable")}
+                    >
+                      Tồn kho
+                      <SortIcon column="quantity_avaiable" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("minimum_stock")}
+                    >
+                      Tồn tối thiểu
+                      <SortIcon column="minimum_stock" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("cost_per_unit")}
+                    >
+                      Giá/đơn vị
+                      <SortIcon column="cost_per_unit" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("last_restocked")}
+                    >
+                      Nhập kho lần cuối
+                      <SortIcon column="last_restocked" />
+                    </TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -415,7 +536,7 @@ const InventoryManagement = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    items.map((it) => (
+                    getSortedItems().map((it) => (
                       <TableRow key={it._id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">

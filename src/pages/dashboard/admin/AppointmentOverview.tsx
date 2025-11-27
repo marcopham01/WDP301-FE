@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "react-toastify";
 import { getAppointmentsApi, Appointment, Pagination } from "@/lib/appointmentApi";
 import { getServiceCentersApi, ServiceCenter } from "@/lib/serviceCenterApi";
@@ -27,6 +27,8 @@ const AppointmentOverview = () => {
   // State cho danh sách lịch hẹn
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
   const [appointmentsPagination, setAppointmentsPagination] = useState<Pagination>({
     page: 1,
     limit: 10,
@@ -139,6 +141,83 @@ const AppointmentOverview = () => {
     return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
   };
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortColumn(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortedAppointments = () => {
+    if (!sortColumn || !sortDirection) return appointments;
+
+    return [...appointments].sort((a, b) => {
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+
+      switch (sortColumn) {
+        case "customer":
+          aVal = a.user_id?.fullName || a.user_id?.username || "";
+          bVal = b.user_id?.fullName || b.user_id?.username || "";
+          break;
+        case "vehicle":
+          aVal = a.vehicle_id?.license_plate || "";
+          bVal = b.vehicle_id?.license_plate || "";
+          break;
+        case "center":
+          aVal = a.center_id?.center_name || a.center_id?.name || "";
+          bVal = b.center_id?.center_name || b.center_id?.name || "";
+          break;
+        case "date":
+          aVal = a.appoinment_date ? new Date(a.appoinment_date).getTime() : 0;
+          bVal = b.appoinment_date ? new Date(b.appoinment_date).getTime() : 0;
+          break;
+        case "service":
+          aVal = a.service_type_id?.service_name || "";
+          bVal = b.service_type_id?.service_name || "";
+          break;
+        case "status":
+          aVal = a.status || "";
+          bVal = b.status || "";
+          break;
+        case "technician":
+          aVal = a.technician_id?.fullName || a.assigned?.fullName || "";
+          bVal = b.technician_id?.fullName || b.assigned?.fullName || "";
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        const comparison = aVal.localeCompare(bVal, "vi");
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      return 0;
+    });
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline opacity-50" />;
+    }
+    if (sortDirection === "asc") {
+      return <ArrowUp className="ml-2 h-4 w-4 inline text-primary" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 inline text-primary" />;
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -148,7 +227,7 @@ const AppointmentOverview = () => {
             onClick={() => navigate("/dashboard/admin/appointments")}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại thống kê
           </Button>
-          <h1 className="text-2xl font-bold">Tổng quan lịch hẹn</h1>
+          <h1 className="text-2xl font-bold">Quản lý lịch hẹn</h1>
         </div>
       </div>
 
@@ -227,18 +306,60 @@ const AppointmentOverview = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left p-3">Khách hàng</th>
-                      <th className="text-left p-3">Xe</th>
-                      <th className="text-left p-3">Trung tâm</th>
-                      <th className="text-left p-3">Ngày giờ</th>
-                      <th className="text-left p-3">Dịch vụ</th>
-                      <th className="text-left p-3">Trạng thái</th>
-                      <th className="text-left p-3">Kỹ thuật viên</th>
+                      <th 
+                        className="text-left p-3 cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleSort("customer")}
+                      >
+                        Khách hàng
+                        <SortIcon column="customer" />
+                      </th>
+                      <th 
+                        className="text-left p-3 cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleSort("vehicle")}
+                      >
+                        Xe
+                        <SortIcon column="vehicle" />
+                      </th>
+                      <th 
+                        className="text-left p-3 cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleSort("center")}
+                      >
+                        Trung tâm
+                        <SortIcon column="center" />
+                      </th>
+                      <th 
+                        className="text-left p-3 cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleSort("date")}
+                      >
+                        Ngày giờ
+                        <SortIcon column="date" />
+                      </th>
+                      <th 
+                        className="text-left p-3 cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleSort("service")}
+                      >
+                        Dịch vụ
+                        <SortIcon column="service" />
+                      </th>
+                      <th 
+                        className="text-left p-3 cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleSort("status")}
+                      >
+                        Trạng thái
+                        <SortIcon column="status" />
+                      </th>
+                      <th 
+                        className="text-left p-3 cursor-pointer select-none hover:bg-muted/50"
+                        onClick={() => handleSort("technician")}
+                      >
+                        Kỹ thuật viên
+                        <SortIcon column="technician" />
+                      </th>
                       <th className="text-center p-3">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {appointments.map((appointment) => (
+                    {getSortedAppointments().map((appointment) => (
                       <tr
                         key={appointment._id}
                         className="border-b hover:bg-muted/50">
@@ -265,7 +386,7 @@ const AppointmentOverview = () => {
                         <td className="p-3">
                           <div className="flex flex-col">
                             <span className="font-medium">
-                              {appointment.center_id?.center_name || appointment.center_id?.name || "N/A"}
+                              {appointment.center_id?.center_name || appointment.center_id?.name || "-"}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {appointment.center_id?.address || ""}

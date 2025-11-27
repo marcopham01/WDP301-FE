@@ -11,7 +11,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Pencil, Plus, Trash2, Clock, Users, UserPlus, X } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Pencil, 
+  Plus, 
+  Trash2, 
+  Clock, 
+  Users, 
+  UserPlus, 
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +74,8 @@ import { getAllProfilesApi, UserProfileItem } from "@/lib/authApi";
 const ServiceCenterManagement = () => {
   const [serviceCenters, setServiceCenters] = useState<ServiceCenter[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -131,6 +145,71 @@ const ServiceCenterManagement = () => {
       loadStaffUsers();
     }
     setIsCreateDialogOpen(true);
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortColumn(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortedServiceCenters = () => {
+    if (!sortColumn || !sortDirection) return serviceCenters;
+
+    return [...serviceCenters].sort((a, b) => {
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+
+      switch (sortColumn) {
+        case "center_name":
+          aVal = a.center_name || "";
+          bVal = b.center_name || "";
+          break;
+        case "address":
+          aVal = a.address || "";
+          bVal = b.address || "";
+          break;
+        case "phone":
+          aVal = a.phone || "";
+          bVal = b.phone || "";
+          break;
+        case "is_active":
+          aVal = a.is_active !== false ? 1 : 0;
+          bVal = b.is_active !== false ? 1 : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        const comparison = aVal.localeCompare(bVal, "vi");
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      return 0;
+    });
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline opacity-50" />;
+    }
+    if (sortDirection === "asc") {
+      return <ArrowUp className="ml-2 h-4 w-4 inline text-primary" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 inline text-primary" />;
   };
 
   const handleOpenEditDialog = (serviceCenter: ServiceCenter) => {
@@ -474,10 +553,34 @@ const ServiceCenterManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tên trung tâm</TableHead>
-                  <TableHead>Địa chỉ</TableHead>
-                  <TableHead>Số điện thoại</TableHead>
-                  <TableHead>Trạng thái</TableHead>
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("center_name")}
+                  >
+                    Tên trung tâm
+                    <SortIcon column="center_name" />
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("address")}
+                  >
+                    Địa chỉ
+                    <SortIcon column="address" />
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("phone")}
+                  >
+                    Số điện thoại
+                    <SortIcon column="phone" />
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer select-none hover:bg-muted/50"
+                    onClick={() => handleSort("is_active")}
+                  >
+                    Trạng thái
+                    <SortIcon column="is_active" />
+                  </TableHead>
                   <TableHead className="text-center">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
@@ -489,7 +592,7 @@ const ServiceCenterManagement = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  serviceCenters.map((center) => (
+                  getSortedServiceCenters().map((center) => (
                     <TableRow key={center._id}>
                       <TableCell className="font-medium">
                         {center.center_name}
