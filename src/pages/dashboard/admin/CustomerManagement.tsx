@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -13,7 +11,6 @@ import {
 } from "@/components/ui/table";
 import {
   ArrowLeft,
-  Search,
   Eye,
   Ban,
   CheckCircle,
@@ -21,9 +18,10 @@ import {
   Phone,
   User,
   Calendar,
-  Filter,
-  Download,
   RefreshCw,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import {
   Dialog,
@@ -33,13 +31,6 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -59,10 +50,9 @@ interface CustomerData extends UserProfileItem {
 const CustomerManagement = () => {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState<CustomerData[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<CustomerData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
   
   // Dialog states
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -74,11 +64,6 @@ const CustomerManagement = () => {
   useEffect(() => {
     loadCustomers();
   }, []);
-
-  useEffect(() => {
-    filterCustomers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, statusFilter, customers]);
 
   const loadCustomers = async () => {
     setLoading(true);
@@ -144,27 +129,73 @@ const CustomerManagement = () => {
     }
   };
 
-  const filterCustomers = () => {
-    let filtered = [...customers];
-
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (customer) =>
-          customer.fullName?.toLowerCase().includes(term) ||
-          customer.email?.toLowerCase().includes(term) ||
-          customer.username?.toLowerCase().includes(term) ||
-          customer.phoneNumber?.includes(term)
-      );
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortColumn(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
     }
+  };
 
-    // Status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((customer) => customer.status === statusFilter);
+  const getSortedCustomers = () => {
+    if (!sortColumn || !sortDirection) return customers;
+
+    return [...customers].sort((a, b) => {
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+
+      switch (sortColumn) {
+        case "fullName":
+          aVal = a.fullName || "";
+          bVal = b.fullName || "";
+          break;
+        case "email":
+          aVal = a.email || "";
+          bVal = b.email || "";
+          break;
+        case "totalAppointments":
+          aVal = a.totalAppointments || 0;
+          bVal = b.totalAppointments || 0;
+          break;
+        case "totalSpent":
+          aVal = a.totalSpent || 0;
+          bVal = b.totalSpent || 0;
+          break;
+        case "createdAt":
+          aVal = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          bVal = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        const comparison = aVal.localeCompare(bVal, "vi");
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      return 0;
+    });
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline opacity-50" />;
     }
-
-    setFilteredCustomers(filtered);
+    if (sortDirection === "asc") {
+      return <ArrowUp className="ml-2 h-4 w-4 inline text-primary" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 inline text-primary" />;
   };
 
   const handleViewCustomer = (customer: CustomerData) => {
@@ -207,10 +238,7 @@ const CustomerManagement = () => {
     }
   };
 
-  const handleExportData = () => {
-    toast.success("Xuất dữ liệu thành công!");
-    // Implement export logic here
-  };
+
 
   const getStatusBadge = (status?: string) => {
     switch (status) {
@@ -274,15 +302,6 @@ const CustomerManagement = () => {
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
             Làm mới
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportData}
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Xuất dữ liệu
           </Button>
         </div>
       </div>
@@ -356,53 +375,12 @@ const CustomerManagement = () => {
         </Card>
       </div>
 
-      {/* Filters and Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Bộ lọc và tìm kiếm</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="search" className="flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                Tìm kiếm
-              </Label>
-              <Input
-                id="search"
-                placeholder="Tên, email, SĐT, username..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status-filter" className="flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                Trạng thái
-              </Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger id="status-filter">
-                  <SelectValue placeholder="Tất cả trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="active">Hoạt động</SelectItem>
-                  <SelectItem value="inactive">Không hoạt động</SelectItem>
-                  <SelectItem value="banned">Bị khóa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Table */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>
-              Danh sách khách hàng ({filteredCustomers.length})
+              Danh sách khách hàng ({customers.length})
             </CardTitle>
           </div>
         </CardHeader>
@@ -411,7 +389,7 @@ const CustomerManagement = () => {
             <div className="flex items-center justify-center py-12">
               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : filteredCustomers.length === 0 ? (
+          ) : customers.length === 0 ? (
             <div className="text-center py-12">
               <User className="h-16 w-16 mx-auto text-gray-300 mb-4" />
               <p className="text-muted-foreground">Không tìm thấy khách hàng nào</p>
@@ -421,17 +399,46 @@ const CustomerManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Khách hàng</TableHead>
-                    <TableHead>Liên hệ</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Số lịch hẹn</TableHead>
-                    <TableHead>Tổng chi tiêu</TableHead>
-                    <TableHead>Ngày tham gia</TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("fullName")}
+                    >
+                      Khách hàng
+                      <SortIcon column="fullName" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("email")}
+                    >
+                      Liên hệ
+                      <SortIcon column="email" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("totalAppointments")}
+                    >
+                      Số lịch hẹn
+                      <SortIcon column="totalAppointments" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("totalSpent")}
+                    >
+                      Tổng chi tiêu
+                      <SortIcon column="totalSpent" />
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer select-none hover:bg-muted/50"
+                      onClick={() => handleSort("createdAt")}
+                    >
+                      Ngày tham gia
+                      <SortIcon column="createdAt" />
+                    </TableHead>
                     <TableHead className="text-right">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCustomers.map((customer) => (
+                  {getSortedCustomers().map((customer) => (
                     <TableRow key={customer._id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -464,7 +471,6 @@ const CustomerManagement = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{getStatusBadge(customer.status)}</TableCell>
                       <TableCell>
                         <div className="font-medium">
                           {customer.totalAppointments || 0}
