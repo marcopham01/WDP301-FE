@@ -393,13 +393,13 @@ export default function TechSchedule() {
       </Card>
 
       {/* Summary Cards */}
-      {data && data.items.length > 0 && (
+      {centerId && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card className="bg-gradient-card border-0 shadow-soft">
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground mb-1">Tổng số KTV</p>
               <p className="text-3xl font-bold text-primary">
-                {data.items.length}
+                {technicians.length}
               </p>
             </CardContent>
           </Card>
@@ -407,7 +407,7 @@ export default function TechSchedule() {
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground mb-1">Tổng số công việc</p>
               <p className="text-3xl font-bold text-success">
-                {data.items.reduce((sum, item) => sum + item.total_assignments, 0)}
+                {data ? data.items.reduce((sum, item) => sum + item.total_assignments, 0) : 0}
               </p>
             </CardContent>
           </Card>
@@ -415,7 +415,13 @@ export default function TechSchedule() {
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground mb-1">Khoảng thời gian</p>
               <p className="text-sm font-medium">
-                {format(new Date(data.date_range.from), "dd/MM/yyyy", { locale: vi })} - {format(new Date(data.date_range.to), "dd/MM/yyyy", { locale: vi })}
+                {data ? (
+                  <>
+                    {format(new Date(data.date_range.from), "dd/MM/yyyy", { locale: vi })} - {format(new Date(data.date_range.to), "dd/MM/yyyy", { locale: vi })}
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">Chưa có dữ liệu</span>
+                )}
               </p>
             </CardContent>
           </Card>
