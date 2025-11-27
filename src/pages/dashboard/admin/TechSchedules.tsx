@@ -35,7 +35,7 @@ import {
   TechnicianScheduleItem,
   ScheduleItem,
 } from "@/lib/appointmentApi";
-import { getServiceCentersApi, ServiceCenter } from "@/lib/serviceCenterApi";
+import { getServiceCentersApi, ServiceCenter, getTechniciansApi } from "@/lib/serviceCenterApi";
 import { getAllProfilesApi, UserProfileItem } from "@/lib/authApi";
 import { TechnicianCalendarView } from "@/components/dashboard/TechnicianCalendarView";
 
@@ -64,6 +64,7 @@ export default function TechSchedules() {
   const [technicianId, setTechnicianId] = useState<string>("all");
   const [serviceCenters, setServiceCenters] = useState<ServiceCenter[]>([]);
   const [technicians, setTechnicians] = useState<UserProfileItem[]>([]);
+  const [centerTechnicians, setCenterTechnicians] = useState<Array<{ _id: string; fullName: string }>>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSchedules, setSelectedSchedules] = useState<ScheduleItem[]>([]);
 
@@ -94,7 +95,7 @@ export default function TechSchedules() {
     }
   }, []);
 
-  // Load danh sách technicians
+  // Load danh sách technicians (tất cả để filter)
   const loadTechnicians = useCallback(async () => {
     try {
       const res = await getAllProfilesApi({ page: 1, limit: 100, role: "technician" });
@@ -108,6 +109,29 @@ export default function TechSchedules() {
       console.error(e);
     }
   }, []);
+
+  // Load danh sách technicians của trung tâm được chọn
+  const loadCenterTechnicians = useCallback(async () => {
+    if (!centerId || centerId === "all") {
+      setCenterTechnicians([]);
+      return;
+    }
+    try {
+      const res = await getTechniciansApi(centerId);
+      if (res.ok && res.data?.data) {
+        const techs = res.data.data.map((tech: any) => ({
+          _id: tech.user?._id || tech.user_id || tech._id,
+          fullName: tech.user?.fullName || tech.fullName || "N/A",
+        }));
+        setCenterTechnicians(techs);
+      } else {
+        setCenterTechnicians([]);
+      }
+    } catch (e) {
+      console.error(e);
+      setCenterTechnicians([]);
+    }
+  }, [centerId]);
 
   // Load lịch làm việc
   const loadSchedules = useCallback(async () => {
@@ -189,6 +213,10 @@ export default function TechSchedules() {
     loadServiceCenters();
     loadTechnicians();
   }, [loadServiceCenters, loadTechnicians]);
+
+  useEffect(() => {
+    loadCenterTechnicians();
+  }, [loadCenterTechnicians]);
 
   useEffect(() => {
     loadSchedules();
@@ -331,13 +359,13 @@ export default function TechSchedules() {
       </Card>
 
       {/* Summary Cards */}
-      {data && data.items.length > 0 && (
+      {(centerId !== "all" || data) && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card className="bg-gradient-card border-0 shadow-soft">
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground mb-1">Tổng số KTV</p>
               <p className="text-3xl font-bold text-primary">
-                {data.items.length}
+                {centerId === "all" ? technicians.length : centerTechnicians.length}
               </p>
             </CardContent>
           </Card>
@@ -345,7 +373,7 @@ export default function TechSchedules() {
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground mb-1">Tổng số công việc</p>
               <p className="text-3xl font-bold text-success">
-                {data.items.reduce((sum, item) => sum + item.total_assignments, 0)}
+                {data ? data.items.reduce((sum, item) => sum + item.total_assignments, 0) : 0}
               </p>
             </CardContent>
           </Card>
@@ -353,7 +381,13 @@ export default function TechSchedules() {
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground mb-1">Khoảng thời gian</p>
               <p className="text-sm font-medium">
-                {format(new Date(data.date_range.from), "dd/MM/yyyy", { locale: vi })} - {format(new Date(data.date_range.to), "dd/MM/yyyy", { locale: vi })}
+                {data ? (
+                  <>
+                    {format(new Date(data.date_range.from), "dd/MM/yyyy", { locale: vi })} - {format(new Date(data.date_range.to), "dd/MM/yyyy", { locale: vi })}
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">Chưa có dữ liệu</span>
+                )}
               </p>
             </CardContent>
           </Card>
