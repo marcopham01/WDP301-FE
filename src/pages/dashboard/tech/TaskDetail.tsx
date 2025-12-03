@@ -29,6 +29,7 @@ import {
   Appointment,
   getAppointmentsApi,
 } from "@/lib/appointmentApi";
+import { AIChecklistSuggestions } from "@/components/tech/AIChecklistSuggestions";
 import { toast } from "react-toastify";
 import {
   getIssueTypesApi,
@@ -1323,6 +1324,38 @@ export const TaskDetail = () => {
                 />
               </div>
             </div>
+
+            {/* AI Suggestions - Show after issue type selected */}
+            {checklistForm.issue_type_id && (
+              <AIChecklistSuggestions
+                issueTypeId={checklistForm.issue_type_id}
+                vehicleId={
+                  typeof appointment?.vehicle_id === "object"
+                    ? appointment?.vehicle_id?._id
+                    : appointment?.vehicle_id
+                }
+                centerId={
+                  typeof appointment?.center_id === "object"
+                    ? appointment?.center_id?._id
+                    : appointment?.center_id
+                }
+                onApplySolution={(solution) => {
+                  setChecklistForm((s) => ({ ...s, solution_applied: solution }));
+                  toast.success("Đã áp dụng giải pháp từ AI");
+                }}
+                onApplyDescription={(description) => {
+                  setChecklistForm((s) => ({ ...s, issue_description: description }));
+                  toast.success("Đã áp dụng mô tả từ AI");
+                }}
+                onApplyParts={(newParts) => {
+                  setChecklistForm((s) => ({
+                    ...s,
+                    parts: [...s.parts, ...newParts],
+                  }));
+                  toast.success("Đã thêm phụ tùng từ AI");
+                }}
+              />
+            )}
 
             {/* Mô tả vấn đề */}
             <div className="space-y-2">

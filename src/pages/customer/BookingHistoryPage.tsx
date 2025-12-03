@@ -8,9 +8,13 @@ import Footer from "@/components/MainLayout/Footer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { getMyAppointmentsApi, deleteAppointmentApi, Appointment } from "@/lib/appointmentApi";
 import { toast } from "react-toastify";
 import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 // Use relative path to avoid any alias resolution edge cases in this file
 import { PaymentDialog } from "../../components/customer/PaymentDialog";
@@ -24,16 +28,25 @@ const BASE_URL = config.API_BASE_URL;
 // (removed unused toVNDate helper)
 
 function statusLabel(s?: string) {
+  // Distinct color coding for better visual recognition
   switch (s) {
-    case "pending": return { text: "Đợi ứng tiền", variant: "secondary" as const };
-    case "assigned": return { text: "Đã sắp nhân viên", variant: "default" as const };
-    case "check_in": return { text: "Chờ báo giá", variant: "outline" as const };
-    case "in_progress": return { text: "Đang sửa chữa", variant: "default" as const };
-    case "completed": return { text: "Đơn hoàn thành", variant: "default" as const };
-    case "delay": return { text: "Trì hoãn", variant: "secondary" as const };
+    case "pending":
+      return { text: "Đợi ứng tiền", className: "bg-amber-100 text-amber-800 border-amber-300" };
+    case "assigned":
+      return { text: "Đã sắp nhân viên", className: "bg-sky-100 text-sky-800 border-sky-300" };
+    case "check_in":
+      return { text: "Chờ báo giá", className: "bg-indigo-100 text-indigo-800 border-indigo-300" };
+    case "in_progress":
+      return { text: "Đang sửa chữa", className: "bg-blue-100 text-blue-800 border-blue-300" };
+    case "completed":
+      return { text: "Đơn hoàn thành", className: "bg-emerald-100 text-emerald-800 border-emerald-300" };
+    case "delay":
+      return { text: "Trì hoãn", className: "bg-orange-100 text-orange-800 border-orange-300" };
     case "canceled":
-    case "cancelled": return { text: "Đã hủy", className: "bg-red-100 text-red-800 border-red-300" };
-    default: return { text: s || "—", className: "bg-gray-100 text-gray-800 border-gray-300" };
+    case "cancelled":
+      return { text: "Đã hủy", className: "bg-rose-100 text-rose-800 border-rose-300" };
+    default:
+      return { text: s || "—", className: "bg-gray-100 text-gray-800 border-gray-300" };
   }
 }
 
@@ -64,8 +77,8 @@ export default function BookingHistoryPage() {
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [fromDate, setFromDate] = useState<string>("");
-  const [toDate, setToDate] = useState<string>("");
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(undefined);
   const [sortKey, setSortKey] = useState<SortKey>("none");
 
   // Dialog state
@@ -193,8 +206,8 @@ export default function BookingHistoryPage() {
   const handleRefresh = () => fetchData({ soft: true });
   const handleClearFilters = () => {
     setStatusFilter("all");
-    setFromDate("");
-    setToDate("");
+    setFromDate(undefined);
+    setToDate(undefined);
     setSortKey("none");
     fetchData({ resetPage: true });
   };
@@ -385,9 +398,53 @@ export default function BookingHistoryPage() {
 
                 {/* From - To */}
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                  <input type="date" className="h-9 rounded-md border px-3 text-sm" value={fromDate} onChange={(e)=> setFromDate(e.target.value)} />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-9 justify-start text-left font-normal",
+                          !fromDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {fromDate ? format(fromDate, "dd/MM/yyyy", { locale: vi }) : "Từ ngày"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={fromDate}
+                        onSelect={setFromDate}
+                        locale={vi}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                   <span className="text-muted-foreground">→</span>
-                  <input type="date" className="h-9 rounded-md border px-3 text-sm" value={toDate} onChange={(e)=> setToDate(e.target.value)} />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-9 justify-start text-left font-normal",
+                          !toDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {toDate ? format(toDate, "dd/MM/yyyy", { locale: vi }) : "Đến ngày"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={toDate}
+                        onSelect={setToDate}
+                        locale={vi}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* Sort */}
@@ -484,6 +541,21 @@ export default function BookingHistoryPage() {
                                 {item.status === "pending" && (
                                   <Button size="sm" variant="ghost" className="h-8 px-2 text-red-600" title="Xóa" onClick={()=> handleDelete(item._id)}>
                                     <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                {/* Đặt lại lịch: chuyển sang trang đặt lịch với dữ liệu cũ, chỉ chọn lại ngày/giờ và thanh toán */}
+                                {item.status === "completed" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 px-3"
+                                    title="Đặt lại lịch này"
+                                    onClick={() => {
+                                        // Điều hướng sang trang đặt lịch với query param rebookFrom (route đúng là /booking)
+                                        window.location.href = `/booking?rebookFrom=${encodeURIComponent(item._id)}`;
+                                      }}
+                                  >
+                                    Đặt lại
                                   </Button>
                                 )}
                                 {/* Nút thanh toán cho lịch đã sửa xong */}

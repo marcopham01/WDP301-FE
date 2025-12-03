@@ -42,6 +42,7 @@ import {
 } from "@/lib/inventoryApi";
 import { getPartsApi, PartItem } from "@/lib/partApi";
 import { getServiceCentersApi, ServiceCenter } from "@/lib/serviceCenterApi";
+import AIInventoryInsights from "@/components/admin/AIInventoryInsights";
 
 const InventoryManagement = () => {
   const navigate = useNavigate();
@@ -101,11 +102,11 @@ const InventoryManagement = () => {
           setItems(res.data.data.items);
           setTotalPages(res.data.data.pagination.total_pages || 1);
         } else {
-          toast.error(res.message || "Không thể tải danh sách inventory");
+          toast.error(res.message || "Không thể tải danh sách kho phụ tùng");
         }
       } catch (e) {
         console.error(e);
-        toast.error("Lỗi khi tải danh sách inventory");
+        toast.error("Lỗi khi tải danh sách kho phụ tùng");
       } finally {
         setLoading(false);
       }
@@ -399,12 +400,15 @@ const InventoryManagement = () => {
           <Button variant="outline" onClick={() => navigate("/dashboard/admin")}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
           </Button>
-          <h1 className="text-2xl font-bold">Quản lý Inventory</h1>
+          <h1 className="text-2xl font-bold">Quản lý Kho phụ tùng</h1>
         </div>
         <Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" /> Thêm inventory mới
         </Button>
       </div>
+
+      {/* AI Insights Section */}
+      <AIInventoryInsights centerId={centerFilter !== "all" ? centerFilter : undefined} />
 
       <Card className="mb-4">
         <CardContent className="pt-6">
@@ -456,7 +460,7 @@ const InventoryManagement = () => {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle>Danh sách Inventory</CardTitle>
+          <CardTitle>Danh sách Kho phụ tùng</CardTitle>
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -562,7 +566,7 @@ const InventoryManagement = () => {
                             : "-"}
                         </TableCell>
                         <TableCell>
-                          {typeof it.part_id.sellPrice === "number"
+                          {typeof it.part_id === "object" && it.part_id && typeof it.part_id.sellPrice === "number"
                             ? `${it.part_id.sellPrice.toLocaleString("vi-VN")} VNĐ`
                             : "-"}
                         </TableCell>

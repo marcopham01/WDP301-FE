@@ -38,6 +38,9 @@ export interface PartInfo {
   name?: string; // Backend có thể dùng "name" thay vì "part_name"
   part_number?: string;
   description?: string;
+  costPrice?: number;
+  sellPrice?: number;
+  warranty_month?: number;
 }
 
 export interface CenterInfo {

@@ -8,10 +8,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Car, Loader2 } from "lucide-react";
+import { ArrowLeft, Car, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import { VehicleModel, getVehicleModelsApi, createVehicleApi } from "@/lib/vehicleApi";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 const vehicleSchema = z.object({
   model_id: z.string().min(1, "Vui lòng chọn model"),
@@ -44,6 +49,7 @@ const AddVehiclePage = () => {
   const [loading, setLoading] = useState(false);
   const [models, setModels] = useState<VehicleModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(true);
+  const [purchaseDate, setPurchaseDate] = useState<Date | undefined>(undefined);
 
   const form = useForm<VehicleForm>({
     resolver: zodResolver(vehicleSchema),
@@ -77,7 +83,7 @@ const AddVehiclePage = () => {
     const res = await createVehicleApi({
       license_plate: values.license_plate,
       color: values.color,
-      purchase_date: values.purchase_date || undefined,
+      purchase_date: purchaseDate ? format(purchaseDate, "yyyy-MM-dd") : undefined,
       current_miliage: values.current_miliage,
       battery_health: values.battery_health,
       last_service_mileage: values.last_service_mileage,
@@ -191,11 +197,30 @@ const AddVehiclePage = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="purchase_date">Ngày mua</Label>
-                    <Input
-                      id="purchase_date"
-                      type="date"
-                      {...form.register("purchase_date")}
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="purchase_date"
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !purchaseDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {purchaseDate ? format(purchaseDate, "dd/MM/yyyy", { locale: vi }) : "Chọn ngày mua"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={purchaseDate}
+                          onSelect={setPurchaseDate}
+                          locale={vi}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
 

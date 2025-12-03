@@ -57,6 +57,7 @@ import ChecklistManagement from "./pages/dashboard/staff/maintenance/ChecklistMa
 import ChecklistDetail from "./pages/dashboard/staff/maintenance/ChecklistDetail";
 import ContactPage from "./pages/ContactPage";
 import AboutPage from "./pages/AboutPage";
+import ServiceCentersPage from "./pages/ServiceCentersPage";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const AppRoutes = () => {
       <Route path="/register" element={<Register />} />
   <Route path="/about" element={<AboutPage />} />
       <Route path="/contact" element={<ContactPage />} />
+        <Route path="/service-centers" element={<ServiceCentersPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route

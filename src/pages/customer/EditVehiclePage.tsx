@@ -4,12 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Car, Save, Loader2, ArrowLeft } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Car, Save, Loader2, ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getUserVehiclesApi, Vehicle, updateVehicleApi, UpdateVehiclePayload } from "@/lib/vehicleApi";
 import Header from "@/components/MainLayout/Header";
 import Footer from "@/components/MainLayout/Footer";
 import { toast } from "react-toastify";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 const EditVehiclePage = () => {
   const navigate = useNavigate();
@@ -17,6 +22,7 @@ const EditVehiclePage = () => {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [purchaseDate, setPurchaseDate] = useState<Date | undefined>(undefined);
   const [formData, setFormData] = useState<UpdateVehiclePayload>({
     color: "",
     current_miliage: 0,
@@ -47,6 +53,9 @@ const EditVehiclePage = () => {
             purchase_date: foundVehicle.purchase_date ?
               new Date(foundVehicle.purchase_date).toISOString().split('T')[0] : "",
           });
+          if (foundVehicle.purchase_date) {
+            setPurchaseDate(new Date(foundVehicle.purchase_date));
+          }
         } else {
           toast.error("Không tìm thấy xe. Xe không tồn tại hoặc không thuộc về bạn");
           navigate("/");
@@ -77,7 +86,11 @@ const EditVehiclePage = () => {
     if (!id) return;
 
     setSaving(true);
-    const res = await updateVehicleApi(id, formData);
+    const payload = {
+      ...formData,
+      purchase_date: purchaseDate ? format(purchaseDate, "yyyy-MM-dd") : "",
+    };
+    const res = await updateVehicleApi(id, payload);
 
     if (res.ok) {
       toast.success("Cập nhật thành công. Thông tin xe đã được cập nhật.");
@@ -244,12 +257,30 @@ const EditVehiclePage = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="purchase_date">Ngày mua</Label>
-                    <Input
-                      id="purchase_date"
-                      type="date"
-                      value={formData.purchase_date || ""}
-                      onChange={(e) => handleInputChange("purchase_date", e.target.value)}
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="purchase_date"
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !purchaseDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {purchaseDate ? format(purchaseDate, "dd/MM/yyyy", { locale: vi }) : "Chọn ngày mua"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={purchaseDate}
+                          onSelect={setPurchaseDate}
+                          locale={vi}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
 

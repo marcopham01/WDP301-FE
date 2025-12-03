@@ -45,11 +45,14 @@ export interface ServiceCenter {
   _id: string;
   center_name: string;
   address?: string;
+  lat?: number;
+  lng?: number;
   phone?: string;
   email?: string;
   is_active?: boolean;
   working_hours?: WorkingHour[];
   user_id?: string | { _id: string; fullName?: string; email?: string }; // staff (single)
+  distanceKm?: number; // returned by nearest endpoint
 }
 
 export interface CreateServiceCenterPayload {
@@ -293,6 +296,27 @@ export async function removeTechnicianFromServiceCenterApi(
     return parseResponse(response);
   } catch (err: unknown) {
     console.error("[serviceCenterApi] Network error", err);
+    return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
+  }
+}
+
+// ============================================================================
+// NEAREST SERVICE CENTERS
+// ============================================================================
+
+export async function getNearestServiceCentersApi(lat: number, lng: number, radiusKm = 20): Promise<ApiResult<{ success: boolean; data: ServiceCenter[] }>> {
+  try {
+    const url = `${BASE_URL}/api/service-center/near?lat=${lat}&lng=${lng}&radius=${radiusKm}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+    });
+    return parseResponse(response);
+  } catch (err: unknown) {
+    console.error('[serviceCenterApi] Network error (nearest)', err);
     return { ok: false, status: 0, data: null, message: String((err as Error)?.message || err) };
   }
 }

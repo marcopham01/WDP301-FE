@@ -125,11 +125,11 @@ const IssueTypeManagement = () => {
           setItems(res.data.data.items);
           setTotalPages(res.data.data.pagination.total_pages || 1);
         } else {
-          toast.error(res.message || "Không thể tải danh sách Kho phụ tùng");
+          toast.error(res.message || "Không thể tải danh sách loại sự cố");
         }
       } catch (e) {
         console.error(e);
-        toast.error("Lỗi khi tải danh sách Kho phụ tùng");
+        toast.error("Lỗi khi tải danh sách loại sự cố");
       } finally {
         setLoading(false);
       }
@@ -338,7 +338,7 @@ const IssueTypeManagement = () => {
           <Button variant="outline" onClick={() => navigate("/dashboard/admin")}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
           </Button>
-          <h1 className="text-2xl font-bold">Quản lý Kho phụ tùng</h1>
+          <h1 className="text-2xl font-bold">Quản lý loại sự cố</h1>
         </div>
         <div className="flex gap-2">
           {items.length === 0 && (
@@ -398,7 +398,7 @@ const IssueTypeManagement = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Danh sách Kho phụ tùng</CardTitle>
+          <CardTitle>Danh sách loại sự cố</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -59,6 +59,7 @@ import {
 import { createPaymentLinkApi } from "@/lib/paymentApi";
 import { PaymentDialog } from "@/components/customer/PaymentDialog";
 import { config } from "@/config/config";
+import SelectCenterGrid from "@/components/customer/booking/SelectCenterGrid";
 
 const BASE_URL = config.API_BASE_URL;
 
@@ -72,6 +73,7 @@ const STEPS = [
 
 export default function BookingPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -170,6 +172,39 @@ export default function BookingPage() {
     };
     load();
   }, []);
+
+  // Prefill from previous appointment (rebook flow)
+  useEffect(() => {
+    const rebookFrom = searchParams.get("rebookFrom");
+    if (!rebookFrom) return;
+    // Fetch appointment details and prefill selections, then jump to final step
+    const run = async () => {
+      try {
+        const res = await getAppointmentByIdApi(rebookFrom);
+        if (res.ok && res.data?.data) {
+          const appt = res.data.data;
+          const vId = appt.vehicle_id && typeof appt.vehicle_id === "object" ? appt.vehicle_id._id : (appt.vehicle_id as unknown as string);
+          const cId = appt.center_id && typeof appt.center_id === "object" ? appt.center_id._id : (appt.center_id as unknown as string);
+          const sId = appt.service_type_id && typeof appt.service_type_id === "object" ? appt.service_type_id._id : (appt.service_type_id as unknown as string);
+          if (vId) setSelectedVehicle(vId);
+          if (cId) setSelectedCenter(cId);
+          if (sId) setSelectedServiceType(sId);
+          // Carry notes forward for convenience
+          if (appt.notes) setNotes(appt.notes);
+          // Jump to final step: user only needs to pick date/time and pay
+          setCurrentStep(4);
+          toast.info("Đang đặt lại theo lịch cũ. Vui lòng chọn ngày và giờ mới.");
+        } else {
+          toast.error("Không tải được lịch gốc để đặt lại.");
+        }
+      } catch (e) {
+        console.error("Rebook load error", e);
+        toast.error("Lỗi khi tải dữ liệu đặt lại.");
+      }
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
 
 
@@ -808,6 +843,12 @@ export default function BookingPage() {
           {/* Content */}
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
             {" "}
+            {/* Banner for rebook mode */}
+            {searchParams.get("rebookFrom") && (
+              <div className="mb-4 p-3 rounded-md bg-ev-green/10 text-ev-green text-sm">
+                Đặt lại lịch từ mã: {searchParams.get("rebookFrom")}. Bạn chỉ cần chọn lại ngày và giờ.
+              </div>
+            )}
             {/* Trắng, border xám, shadow nhẹ */}
             {/* Step 1: Choose Vehicle */}
             {currentStep === 1 && (
@@ -1132,76 +1173,14 @@ export default function BookingPage() {
             {/* Step 2: Choose Service Center */}
             {currentStep === 2 && (
               <div>
-                <h2 className="text-2xl font-bold mb-4 text-center">
-                  Chọn trung tâm dịch vụ
-                </h2>
-                <p className="text-center text-muted-foreground mb-6">
-                  Tìm và chọn trung tâm dịch vụ gần bạn nhất
-                </p>
-
-                <div className="space-y-4">
-                  {serviceCenters.map((center) => (
-                    <Card
-                      key={center._id}
-                      className={cn(
-                        "cursor-pointer transition-all hover:shadow-md border border-gray-200", // Border xám
-                        selectedCenter === center._id
-                          ? "border-ev-green border-2 bg-gray-50" // ev-green, xám nhạt
-                          : "bg-white"
-                      )}
-                      onClick={() => setSelectedCenter(center._id)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="font-semibold text-lg">
-                                {center.center_name}
-                              </h3>
-                              <Badge
-                                variant="default"
-                                className="bg-ev-green/10 text-ev-green hover:bg-ev-green/10"
-                              >
-                                {" "}
-                                {/* ev-green nhạt */}
-                                Hoạt động
-                              </Badge>
-                            </div>
-                            <div className="flex items-start gap-2 text-sm text-muted-foreground mb-2">
-                              <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                              <span>{center.address}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Phone className="h-4 w-4" />
-                              <span>{center.phone || "N/A"}</span>
-                            </div>
-                            {center.working_hours &&
-                              center.working_hours.length > 0 && (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                                  <Clock className="h-4 w-4" />
-                                  <span>
-                                    Giờ làm việc:{" "}
-                                    {center.working_hours[0].open_time} -{" "}
-                                    {center.working_hours[0].close_time}
-                                  </span>
-                                </div>
-                              )}
-                          </div>
-                          {selectedCenter === center._id && (
-                            <Check className="h-5 w-5 text-ev-green ml-2" />
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
+                <SelectCenterGrid
+                  selectedId={selectedCenter}
+                  onSelect={(center) => setSelectedCenter(center._id)}
+                />
                 {serviceCenters.length === 0 && (
                   <div className="text-center py-12">
                     <MapPin className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-                    <p className="text-muted-foreground">
-                      Không tìm thấy trung tâm nào
-                    </p>
+                    <p className="text-muted-foreground">Không tìm thấy trung tâm nào</p>
                   </div>
                 )}
               </div>

@@ -6,6 +6,7 @@ import {
   Package,
   Calendar,
   TrendingUp,
+  Wrench,
 } from "lucide-react";
 
 export const adminMenuItems = [
@@ -79,20 +80,26 @@ export const adminMenuItems = [
     ],
   },
   {
-    title: "Quản lý kho",
-    icon: Package,
+    title: "Quản lý phụ tùng",
+    icon: Wrench,
     items: [
       {
-        title: "Phụ tùng",
+        title: "Danh sách phụ tùng",
         href: "/dashboard/admin/parts",
-      },
-      {
-        title: "Kho phụ tùng",
-        href: "/dashboard/admin/inventory",
       },
       {
         title: "Loại sự cố",
         href: "/dashboard/admin/issue-types",
+      },
+    ],
+  },
+  {
+    title: "Quản lý kho",
+    icon: Package,
+    items: [
+      {
+        title: "Kho phụ tùng",
+        href: "/dashboard/admin/inventory",
       },
     ],
   },
